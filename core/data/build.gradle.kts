@@ -28,6 +28,8 @@ dependencies {
     implementation(project(":core:data-store"))
     implementation(project(":core:config"))
 
+    implementation(libs.androidx.datastore.preferences)
+
     implementation(libs.hilt.android)
     ksp(libs.hilt.android.compiler)
     implementation(libs.kotlinx.coroutines.android)
