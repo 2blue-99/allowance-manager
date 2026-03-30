@@ -7,7 +7,8 @@ import javax.inject.Singleton
 
 @Singleton
 class RemoteConfigDataSource @Inject constructor(
-    private val remoteConfig: FirebaseRemoteConfig,
+    private val remoteConfig
+    : FirebaseRemoteConfig,
 ) {
     suspend fun fetchAndActivate(): Boolean = remoteConfig.fetchAndActivate().await()
 

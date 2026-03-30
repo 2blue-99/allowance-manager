@@ -57,7 +57,9 @@ captures/
 .cxx/
 
 # Google Services (e.g. APIs or Firebase)
-google-services.json
+# debug용은 git 추적, release용만 제외
+app/google-services.json
+app/src/release/google-services.json
 
 # Signing reports
 signingReport/

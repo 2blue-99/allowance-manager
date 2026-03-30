@@ -51,6 +51,7 @@ dependencies {
     implementation(project(":core:data-store"))
     implementation(project(":core:config"))
     implementation(project(":core:ui"))
+    implementation(project(":core:design-system"))
 
     implementation(platform(libs.firebase.bom))
     implementation(libs.firebase.analytics)
