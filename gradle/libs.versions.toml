@@ -16,6 +16,7 @@ okhttp = "4.12.0"
 firebaseBom = "34.10.0"
 coroutines = "1.9.0"
 kotlinxSerializationJson = "1.7.3"
+timber = "5.0.1"
 
 [libraries]
 # AndroidX Core
@@ -62,6 +63,9 @@ firebase-remote-config = { group = "com.google.firebase", name = "firebase-confi
 # Kotlinx
 kotlinx-coroutines-android = { group = "org.jetbrains.kotlinx", name = "kotlinx-coroutines-android", version.ref = "coroutines" }
 kotlinx-serialization-json = { group = "org.jetbrains.kotlinx", name = "kotlinx-serialization-json", version.ref = "kotlinxSerializationJson" }
+
+# Timber
+timber = { group = "com.jakewharton.timber", name = "timber", version.ref = "timber" }
 
 [plugins]
 android-application = { id = "com.android.application", version.ref = "agp" }

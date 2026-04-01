@@ -43,5 +43,7 @@ dependencies {
     implementation(libs.hilt.navigation.compose)
     implementation(libs.kotlinx.serialization.json)
 
+    implementation(libs.timber)
+
     debugImplementation(libs.androidx.compose.ui.tooling)
 }

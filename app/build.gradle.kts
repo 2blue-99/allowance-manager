@@ -72,5 +72,7 @@ dependencies {
     ksp(libs.hilt.android.compiler)
     implementation(libs.hilt.navigation.compose)
 
+    implementation(libs.timber)
+
     debugImplementation(libs.androidx.compose.ui.tooling)
 }
