@@ -44,6 +44,7 @@ dependencies {
     implementation(project(":feature:splash"))
     implementation(project(":feature:home"))
     implementation(project(":feature:setting"))
+    implementation(project(":feature:widget"))
     implementation(project(":core:domain"))
     implementation(project(":core:data"))
     implementation(project(":core:remote"))

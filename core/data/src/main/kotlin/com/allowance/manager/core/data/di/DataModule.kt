@@ -1,10 +1,10 @@
 package com.allowance.manager.core.data.di
 
 import com.allowance.manager.core.data.repository.AppVersionRepositoryImpl
-import com.allowance.manager.core.data.repository.BalanceRepositoryImpl
+import com.allowance.manager.core.data.repository.DataStoreRepositoryImpl
 import com.allowance.manager.core.data.repository.RemoteConfigRepositoryImpl
 import com.allowance.manager.core.domain.repository.AppVersionRepository
-import com.allowance.manager.core.domain.repository.BalanceRepository
+import com.allowance.manager.core.domain.repository.DataStoreRepository
 import com.allowance.manager.core.domain.repository.RemoteConfigRepository
 import dagger.Binds
 import dagger.Module
@@ -19,8 +19,8 @@ abstract class DataModule {
     @Binds
     @Singleton
     abstract fun bindBalanceRepository(
-        impl: BalanceRepositoryImpl,
-    ): BalanceRepository
+        impl: DataStoreRepositoryImpl,
+    ): DataStoreRepository
 
     @Binds
     @Singleton

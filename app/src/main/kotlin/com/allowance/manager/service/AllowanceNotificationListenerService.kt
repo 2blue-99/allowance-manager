@@ -3,8 +3,7 @@ package com.allowance.manager.service
 import android.os.Bundle
 import android.service.notification.NotificationListenerService
 import android.service.notification.StatusBarNotification
-import com.allowance.manager.core.domain.usecase.balance.GetBalanceUseCase
-import com.allowance.manager.core.domain.usecase.balance.SetBalanceUseCase
+import com.allowance.manager.core.domain.usecase.store.SetMonthAllowanceUseCase
 import dagger.hilt.EntryPoint
 import dagger.hilt.InstallIn
 import dagger.hilt.android.EntryPointAccessors
@@ -21,15 +20,13 @@ class AllowanceNotificationListenerService : NotificationListenerService() {
     @EntryPoint
     @InstallIn(SingletonComponent::class)
     interface ServiceEntryPoint {
-        fun getBalanceUseCase(): GetBalanceUseCase
-        fun setBalanceUseCase(): SetBalanceUseCase
+        fun setBalanceUseCase(): SetMonthAllowanceUseCase
     }
 
     private val entryPoint by lazy {
         EntryPointAccessors.fromApplication(applicationContext, ServiceEntryPoint::class.java)
     }
 
-    private val getBalanceUseCase get() = entryPoint.getBalanceUseCase()
     private val setBalanceUseCase get() = entryPoint.setBalanceUseCase()
 
     private val serviceScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)

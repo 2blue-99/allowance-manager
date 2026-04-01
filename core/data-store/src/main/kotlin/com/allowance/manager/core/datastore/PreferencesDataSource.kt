@@ -6,7 +6,6 @@ import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.longPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
 import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -16,21 +15,19 @@ class PreferencesDataSource @Inject constructor(
     private val dataStore: DataStore<Preferences>,
 ) {
     companion object {
-        val BUDGET = longPreferencesKey("budget")
-        val REMAINING_BALANCE = longPreferencesKey("remaining_balance")
-        val LAST_RESET_DATE = stringPreferencesKey("last_reset_date")
+        val MONTH_ALLOWANCE = longPreferencesKey("month_allowance")
+        val NEXT_PAYDAY = stringPreferencesKey("next_payday")
     }
 
-    fun getBalance(): Flow<Long> = get(REMAINING_BALANCE, 0L)
-
-    /**
-     * 기존 값에 Amount 를 더함
-     */
-    suspend fun setBalance(amount: Long) {
-        val resultBalance = getBalance().first() + amount
-        set(REMAINING_BALANCE, resultBalance)
+    fun getMonthAllowance(): Flow<Long> = get(MONTH_ALLOWANCE, 0L)
+    suspend fun setMonthAllowance(amount: Long) {
+        set(MONTH_ALLOWANCE, amount)
     }
 
+    fun getNextPayday(): Flow<String> = get(NEXT_PAYDAY, "25")
+    suspend fun setNextPayday(date: String) {
+        set(NEXT_PAYDAY, date)
+    }
 
     private fun <T> get(key: Preferences.Key<T>, defaultValue: T): Flow<T> =
         dataStore.data.map { it[key] ?: defaultValue }
