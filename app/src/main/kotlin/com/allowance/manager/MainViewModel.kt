@@ -16,6 +16,7 @@ import javax.inject.Inject
 data class MainUiState(
     val showForceUpdateDialog: Boolean = false,
     val updateNote: String = "",
+    val showNotificationPermissionDialog: Boolean = false,
 )
 
 @HiltViewModel
@@ -38,6 +39,14 @@ class MainViewModel @Inject constructor(
                 .onSuccess { checkForceUpdate() }
                 .onFailure { setError(it.message) }
         }
+    }
+
+    fun onNotificationPermissionChecked(isGranted: Boolean) {
+        _uiState.update { it.copy(showNotificationPermissionDialog = !isGranted) }
+    }
+
+    fun dismissNotificationPermissionDialog() {
+        _uiState.update { it.copy(showNotificationPermissionDialog = false) }
     }
 
     private fun checkForceUpdate() {

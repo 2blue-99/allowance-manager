@@ -1,5 +1,7 @@
 package com.allowance.manager.service
 
+import timber.log.Timber
+
 /**
  * 카드사·은행 앱의 결제 알림에서 사용 금액을 추출합니다.
  *
@@ -31,28 +33,45 @@ object NotificationParser {
     // "12,000원" 또는 "12000원" 패턴
     private val AMOUNT_REGEX = Regex("""([\d,]+)원""")
 
-    // 결제 관련 키워드 (환불/취소는 제외)
-    private val PAYMENT_KEYWORDS = listOf("사용", "승인", "결제", "출금", "이체")
-    private val CANCEL_KEYWORDS = listOf("취소", "환불", "오류")
+    // "잔액225,023" 패턴 (원 단위 없이 숫자만 붙는 경우)
+    private val BALANCE_REGEX = Regex("""잔액([\d,]+)""")
+
+    // 결제 관련 유효 키워드 (환불/취소는 제외)
+    private val PAYMENT_KEYWORDS = listOf("잔액")
+//    private val PAYMENT_KEYWORDS = listOf("사용", "승인", "결제", "출금", "이체", "입금", "잔액")
 
     data class ParseResult(
         val amount: Long,
         val packageName: String,
     )
 
+    /**
+     * 14:48:29.055  E  packageName : com.kbstar.kbbank
+     * 14:48:29.055  E  title : 입금 1,000원
+     * 14:48:29.055  E  text : 이*름님 04/01 14:48 941602-**-***318 이푸름 FBS입금 1,000 잔액225,023
+     */
     fun parse(packageName: String, title: String?, text: String?): ParseResult? {
-        if (packageName !in FINANCIAL_PACKAGES) return null
+        Timber.e("packageName : $packageName")
+        Timber.e("title : $title")
+        Timber.e("text : $text")
+
+//        if (packageName !in FINANCIAL_PACKAGES) {
+//            Timber.e("No Define Package Name Error")
+//            return null
+//        }
 
         val content = "${title.orEmpty()} ${text.orEmpty()}"
-        if (content.isBlank()) return null
+        if (content.isBlank()) {
+            Timber.e("Empty Content Error")
+            return null
+        }
 
-        // 취소/환불 알림은 무시
-        if (CANCEL_KEYWORDS.any { it in content }) return null
+        // 잔액 키워드가 없으면 무시
+        if (PAYMENT_KEYWORDS.none { it in content }) {
+            return null
+        }
 
-        // 결제 키워드가 없으면 무시
-        if (PAYMENT_KEYWORDS.none { it in content }) return null
-
-        val amount = AMOUNT_REGEX.find(content)
+        val amount = (BALANCE_REGEX.find(content) ?: AMOUNT_REGEX.find(content))
             ?.groupValues?.get(1)
             ?.replace(",", "")
             ?.toLongOrNull()
