@@ -1,6 +1,8 @@
 package com.allowance.manager.feature.home
 
 import androidx.lifecycle.viewModelScope
+import com.allowance.manager.core.domain.model.Spending
+import com.allowance.manager.core.domain.usecase.spending.GetAllSpendingsUseCase
 import com.allowance.manager.core.domain.usecase.store.GetMonthAllowanceUseCase
 import com.allowance.manager.core.domain.usecase.store.SetMonthAllowanceUseCase
 import com.allowance.manager.core.domain.util.amountToComma
@@ -16,6 +18,7 @@ import javax.inject.Inject
 data class HomeUiState(
     val balance: String = "",
     val inputAmount: String = "",
+    val spendings: List<Spending> = emptyList(),
 
     val isLoading: Boolean = false,
     val error: String? = null,
@@ -24,7 +27,8 @@ data class HomeUiState(
 @HiltViewModel
 class HomeViewModel @Inject constructor(
     private val getMonthAllowanceUseCase: GetMonthAllowanceUseCase,
-    private val setMonthAllowanceUseCase: SetMonthAllowanceUseCase
+    private val setMonthAllowanceUseCase: SetMonthAllowanceUseCase,
+    private val getAllSpendingsUseCase: GetAllSpendingsUseCase,
 ) : BaseViewModel() {
 
     private val _uiState = MutableStateFlow(HomeUiState())
@@ -34,6 +38,11 @@ class HomeViewModel @Inject constructor(
         viewModelScope.launch {
             getMonthAllowanceUseCase().collect { amount ->
                 _uiState.update { it.copy(balance = amount.amountToComma()) }
+            }
+        }
+        viewModelScope.launch {
+            getAllSpendingsUseCase().collect { spendings ->
+                _uiState.update { it.copy(spendings = spendings) }
             }
         }
     }

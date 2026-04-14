@@ -3,6 +3,9 @@ package com.allowance.manager.service
 import android.os.Bundle
 import android.service.notification.NotificationListenerService
 import android.service.notification.StatusBarNotification
+import com.allowance.manager.core.domain.model.Spending
+import com.allowance.manager.core.domain.usecase.spending.InsertSpendingUseCase
+import com.allowance.manager.core.domain.usecase.store.GetMonthAllowanceUseCase
 import com.allowance.manager.core.domain.usecase.store.SetMonthAllowanceUseCase
 import dagger.hilt.EntryPoint
 import dagger.hilt.InstallIn
@@ -12,6 +15,7 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import timber.log.Timber
 
@@ -21,6 +25,8 @@ class AllowanceNotificationListenerService : NotificationListenerService() {
     @InstallIn(SingletonComponent::class)
     interface ServiceEntryPoint {
         fun setBalanceUseCase(): SetMonthAllowanceUseCase
+        fun getBalanceUseCase(): GetMonthAllowanceUseCase
+        fun insertSpendingUseCase(): InsertSpendingUseCase
     }
 
     private val entryPoint by lazy {
@@ -28,6 +34,8 @@ class AllowanceNotificationListenerService : NotificationListenerService() {
     }
 
     private val setBalanceUseCase get() = entryPoint.setBalanceUseCase()
+    private val getBalanceUseCase get() = entryPoint.getBalanceUseCase()
+    private val insertSpendingUseCase get() = entryPoint.insertSpendingUseCase()
 
     private val serviceScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
 
@@ -51,12 +59,22 @@ class AllowanceNotificationListenerService : NotificationListenerService() {
         ) ?: return
 
         serviceScope.launch {
-            deductBalance(result.amount)
-        }
-    }
+            val newBalance = result.amount
+            val previousBalance = getBalanceUseCase().first()
+            val spendingAmount = previousBalance - newBalance
 
-    private suspend fun deductBalance(amount: Long) {
-        setBalanceUseCase(amount)
+            Timber.e("newBalance : $newBalance, previousBalance : $previousBalance, spendingAmount : $spendingAmount")
+
+            insertSpendingUseCase(
+                Spending(
+                    amount = spendingAmount,
+                    remainingBalance = newBalance,
+                    timestamp = System.currentTimeMillis(),
+                )
+            )
+
+            setBalanceUseCase(newBalance)
+        }
     }
 
     override fun onDestroy() {

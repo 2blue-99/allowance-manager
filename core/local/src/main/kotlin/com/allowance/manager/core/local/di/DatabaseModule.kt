@@ -2,6 +2,7 @@ package com.allowance.manager.core.local.di
 
 import android.content.Context
 import androidx.room.Room
+import com.allowance.manager.core.local.dao.SpendingDao
 import com.allowance.manager.core.local.database.AppDatabase
 import dagger.Module
 import dagger.Provides
@@ -22,5 +23,9 @@ object DatabaseModule {
         context,
         AppDatabase::class.java,
         "allowance_manager.db",
-    ).build()
+    ).fallbackToDestructiveMigration().build()
+
+    @Provides
+    fun provideSpendingDao(database: AppDatabase): SpendingDao =
+        database.spendingDao()
 }

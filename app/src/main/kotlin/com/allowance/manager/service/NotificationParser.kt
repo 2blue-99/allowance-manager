@@ -68,6 +68,7 @@ object NotificationParser {
 
         // 잔액 키워드가 없으면 무시
         if (PAYMENT_KEYWORDS.none { it in content }) {
+            Timber.e("Empty Keyword")
             return null
         }
 
@@ -75,9 +76,15 @@ object NotificationParser {
             ?.groupValues?.get(1)
             ?.replace(",", "")
             ?.toLongOrNull()
-            ?: return null
+            ?: run {
+                Timber.e("amount error")
+                return null
+            }
 
-        if (amount <= 0) return null
+        if (amount <= 0) {
+            Timber.e("amount <= 0")
+            return null
+        }
 
         return ParseResult(amount = amount, packageName = packageName)
     }

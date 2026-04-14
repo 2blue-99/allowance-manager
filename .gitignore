@@ -89,3 +89,4 @@ Thumbs.db
 com_crashlytics_export_strings.xml
 crashlytics-build.properties
 fabric.properties
+/app/src/debug/google-services.json
