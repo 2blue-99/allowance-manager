@@ -12,8 +12,11 @@ import androidx.compose.ui.unit.sp
 import androidx.glance.GlanceModifier
 import androidx.glance.Image
 import androidx.glance.ImageProvider
+import android.content.Intent
 import androidx.glance.action.clickable
 import androidx.glance.background
+import androidx.glance.LocalContext
+import androidx.glance.appwidget.action.actionStartActivity
 import androidx.glance.layout.Alignment
 import androidx.glance.layout.Box
 import androidx.glance.layout.Column
@@ -53,11 +56,16 @@ fun BalanceWidgetContent(allowance: Allowance, onRefresh: () -> Unit) {
         isFlashing = false
     }
 
+    val context = LocalContext.current
+    val launchIntent = context.packageManager.getLaunchIntentForPackage(context.packageName)
+        ?: Intent()
+
     Box(
         modifier = GlanceModifier
             .fillMaxSize()
             .background(if (isFlashing) ColorFlash else ColorNormal)
-            .padding(horizontal = 16.dp, vertical = 14.dp),
+            .padding(horizontal = 16.dp, vertical = 14.dp)
+            .clickable(actionStartActivity(launchIntent)),
     ) {
         Column(modifier = GlanceModifier.fillMaxSize()) {
 
