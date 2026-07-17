@@ -37,31 +37,21 @@ private val UpRed = Color(0xFFEF4444)
 
 @Composable
 fun StatsRoute(
-    onBack: () -> Unit = {},
     viewModel: StatsViewModel = hiltViewModel(),
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
-    StatsScreen(uiState = uiState, onBack = onBack)
+    StatsScreen(uiState = uiState)
 }
 
 @Composable
-fun StatsScreen(uiState: StatsUiState, onBack: () -> Unit = {}) {
+fun StatsScreen(uiState: StatsUiState) {
     Column(
         modifier = Modifier
             .fillMaxSize()
             .background(Bg)
             .padding(20.dp),
     ) {
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            Text(
-                "←",
-                fontSize = 22.sp,
-                color = TextPrimary,
-                modifier = Modifier.clickable(onClick = onBack),
-            )
-            Spacer(Modifier.width(12.dp))
-            Text("통계", fontSize = 18.sp, fontWeight = FontWeight.Bold, color = TextPrimary)
-        }
+        Text("통계", fontSize = 18.sp, fontWeight = FontWeight.Bold, color = TextPrimary)
 
         Spacer(Modifier.height(20.dp))
 

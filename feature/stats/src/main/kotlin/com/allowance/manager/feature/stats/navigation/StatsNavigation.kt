@@ -8,10 +8,8 @@ import kotlinx.serialization.Serializable
 @Serializable
 object StatsRoute
 
-fun NavGraphBuilder.statsScreen(
-    onBack: () -> Unit,
-) {
+fun NavGraphBuilder.statsScreen() {
     composable<StatsRoute> {
-        StatsRoute(onBack = onBack)
+        StatsRoute()
     }
 }
