@@ -10,33 +10,34 @@ import androidx.glance.appwidget.GlanceAppWidget
 import androidx.glance.appwidget.action.ActionCallback
 import androidx.glance.appwidget.action.actionRunCallback
 import androidx.glance.appwidget.provideContent
-import com.allowance.manager.core.domain.model.Allowance
-import com.allowance.manager.core.domain.usecase.store.GetAllowanceInfoUseCase
+import com.allowance.manager.core.domain.usecase.budget.ObserveBudgetStatusUseCase
 import dagger.hilt.EntryPoint
 import dagger.hilt.InstallIn
 import dagger.hilt.android.EntryPointAccessors
 import dagger.hilt.components.SingletonComponent
+import kotlinx.coroutines.flow.map
 
 class BalanceWidget : GlanceAppWidget() {
 
     @EntryPoint
     @InstallIn(SingletonComponent::class)
     interface WidgetEntryPoint {
-        fun getAllowanceInfoUseCase(): GetAllowanceInfoUseCase
+        fun observeBudgetStatusUseCase(): ObserveBudgetStatusUseCase
     }
 
     override suspend fun provideGlance(context: Context, id: GlanceId) {
         val entryPoint = EntryPointAccessors.fromApplication(context, WidgetEntryPoint::class.java)
-        val getAllowanceInfoUseCase = entryPoint.getAllowanceInfoUseCase()
+        val observeBudgetStatusUseCase = entryPoint.observeBudgetStatusUseCase()
 
         provideContent {
-            val allowance by getAllowanceInfoUseCase().collectAsState(Allowance())
+            val pair by observeBudgetStatusUseCase()
+                .map { it.spent to it.budget }
+                .collectAsState(0L to 0L)
             GlanceTheme {
                 BalanceWidgetContent(
-                    allowance = allowance,
-                    onRefresh = {
-                        actionRunCallback<RefreshAction>()
-                    },
+                    spent = pair.first,
+                    budget = pair.second,
+                    onRefresh = { actionRunCallback<RefreshAction>() },
                 )
             }
         }
