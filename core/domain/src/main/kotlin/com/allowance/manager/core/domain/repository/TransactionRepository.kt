@@ -1,5 +1,6 @@
 package com.allowance.manager.core.domain.repository
 
+import com.allowance.manager.core.domain.model.MonthlyExpense
 import com.allowance.manager.core.domain.model.Transaction
 import kotlinx.coroutines.flow.Flow
 
@@ -14,6 +15,9 @@ interface TransactionRepository {
 
     /** 이번달 지출 합계 (메인·무시아님·EXPENSE, 환불 음수 자동 차감) */
     fun observeSpentBetween(start: Long, end: Long): Flow<Long>
+
+    /** 월별 지출 합계 (통계용) */
+    fun observeMonthlyExpenseTotals(): Flow<List<MonthlyExpense>>
 
     suspend fun setIgnored(id: Long, ignored: Boolean)
 

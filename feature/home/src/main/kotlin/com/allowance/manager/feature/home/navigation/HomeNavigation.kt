@@ -10,8 +10,12 @@ object HomeRoute
 
 fun NavGraphBuilder.homeScreen(
     onNavigateToSetting: () -> Unit,
+    onNavigateToStats: () -> Unit,
 ) {
     composable<HomeRoute> {
-        HomeRoute(onNavigateToSetting = onNavigateToSetting)
+        HomeRoute(
+            onNavigateToSetting = onNavigateToSetting,
+            onNavigateToStats = onNavigateToStats,
+        )
     }
 }

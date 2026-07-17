@@ -23,7 +23,9 @@ rootProject.name = "allowance-manager"
 
 include(":app")
 include(":feature:splash")
+include(":feature:onboarding")
 include(":feature:home")
+include(":feature:stats")
 include(":feature:setting")
 include(":feature:widget")
 include(":core:domain")

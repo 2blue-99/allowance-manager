@@ -52,12 +52,14 @@ private val RingTrack = Color(0x22FFFFFF)
 @Composable
 fun HomeRoute(
     onNavigateToSetting: () -> Unit,
+    onNavigateToStats: () -> Unit,
     viewModel: HomeViewModel = hiltViewModel(),
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     HomeScreen(
         uiState = uiState,
         onNavigateToSetting = onNavigateToSetting,
+        onNavigateToStats = onNavigateToStats,
         onToggleMainOnly = viewModel::onToggleMainOnly,
         onSetIgnored = viewModel::onSetIgnored,
         onDelete = viewModel::onDelete,
@@ -69,6 +71,7 @@ fun HomeRoute(
 fun HomeScreen(
     uiState: HomeUiState,
     onNavigateToSetting: () -> Unit = {},
+    onNavigateToStats: () -> Unit = {},
     onToggleMainOnly: () -> Unit = {},
     onSetIgnored: (Long, Boolean) -> Unit = { _, _ -> },
     onDelete: (Long) -> Unit = {},
@@ -76,7 +79,7 @@ fun HomeScreen(
     modifier: Modifier = Modifier,
 ) {
     Column(modifier = modifier.fillMaxSize().background(BottomBg)) {
-        Hero(uiState = uiState, onNavigateToSetting = onNavigateToSetting)
+        Hero(uiState = uiState, onNavigateToSetting = onNavigateToSetting, onNavigateToStats = onNavigateToStats)
         ListHeader(showMainOnly = uiState.showMainOnly, onToggleMainOnly = onToggleMainOnly)
         LazyColumn(modifier = Modifier.fillMaxSize().padding(horizontal = 12.dp)) {
             items(uiState.transactions, key = { it.id }) { tx ->
@@ -92,7 +95,7 @@ fun HomeScreen(
 }
 
 @Composable
-private fun Hero(uiState: HomeUiState, onNavigateToSetting: () -> Unit) {
+private fun Hero(uiState: HomeUiState, onNavigateToSetting: () -> Unit, onNavigateToStats: () -> Unit) {
     Column(
         modifier = Modifier
             .fillMaxWidth()
@@ -102,6 +105,12 @@ private fun Hero(uiState: HomeUiState, onNavigateToSetting: () -> Unit) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             Text("가계부", color = Color.White, fontSize = 16.sp, fontWeight = FontWeight.Bold)
             Spacer(Modifier.weight(1f))
+            Text(
+                "📊",
+                fontSize = 18.sp,
+                modifier = Modifier.size(24.dp).clickable(onClick = onNavigateToStats),
+            )
+            Spacer(Modifier.size(12.dp))
             Text(
                 "⚙",
                 color = Color.White,

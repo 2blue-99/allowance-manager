@@ -9,7 +9,10 @@
       "Bash(git add *)",
       "Bash(git commit -q -m ' *)",
       "Bash(java -version)",
-      "Bash(xargs grep -l \"NavHost\\\\|composable\")"
+      "Bash(xargs grep -l \"NavHost\\\\|composable\")",
+      "Bash(export JAVA_HOME=\"/c/Program Files/Android/Android Studio1/jbr\")",
+      "Bash(./gradlew :app:compileDebugKotlin --console=plain)",
+      "Bash(echo \"GRADLE_EXIT=$?\")"
     ]
   }
 }

@@ -43,4 +43,18 @@ interface TransactionDao {
     /** 비메인 → 메인 승격: 같은 계좌 패턴의 기존 내역에 accountId 소급 적용 */
     @Query("UPDATE transactions SET account_id = :accountId WHERE extracted_account = :pattern AND account_id IS NULL")
     suspend fun promoteByPattern(pattern: String, accountId: Long)
+
+    /** 월별 지출 합계 (메인·무시아님·EXPENSE). ym = "yyyy-MM" (기기 로컬 타임존 기준) */
+    @Query(
+        """
+        SELECT strftime('%Y-%m', created_at / 1000, 'unixepoch', 'localtime') AS ym,
+               COALESCE(SUM(amount), 0) AS total
+        FROM transactions
+        WHERE type = 'EXPENSE'
+          AND account_id IS NOT NULL
+          AND is_ignored = 0
+        GROUP BY ym
+        """
+    )
+    fun observeMonthlyExpenseTotals(): Flow<List<MonthlyTotalRow>>
 }

@@ -1,5 +1,6 @@
 package com.allowance.manager.core.data.repository
 
+import com.allowance.manager.core.domain.model.MonthlyExpense
 import com.allowance.manager.core.domain.model.Transaction
 import com.allowance.manager.core.domain.model.TransactionType
 import com.allowance.manager.core.domain.repository.TransactionRepository
@@ -7,6 +8,7 @@ import com.allowance.manager.core.local.dao.TransactionDao
 import com.allowance.manager.core.local.entity.TransactionEntity
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
+import java.time.YearMonth
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -36,6 +38,14 @@ class TransactionRepositoryImpl @Inject constructor(
 
     override fun observeSpentBetween(start: Long, end: Long): Flow<Long> =
         transactionDao.observeSpentBetween(start, end)
+
+    override fun observeMonthlyExpenseTotals(): Flow<List<MonthlyExpense>> =
+        transactionDao.observeMonthlyExpenseTotals().map { rows ->
+            rows.mapNotNull { row ->
+                runCatching { YearMonth.parse(row.ym) }.getOrNull()
+                    ?.let { MonthlyExpense(yearMonth = it, total = row.total) }
+            }
+        }
 
     override suspend fun setIgnored(id: Long, ignored: Boolean) {
         transactionDao.getById(id)?.let { transactionDao.update(it.copy(isIgnored = ignored)) }
