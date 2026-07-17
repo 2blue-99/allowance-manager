@@ -2,7 +2,8 @@ package com.allowance.manager.core.local.di
 
 import android.content.Context
 import androidx.room.Room
-import com.allowance.manager.core.local.dao.SpendingDao
+import com.allowance.manager.core.local.dao.AccountDao
+import com.allowance.manager.core.local.dao.TransactionDao
 import com.allowance.manager.core.local.database.AppDatabase
 import dagger.Module
 import dagger.Provides
@@ -26,6 +27,10 @@ object DatabaseModule {
     ).fallbackToDestructiveMigration().build()
 
     @Provides
-    fun provideSpendingDao(database: AppDatabase): SpendingDao =
-        database.spendingDao()
+    fun provideAccountDao(database: AppDatabase): AccountDao =
+        database.accountDao()
+
+    @Provides
+    fun provideTransactionDao(database: AppDatabase): TransactionDao =
+        database.transactionDao()
 }

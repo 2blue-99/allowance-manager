@@ -3,13 +3,21 @@ package com.allowance.manager.core.domain.repository
 import kotlinx.coroutines.flow.Flow
 
 interface DataStoreRepository {
-    fun getDailyAllowance(): Flow<Long>
-    suspend fun setDailyAllowance(amount: Long)
-    suspend fun changeDailyAllowance(delta: Long)
+    fun getMonthlyBudget(): Flow<Long>
+    suspend fun setMonthlyBudget(amount: Long)
 
-    fun getMonthAllowance(): Flow<Long>
-    suspend fun setMonthAllowance(amount: Long)
+    fun getPayday(): Flow<Int>          // 1~31, 0 = 말일
+    suspend fun setPayday(day: Int)
 
-    fun getNextPayday(): Flow<String>
-    suspend fun setNextPayday(date: String)
+    fun getIntroShown(): Flow<Boolean>
+    suspend fun setIntroShown(shown: Boolean)
+
+    fun getOnboardingDone(): Flow<Boolean>
+    suspend fun setOnboardingDone(done: Boolean)
+
+    fun getStatusBarEnabled(): Flow<Boolean>
+    suspend fun setStatusBarEnabled(enabled: Boolean)
+
+    fun getShowMainOnly(): Flow<Boolean>
+    suspend fun setShowMainOnly(mainOnly: Boolean)
 }

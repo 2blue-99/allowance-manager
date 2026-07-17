@@ -23,7 +23,6 @@ android {
 
 dependencies {
     implementation(project(":core:domain"))
-    implementation(project(":core:remote"))
     implementation(project(":core:local"))
     implementation(project(":core:data-store"))
     implementation(project(":core:config"))

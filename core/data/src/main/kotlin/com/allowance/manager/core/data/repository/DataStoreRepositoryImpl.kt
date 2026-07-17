@@ -11,28 +11,21 @@ class DataStoreRepositoryImpl @Inject constructor(
     private val preferencesDataSource: PreferencesDataSource,
 ) : DataStoreRepository {
 
-    override fun getDailyAllowance(): Flow<Long> =
-        preferencesDataSource.getDailyAllowance()
+    override fun getMonthlyBudget(): Flow<Long> = preferencesDataSource.getMonthlyBudget()
+    override suspend fun setMonthlyBudget(amount: Long) = preferencesDataSource.setMonthlyBudget(amount)
 
-    override suspend fun setDailyAllowance(amount: Long) {
-        preferencesDataSource.setDailyAllowance(amount)
-    }
+    override fun getPayday(): Flow<Int> = preferencesDataSource.getPayday()
+    override suspend fun setPayday(day: Int) = preferencesDataSource.setPayday(day)
 
-    override suspend fun changeDailyAllowance(delta: Long) {
-        preferencesDataSource.changeDailyAllowance(delta)
-    }
+    override fun getIntroShown(): Flow<Boolean> = preferencesDataSource.getIntroShown()
+    override suspend fun setIntroShown(shown: Boolean) = preferencesDataSource.setIntroShown(shown)
 
-    override fun getMonthAllowance(): Flow<Long> =
-        preferencesDataSource.getMonthAllowance()
+    override fun getOnboardingDone(): Flow<Boolean> = preferencesDataSource.getOnboardingDone()
+    override suspend fun setOnboardingDone(done: Boolean) = preferencesDataSource.setOnboardingDone(done)
 
-    override suspend fun setMonthAllowance(amount: Long) {
-        preferencesDataSource.setMonthAllowance(amount)
-    }
+    override fun getStatusBarEnabled(): Flow<Boolean> = preferencesDataSource.getStatusBarEnabled()
+    override suspend fun setStatusBarEnabled(enabled: Boolean) = preferencesDataSource.setStatusBarEnabled(enabled)
 
-    override fun getNextPayday(): Flow<String> =
-        preferencesDataSource.getNextPayday()
-
-    override suspend fun setNextPayday(date: String) {
-        preferencesDataSource.setNextPayday(date)
-    }
+    override fun getShowMainOnly(): Flow<Boolean> = preferencesDataSource.getShowMainOnly()
+    override suspend fun setShowMainOnly(mainOnly: Boolean) = preferencesDataSource.setShowMainOnly(mainOnly)
 }

@@ -47,7 +47,6 @@ dependencies {
     implementation(project(":feature:widget"))
     implementation(project(":core:domain"))
     implementation(project(":core:data"))
-    implementation(project(":core:remote"))
     implementation(project(":core:local"))
     implementation(project(":core:data-store"))
     implementation(project(":core:config"))
