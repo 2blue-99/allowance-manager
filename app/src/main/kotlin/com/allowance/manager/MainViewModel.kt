@@ -16,7 +16,8 @@ import javax.inject.Inject
 data class MainUiState(
     val showForceUpdateDialog: Boolean = false,
     val updateNote: String = "",
-    val showNotificationPermissionDialog: Boolean = false,
+    val showNotificationListenerDialog: Boolean = false,
+    val shouldRequestPostNotification: Boolean = false,
 )
 
 @HiltViewModel
@@ -41,12 +42,21 @@ class MainViewModel @Inject constructor(
         }
     }
 
-    fun onNotificationPermissionChecked(isGranted: Boolean) {
-        _uiState.update { it.copy(showNotificationPermissionDialog = !isGranted) }
+    fun onPermissionsChecked(isListenerGranted: Boolean, isPostNotificationGranted: Boolean) {
+        _uiState.update {
+            it.copy(
+                showNotificationListenerDialog = !isListenerGranted,
+                shouldRequestPostNotification = !isPostNotificationGranted,
+            )
+        }
     }
 
-    fun dismissNotificationPermissionDialog() {
-        _uiState.update { it.copy(showNotificationPermissionDialog = false) }
+    fun onPostNotificationRequested() {
+        _uiState.update { it.copy(shouldRequestPostNotification = false) }
+    }
+
+    fun dismissNotificationListenerDialog() {
+        _uiState.update { it.copy(showNotificationListenerDialog = false) }
     }
 
     private fun checkForceUpdate() {

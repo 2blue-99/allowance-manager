@@ -7,5 +7,5 @@ import javax.inject.Inject
 class GetNextPaydayUseCase @Inject constructor(
     private val dataStoreRepository: DataStoreRepository,
 ) {
-    operator fun invoke(): Flow<String> = dataStoreRepository.getNexPayDay()
+    operator fun invoke(): Flow<String> = dataStoreRepository.getNextPayday()
 }

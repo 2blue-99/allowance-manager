@@ -5,6 +5,8 @@ import android.service.notification.NotificationListenerService
 import android.service.notification.StatusBarNotification
 import com.allowance.manager.core.domain.model.Spending
 import com.allowance.manager.core.domain.usecase.spending.InsertSpendingUseCase
+import com.allowance.manager.core.domain.usecase.store.ChangeDailyAllowanceUseCase
+import com.allowance.manager.core.domain.usecase.store.GetDailyAllowanceUseCase
 import com.allowance.manager.core.domain.usecase.store.GetMonthAllowanceUseCase
 import com.allowance.manager.core.domain.usecase.store.SetMonthAllowanceUseCase
 import dagger.hilt.EntryPoint
@@ -24,6 +26,10 @@ class AllowanceNotificationListenerService : NotificationListenerService() {
     @EntryPoint
     @InstallIn(SingletonComponent::class)
     interface ServiceEntryPoint {
+        fun changeDailyAllowance(): ChangeDailyAllowanceUseCase
+
+        fun getDailyAllowanceUseCase(): GetDailyAllowanceUseCase
+
         fun setBalanceUseCase(): SetMonthAllowanceUseCase
         fun getBalanceUseCase(): GetMonthAllowanceUseCase
         fun insertSpendingUseCase(): InsertSpendingUseCase
@@ -33,8 +39,10 @@ class AllowanceNotificationListenerService : NotificationListenerService() {
         EntryPointAccessors.fromApplication(applicationContext, ServiceEntryPoint::class.java)
     }
 
-    private val setBalanceUseCase get() = entryPoint.setBalanceUseCase()
-    private val getBalanceUseCase get() = entryPoint.getBalanceUseCase()
+    private val changeDailyAllowanceUseCase get() = entryPoint.changeDailyAllowance()
+
+    private val getDailyAllowanceUseCase get() = entryPoint.getDailyAllowanceUseCase()
+
     private val insertSpendingUseCase get() = entryPoint.insertSpendingUseCase()
 
     private val serviceScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
@@ -59,21 +67,21 @@ class AllowanceNotificationListenerService : NotificationListenerService() {
         ) ?: return
 
         serviceScope.launch {
-            val newBalance = result.amount
-            val previousBalance = getBalanceUseCase().first()
-            val spendingAmount = previousBalance - newBalance
+            val isInitDailyAllowance = getDailyAllowanceUseCase().first() != 0L
+            // 일일 사용량이 초기화 됐을때만 변경사항 반영
+            if(isInitDailyAllowance){
+                changeDailyAllowanceUseCase(result.amount)
+            }
 
-            Timber.e("newBalance : $newBalance, previousBalance : $previousBalance, spendingAmount : $spendingAmount")
-
+            // Room db에 저장
             insertSpendingUseCase(
                 Spending(
-                    amount = spendingAmount,
-                    remainingBalance = newBalance,
+                    type = result.type,
+                    amount = result.amount,
+                    totalAmount = result.totalAmount,
                     timestamp = System.currentTimeMillis(),
                 )
             )
-
-            setBalanceUseCase(newBalance)
         }
     }
 

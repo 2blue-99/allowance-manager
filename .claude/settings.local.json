@@ -2,7 +2,11 @@
   "permissions": {
     "allow": [
       "Bash(npm install:*)",
-      "Bash(claude:*)"
+      "Bash(claude:*)",
+      "WebFetch(domain:www.figma.com)",
+      "Read(//c/Users/USER/Blue's Obsidian/Side-Project/Allowance-Manager/**)",
+      "Bash(git checkout *)",
+      "Bash(git add *)"
     ]
   }
 }

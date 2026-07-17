@@ -11,7 +11,7 @@ import androidx.glance.appwidget.action.ActionCallback
 import androidx.glance.appwidget.action.actionRunCallback
 import androidx.glance.appwidget.provideContent
 import com.allowance.manager.core.domain.model.Allowance
-import com.allowance.manager.core.domain.usecase.store.GetDailyAllowanceUseCase
+import com.allowance.manager.core.domain.usecase.store.GetAllowanceInfoUseCase
 import dagger.hilt.EntryPoint
 import dagger.hilt.InstallIn
 import dagger.hilt.android.EntryPointAccessors
@@ -22,15 +22,15 @@ class BalanceWidget : GlanceAppWidget() {
     @EntryPoint
     @InstallIn(SingletonComponent::class)
     interface WidgetEntryPoint {
-        fun getDailyBalanceUseCase(): GetDailyAllowanceUseCase
+        fun getAllowanceInfoUseCase(): GetAllowanceInfoUseCase
     }
 
     override suspend fun provideGlance(context: Context, id: GlanceId) {
         val entryPoint = EntryPointAccessors.fromApplication(context, WidgetEntryPoint::class.java)
-        val getDailyAllowanceUseCase = entryPoint.getDailyBalanceUseCase()
+        val getAllowanceInfoUseCase = entryPoint.getAllowanceInfoUseCase()
 
         provideContent {
-            val allowance by getDailyAllowanceUseCase().collectAsState(Allowance())
+            val allowance by getAllowanceInfoUseCase().collectAsState(Allowance())
             GlanceTheme {
                 BalanceWidgetContent(
                     allowance = allowance,

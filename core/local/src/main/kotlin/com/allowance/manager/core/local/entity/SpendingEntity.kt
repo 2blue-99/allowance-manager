@@ -8,10 +8,12 @@ import androidx.room.PrimaryKey
 data class SpendingEntity(
     @PrimaryKey(autoGenerate = true)
     val id: Long = 0,
+    val type: String,
     val amount: Long,
-    @ColumnInfo(name = "remaining_balance")
-    val remainingBalance: Long,
+    @ColumnInfo(name = "total_amount")
+    val totalAmount: Long,
+    @ColumnInfo(name = "bank_name")
+    val bankName: String = "",
     val timestamp: Long,
-    val category: String = "",
     val memo: String = "",
 )

@@ -11,6 +11,17 @@ class DataStoreRepositoryImpl @Inject constructor(
     private val preferencesDataSource: PreferencesDataSource,
 ) : DataStoreRepository {
 
+    override fun getDailyAllowance(): Flow<Long> =
+        preferencesDataSource.getDailyAllowance()
+
+    override suspend fun setDailyAllowance(amount: Long) {
+        preferencesDataSource.setDailyAllowance(amount)
+    }
+
+    override suspend fun changeDailyAllowance(delta: Long) {
+        preferencesDataSource.changeDailyAllowance(delta)
+    }
+
     override fun getMonthAllowance(): Flow<Long> =
         preferencesDataSource.getMonthAllowance()
 
@@ -18,7 +29,7 @@ class DataStoreRepositoryImpl @Inject constructor(
         preferencesDataSource.setMonthAllowance(amount)
     }
 
-    override fun getNexPayDay(): Flow<String> =
+    override fun getNextPayday(): Flow<String> =
         preferencesDataSource.getNextPayday()
 
     override suspend fun setNextPayday(date: String) {

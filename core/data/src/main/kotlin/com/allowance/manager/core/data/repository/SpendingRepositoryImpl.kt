@@ -1,6 +1,7 @@
 package com.allowance.manager.core.data.repository
 
 import com.allowance.manager.core.domain.model.Spending
+import com.allowance.manager.core.domain.model.TransactionType
 import com.allowance.manager.core.domain.repository.SpendingRepository
 import com.allowance.manager.core.local.dao.SpendingDao
 import com.allowance.manager.core.local.entity.SpendingEntity
@@ -26,18 +27,20 @@ class SpendingRepositoryImpl @Inject constructor(
 
 private fun Spending.toEntity() = SpendingEntity(
     id = id,
+    type = type.name,
     amount = amount,
-    remainingBalance = remainingBalance,
+    totalAmount = totalAmount,
+    bankName = bankName,
     timestamp = timestamp,
-    category = category,
     memo = memo,
 )
 
 private fun SpendingEntity.toDomain() = Spending(
     id = id,
+    type = TransactionType.valueOf(type),
     amount = amount,
-    remainingBalance = remainingBalance,
+    totalAmount = totalAmount,
+    bankName = bankName,
     timestamp = timestamp,
-    category = category,
     memo = memo,
 )

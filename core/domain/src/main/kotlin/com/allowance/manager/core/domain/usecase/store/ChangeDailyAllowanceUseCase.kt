@@ -1,11 +1,12 @@
 package com.allowance.manager.core.domain.usecase.store
 
 import com.allowance.manager.core.domain.repository.DataStoreRepository
-import kotlinx.coroutines.flow.Flow
 import javax.inject.Inject
 
-class GetDailyAllowanceUseCase @Inject constructor(
+class ChangeDailyAllowanceUseCase @Inject constructor(
     private val dataStoreRepository: DataStoreRepository,
 ) {
-    operator fun invoke(): Flow<Long> = dataStoreRepository.getDailyAllowance()
+    suspend operator fun invoke(delta: Long) {
+        dataStoreRepository.changeDailyAllowance(delta)
+    }
 }
