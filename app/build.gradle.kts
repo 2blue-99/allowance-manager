@@ -42,6 +42,7 @@ android {
 
 dependencies {
     implementation(project(":feature:splash"))
+    implementation(project(":feature:intro"))
     implementation(project(":feature:onboarding"))
     implementation(project(":feature:home"))
     implementation(project(":feature:stats"))

@@ -11,11 +11,13 @@ object SplashRoute
 fun NavGraphBuilder.splashScreen(
     onNavigateToHome: () -> Unit,
     onNavigateToOnboarding: () -> Unit,
+    onNavigateToIntro: () -> Unit,
 ) {
     composable<SplashRoute> {
         SplashScreen(
             onNavigateToHome = onNavigateToHome,
             onNavigateToOnboarding = onNavigateToOnboarding,
+            onNavigateToIntro = onNavigateToIntro,
         )
     }
 }

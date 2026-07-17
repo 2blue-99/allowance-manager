@@ -16,14 +16,19 @@ import kotlinx.coroutines.delay
 fun SplashScreen(
     onNavigateToHome: () -> Unit,
     onNavigateToOnboarding: () -> Unit,
+    onNavigateToIntro: () -> Unit,
     viewModel: SplashViewModel = hiltViewModel(),
 ) {
-    val onboardingDone by viewModel.onboardingDone.collectAsState()
+    val destination by viewModel.destination.collectAsState()
 
-    LaunchedEffect(onboardingDone) {
-        val done = onboardingDone ?: return@LaunchedEffect
+    LaunchedEffect(destination) {
+        val dest = destination ?: return@LaunchedEffect
         delay(1000L)
-        if (done) onNavigateToHome() else onNavigateToOnboarding()
+        when (dest) {
+            SplashDestination.INTRO -> onNavigateToIntro()
+            SplashDestination.ONBOARDING -> onNavigateToOnboarding()
+            SplashDestination.HOME -> onNavigateToHome()
+        }
     }
 
     Box(

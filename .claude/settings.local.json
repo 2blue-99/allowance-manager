@@ -14,7 +14,8 @@
       "Bash(./gradlew :app:compileDebugKotlin --console=plain)",
       "Bash(echo \"GRADLE_EXIT=$?\")",
       "Bash(./gradlew :feature:home:compileDebugKotlin --console=plain)",
-      "mcp__visualize__read_me"
+      "mcp__visualize__read_me",
+      "mcp__visualize__show_widget"
     ]
   }
 }

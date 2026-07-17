@@ -18,6 +18,8 @@ import com.allowance.manager.feature.account.navigation.AccountSettingRoute
 import com.allowance.manager.feature.account.navigation.accountSettingScreen
 import com.allowance.manager.feature.home.navigation.HomeRoute
 import com.allowance.manager.feature.home.navigation.homeScreen
+import com.allowance.manager.feature.intro.navigation.IntroRoute
+import com.allowance.manager.feature.intro.navigation.introScreen
 import com.allowance.manager.feature.onboarding.navigation.OnboardingRoute
 import com.allowance.manager.feature.onboarding.navigation.onboardingScreen
 import com.allowance.manager.feature.setting.navigation.SettingRoute
@@ -76,6 +78,18 @@ fun AppNavHost(navController: NavHostController) {
                 onNavigateToOnboarding = {
                     navController.navigate(OnboardingRoute) {
                         popUpTo(SplashRoute) { inclusive = true }
+                    }
+                },
+                onNavigateToIntro = {
+                    navController.navigate(IntroRoute) {
+                        popUpTo(SplashRoute) { inclusive = true }
+                    }
+                },
+            )
+            introScreen(
+                onFinish = {
+                    navController.navigate(OnboardingRoute) {
+                        popUpTo(IntroRoute) { inclusive = true }
                     }
                 },
             )
