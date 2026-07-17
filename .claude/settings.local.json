@@ -12,7 +12,9 @@
       "Bash(xargs grep -l \"NavHost\\\\|composable\")",
       "Bash(export JAVA_HOME=\"/c/Program Files/Android/Android Studio1/jbr\")",
       "Bash(./gradlew :app:compileDebugKotlin --console=plain)",
-      "Bash(echo \"GRADLE_EXIT=$?\")"
+      "Bash(echo \"GRADLE_EXIT=$?\")",
+      "Bash(./gradlew :feature:home:compileDebugKotlin --console=plain)",
+      "mcp__visualize__read_me"
     ]
   }
 }
