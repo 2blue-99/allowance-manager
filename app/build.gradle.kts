@@ -46,6 +46,7 @@ dependencies {
     implementation(project(":feature:home"))
     implementation(project(":feature:stats"))
     implementation(project(":feature:setting"))
+    implementation(project(":feature:account"))
     implementation(project(":feature:widget"))
     implementation(project(":core:domain"))
     implementation(project(":core:data"))

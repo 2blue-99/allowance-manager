@@ -10,8 +10,9 @@ object SettingRoute
 
 fun NavGraphBuilder.settingScreen(
     onBack: () -> Unit,
+    onNavigateToAccount: () -> Unit,
 ) {
     composable<SettingRoute> {
-        SettingScreen(onBack = onBack)
+        SettingScreen(onBack = onBack, onNavigateToAccount = onNavigateToAccount)
     }
 }

@@ -14,6 +14,8 @@ import androidx.navigation.NavDestination.Companion.hierarchy
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.currentBackStackEntryAsState
+import com.allowance.manager.feature.account.navigation.AccountSettingRoute
+import com.allowance.manager.feature.account.navigation.accountSettingScreen
 import com.allowance.manager.feature.home.navigation.HomeRoute
 import com.allowance.manager.feature.home.navigation.homeScreen
 import com.allowance.manager.feature.onboarding.navigation.OnboardingRoute
@@ -89,6 +91,10 @@ fun AppNavHost(navController: NavHostController) {
             )
             statsScreen()
             settingScreen(
+                onBack = { navController.popBackStack() },
+                onNavigateToAccount = { navController.navigate(AccountSettingRoute) },
+            )
+            accountSettingScreen(
                 onBack = { navController.popBackStack() },
             )
         }
