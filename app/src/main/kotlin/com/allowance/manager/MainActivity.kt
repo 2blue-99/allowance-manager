@@ -6,7 +6,6 @@ import android.content.pm.PackageManager
 import android.net.Uri
 import android.os.Build
 import android.os.Bundle
-import android.provider.Settings
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
@@ -15,7 +14,6 @@ import androidx.activity.viewModels
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
-import androidx.core.app.NotificationManagerCompat
 import androidx.navigation.compose.rememberNavController
 import com.allowance.manager.core.designsystem.CommonDialog
 import com.allowance.manager.core.ui.theme.AllowanceManagerTheme
@@ -60,18 +58,6 @@ class MainActivity : ComponentActivity() {
 
                 AppNavHost(navController = navController)
 
-                if (uiState.showNotificationListenerDialog) {
-                    CommonDialog(
-                        message = "카드·은행 결제 알림을 자동으로 감지하려면 알림 접근 권한이 필요합니다.\n설정에서 허용해주세요.",
-                        primaryButtonText = "설정으로 이동",
-                        onPrimaryClick = {
-                            startActivity(Intent(Settings.ACTION_NOTIFICATION_LISTENER_SETTINGS))
-                        },
-                        secondaryButtonText = "닫기",
-                        onSecondaryClick = { viewModel.dismissNotificationListenerDialog() },
-                    )
-                }
-
                 if (uiState.showForceUpdateDialog) {
                     CommonDialog(
                         message = uiState.updateNote,
@@ -94,11 +80,10 @@ class MainActivity : ComponentActivity() {
 
     override fun onResume() {
         super.onResume()
-        val isListenerGranted = NotificationManagerCompat.getEnabledListenerPackages(this)
-            .contains(packageName)
+        // 상태바 표시용 POST_NOTIFICATIONS만 확인. 알림 접근(리스너) 유도는 온보딩에서만.
         val isPostNotificationGranted = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
             checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS) == PackageManager.PERMISSION_GRANTED
         } else true
-        viewModel.onPermissionsChecked(isListenerGranted, isPostNotificationGranted)
+        viewModel.onPostNotificationChecked(isPostNotificationGranted)
     }
 }

@@ -19,7 +19,6 @@ import javax.inject.Inject
 data class MainUiState(
     val showForceUpdateDialog: Boolean = false,
     val updateNote: String = "",
-    val showNotificationListenerDialog: Boolean = false,
     val shouldRequestPostNotification: Boolean = false,
 )
 
@@ -49,21 +48,13 @@ class MainViewModel @Inject constructor(
         }
     }
 
-    fun onPermissionsChecked(isListenerGranted: Boolean, isPostNotificationGranted: Boolean) {
-        _uiState.update {
-            it.copy(
-                showNotificationListenerDialog = !isListenerGranted,
-                shouldRequestPostNotification = !isPostNotificationGranted,
-            )
-        }
+    // 알림 접근(리스너) 권한 유도는 온보딩 한 곳에서만. 여기선 POST_NOTIFICATIONS(상태바 표시용)만 처리.
+    fun onPostNotificationChecked(isPostNotificationGranted: Boolean) {
+        _uiState.update { it.copy(shouldRequestPostNotification = !isPostNotificationGranted) }
     }
 
     fun onPostNotificationRequested() {
         _uiState.update { it.copy(shouldRequestPostNotification = false) }
-    }
-
-    fun dismissNotificationListenerDialog() {
-        _uiState.update { it.copy(showNotificationListenerDialog = false) }
     }
 
     private fun checkForceUpdate() {

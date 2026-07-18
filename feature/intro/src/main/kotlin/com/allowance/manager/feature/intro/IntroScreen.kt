@@ -1,5 +1,7 @@
 package com.allowance.manager.feature.intro
 
+import androidx.compose.animation.Crossfade
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -12,17 +14,16 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.pager.HorizontalPager
-import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Button
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -33,7 +34,6 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import kotlinx.coroutines.launch
 
 private val Accent = Color(0xFF10B981)
 private val PlaceholderBg = Color(0xFFECECEC)
@@ -63,47 +63,37 @@ fun IntroRoute(
 
 @Composable
 fun IntroScreen(onFinish: () -> Unit = {}) {
-    val pagerState = rememberPagerState(pageCount = { introPages.size })
-    val scope = rememberCoroutineScope()
-    val isLast = pagerState.currentPage == introPages.size - 1
+    var page by remember { mutableIntStateOf(0) }
+    val isLast = page == introPages.size - 1
 
     Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .background(Color.White)
-            .padding(24.dp),
+        modifier = Modifier.fillMaxSize().background(Color.White).padding(24.dp),
     ) {
         Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
             if (!isLast) {
-                Text(
-                    "건너뛰기",
-                    fontSize = 13.sp,
-                    color = TextSecondary,
-                    modifier = Modifier.clickable(onClick = onFinish),
-                )
+                Text("건너뛰기", fontSize = 13.sp, color = TextSecondary, modifier = Modifier.clickable(onClick = onFinish))
             } else {
                 Spacer(Modifier.height(18.dp))
             }
         }
 
-        HorizontalPager(
-            state = pagerState,
+        // 슬라이드 전환: 페이드 인/아웃
+        Crossfade(
+            targetState = page,
+            animationSpec = tween(durationMillis = 350),
+            label = "intro",
             modifier = Modifier.fillMaxWidth().weight(1f),
-        ) { page ->
-            IntroSlide(introPages[page])
+        ) { index ->
+            IntroSlide(introPages[index])
         }
 
-        PageIndicator(current = pagerState.currentPage)
+        PageIndicator(current = page)
         Spacer(Modifier.height(16.dp))
 
-        if (isLast) {
-            Button(onClick = onFinish, modifier = Modifier.fillMaxWidth()) { Text("시작하기") }
-        } else {
-            Button(
-                onClick = { scope.launch { pagerState.animateScrollToPage(pagerState.currentPage + 1) } },
-                modifier = Modifier.fillMaxWidth(),
-            ) { Text("다음") }
-        }
+        Button(
+            onClick = { if (isLast) onFinish() else page++ },
+            modifier = Modifier.fillMaxWidth(),
+        ) { Text(if (isLast) "시작하기" else "다음") }
     }
 }
 
