@@ -10,6 +10,7 @@ import com.allowance.manager.core.domain.usecase.transaction.DeleteTransactionUs
 import com.allowance.manager.core.domain.usecase.transaction.IgnoreTransactionUseCase
 import com.allowance.manager.core.domain.usecase.transaction.ObserveCurrentTransactionsUseCase
 import com.allowance.manager.core.domain.usecase.transaction.PromoteToMainUseCase
+import com.allowance.manager.core.domain.usecase.transaction.UpdateTransactionMemoUseCase
 import com.allowance.manager.core.ui.BaseViewModel
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -44,6 +45,7 @@ class HomeViewModel @Inject constructor(
     private val ignoreTransactionUseCase: IgnoreTransactionUseCase,
     private val deleteTransactionUseCase: DeleteTransactionUseCase,
     private val promoteToMainUseCase: PromoteToMainUseCase,
+    private val updateTransactionMemoUseCase: UpdateTransactionMemoUseCase,
 ) : BaseViewModel() {
 
     private val _uiState = MutableStateFlow(HomeUiState())
@@ -87,6 +89,10 @@ class HomeViewModel @Inject constructor(
 
     fun onDelete(id: Long) {
         viewModelScope.launch { deleteTransactionUseCase(id) }
+    }
+
+    fun onUpdateMemo(id: Long, memo: String) {
+        viewModelScope.launch { updateTransactionMemoUseCase(id, memo) }
     }
 
     fun onPromoteToMain(transaction: Transaction) {

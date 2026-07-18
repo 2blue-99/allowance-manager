@@ -18,9 +18,15 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.ModalBottomSheet
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -72,6 +78,7 @@ fun HomeRoute(
         onSetIgnored = viewModel::onSetIgnored,
         onDelete = viewModel::onDelete,
         onPromoteToMain = viewModel::onPromoteToMain,
+        onUpdateMemo = viewModel::onUpdateMemo,
     )
 }
 
@@ -83,18 +90,32 @@ fun HomeScreen(
     onSetIgnored: (Long, Boolean) -> Unit = { _, _ -> },
     onDelete: (Long) -> Unit = {},
     onPromoteToMain: (Transaction) -> Unit = {},
+    onUpdateMemo: (Long, String) -> Unit = { _, _ -> },
     modifier: Modifier = Modifier,
 ) {
-    Column(modifier = modifier.fillMaxSize().background(BottomBg)) {
-        Hero(uiState = uiState, onNavigateToSetting = onNavigateToSetting)
-        BottomContent(
-            uiState = uiState,
-            onToggleMainOnly = onToggleMainOnly,
-            onSetIgnored = onSetIgnored,
-            onDelete = onDelete,
-            onPromoteToMain = onPromoteToMain,
-            modifier = Modifier.weight(1f),
-        )
+    var selected by remember { mutableStateOf<Transaction?>(null) }
+
+    Box(modifier = modifier.fillMaxSize()) {
+        Column(modifier = Modifier.fillMaxSize().background(BottomBg)) {
+            Hero(uiState = uiState, onNavigateToSetting = onNavigateToSetting)
+            BottomContent(
+                uiState = uiState,
+                onToggleMainOnly = onToggleMainOnly,
+                onSelect = { selected = it },
+                modifier = Modifier.weight(1f),
+            )
+        }
+
+        selected?.let { tx ->
+            TransactionActionSheet(
+                tx = tx,
+                onDismiss = { selected = null },
+                onSetIgnored = onSetIgnored,
+                onDelete = onDelete,
+                onPromoteToMain = onPromoteToMain,
+                onUpdateMemo = onUpdateMemo,
+            )
+        }
     }
 }
 
@@ -224,9 +245,7 @@ private fun PillItem(value: String, label: String, modifier: Modifier = Modifier
 private fun BottomContent(
     uiState: HomeUiState,
     onToggleMainOnly: () -> Unit,
-    onSetIgnored: (Long, Boolean) -> Unit,
-    onDelete: (Long) -> Unit,
-    onPromoteToMain: (Transaction) -> Unit,
+    onSelect: (Transaction) -> Unit,
     modifier: Modifier = Modifier,
 ) {
     Box(
@@ -245,12 +264,7 @@ private fun BottomContent(
                 item { EmptyState() }
             } else {
                 items(uiState.transactions, key = { it.id }) { tx ->
-                    TransactionCard(
-                        tx = tx,
-                        onSetIgnored = onSetIgnored,
-                        onDelete = onDelete,
-                        onPromoteToMain = onPromoteToMain,
-                    )
+                    TransactionCard(tx = tx, onClick = { onSelect(tx) })
                 }
             }
         }
@@ -333,72 +347,107 @@ private fun EmptyState() {
 }
 
 @Composable
-private fun TransactionCard(
-    tx: Transaction,
-    onSetIgnored: (Long, Boolean) -> Unit,
-    onDelete: (Long) -> Unit,
-    onPromoteToMain: (Transaction) -> Unit,
-) {
+private fun TransactionCard(tx: Transaction, onClick: () -> Unit) {
     val dim = tx.isIgnored || !tx.isMain
     val isIncome = tx.type == TransactionType.INCOME || tx.amount < 0
 
-    Column(
-        modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(16.dp)).background(CardBg).padding(14.dp),
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(16.dp))
+            .background(CardBg)
+            .clickable(onClick = onClick)
+            .padding(14.dp),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically,
     ) {
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            Row(horizontalArrangement = Arrangement.spacedBy(9.dp), verticalAlignment = Alignment.CenterVertically) {
-                Box(
-                    modifier = Modifier.size(34.dp).clip(RoundedCornerShape(10.dp)).background(if (dim) Divider else AccentBg),
-                    contentAlignment = Alignment.Center,
-                ) {
-                    Text(if (isIncome) "💰" else "💳", fontSize = 15.sp)
-                }
-                Column {
-                    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(5.dp)) {
-                        Text(
-                            tx.sourceName,
-                            fontSize = 12.sp,
-                            fontWeight = FontWeight.Bold,
-                            color = if (dim) TextSecondary else TextPrimary,
-                        )
-                        if (!tx.isMain) {
-                            Box(Modifier.clip(RoundedCornerShape(5.dp)).background(Divider).padding(horizontal = 5.dp, vertical = 1.dp)) {
-                                Text("미등록", fontSize = 8.sp, color = TextSecondary)
-                            }
+        Row(horizontalArrangement = Arrangement.spacedBy(9.dp), verticalAlignment = Alignment.CenterVertically) {
+            Box(
+                modifier = Modifier.size(34.dp).clip(RoundedCornerShape(10.dp)).background(if (dim) Divider else AccentBg),
+                contentAlignment = Alignment.Center,
+            ) {
+                Text(if (isIncome) "💰" else "💳", fontSize = 15.sp)
+            }
+            Column {
+                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(5.dp)) {
+                    Text(
+                        tx.sourceName,
+                        fontSize = 12.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = if (dim) TextSecondary else TextPrimary,
+                    )
+                    if (!tx.isMain) {
+                        Box(Modifier.clip(RoundedCornerShape(5.dp)).background(Divider).padding(horizontal = 5.dp, vertical = 1.dp)) {
+                            Text("미등록", fontSize = 8.sp, color = TextSecondary)
                         }
                     }
-                    Text(formatTime(tx.createdAt), fontSize = 9.sp, color = Color(0xFFA0AABB))
                 }
+                val subtitle = tx.memo?.takeIf { it.isNotBlank() } ?: formatTime(tx.createdAt)
+                Text(subtitle, fontSize = 9.sp, color = Color(0xFFA0AABB))
             }
-            Text(
-                text = signedAmount(tx),
-                fontSize = 12.sp,
-                fontWeight = FontWeight.ExtraBold,
-                color = amountColor(tx, dim),
-                textDecoration = if (tx.isIgnored) TextDecoration.LineThrough else TextDecoration.None,
-            )
         }
+        Text(
+            text = signedAmount(tx),
+            fontSize = 12.sp,
+            fontWeight = FontWeight.ExtraBold,
+            color = amountColor(tx, dim),
+            textDecoration = if (tx.isIgnored) TextDecoration.LineThrough else TextDecoration.None,
+        )
+    }
+}
 
-        Row(
-            modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
-            horizontalArrangement = Arrangement.spacedBy(14.dp),
-        ) {
-            if (!tx.isMain && tx.extractedAccount != null) {
-                ActionText("메인 등록", AccentGreen) { onPromoteToMain(tx) }
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun TransactionActionSheet(
+    tx: Transaction,
+    onDismiss: () -> Unit,
+    onSetIgnored: (Long, Boolean) -> Unit,
+    onDelete: (Long) -> Unit,
+    onPromoteToMain: (Transaction) -> Unit,
+    onUpdateMemo: (Long, String) -> Unit,
+) {
+    var memo by remember(tx.id) { mutableStateOf(tx.memo.orEmpty()) }
+
+    ModalBottomSheet(onDismissRequest = onDismiss, containerColor = CardBg) {
+        Column(modifier = Modifier.fillMaxWidth().padding(horizontal = 20.dp).padding(bottom = 24.dp)) {
+            Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                Column(Modifier.weight(1f)) {
+                    Text(tx.sourceName, fontSize = 15.sp, fontWeight = FontWeight.ExtraBold, color = TextPrimary)
+                    Text(formatTime(tx.createdAt), fontSize = 11.sp, color = TextSecondary)
+                }
+                Text(signedAmount(tx), fontSize = 15.sp, fontWeight = FontWeight.ExtraBold, color = amountColor(tx, false))
             }
-            ActionText(if (tx.isIgnored) "무시 취소" else "무시", TextSecondary) { onSetIgnored(tx.id, !tx.isIgnored) }
-            ActionText("삭제", SpendRed) { onDelete(tx.id) }
+
+            Spacer(Modifier.height(16.dp))
+            OutlinedTextField(
+                value = memo,
+                onValueChange = { memo = it },
+                label = { Text("메모") },
+                singleLine = true,
+                modifier = Modifier.fillMaxWidth(),
+            )
+            SheetAction("메모 저장", AccentGreen) { onUpdateMemo(tx.id, memo); onDismiss() }
+
+            if (!tx.isMain && tx.extractedAccount != null) {
+                SheetAction("메인으로 등록", AccentGreen) { onPromoteToMain(tx); onDismiss() }
+            }
+            SheetAction(if (tx.isIgnored) "무시 취소" else "무시 처리 (합계 제외)", TextPrimary) {
+                onSetIgnored(tx.id, !tx.isIgnored); onDismiss()
+            }
+            SheetAction("삭제", SpendRed) { onDelete(tx.id); onDismiss() }
         }
     }
 }
 
 @Composable
-private fun ActionText(label: String, color: Color, onClick: () -> Unit) {
-    Text(label, fontSize = 10.sp, fontWeight = FontWeight.Bold, color = color, modifier = Modifier.clickable(onClick = onClick))
+private fun SheetAction(label: String, color: Color, onClick: () -> Unit) {
+    Text(
+        text = label,
+        fontSize = 14.sp,
+        fontWeight = FontWeight.Bold,
+        color = color,
+        modifier = Modifier.fillMaxWidth().clickable(onClick = onClick).padding(vertical = 14.dp),
+    )
 }
 
 // ── helpers ──────────────────────────────────────────
