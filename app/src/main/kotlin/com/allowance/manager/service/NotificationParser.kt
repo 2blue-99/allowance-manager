@@ -30,9 +30,9 @@ object NotificationParser {
         "kr.co.citibank.citimobile" to "씨티은행",
     )
 
-    private val REFUND_KEYWORDS = listOf("취소", "환불")
+    private val REFUND_KEYWORDS = listOf("취소", "환불", "반품")
     private val INCOME_KEYWORDS = listOf("입금", "이체입금", "급여")
-    private val EXPENSE_KEYWORDS = listOf("출금", "결제", "사용", "이체출금", "승인")
+    private val EXPENSE_KEYWORDS = listOf("출금", "결제", "사용", "이용", "구매", "이체출금", "승인")
 
     // "1,000원" / "1,000 원"
     private val AMOUNT_WON_REGEX = Regex("""([\d,]{2,})\s*원""")

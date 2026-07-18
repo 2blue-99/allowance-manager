@@ -32,7 +32,7 @@
             </intent-filter>
             <meta-data
                 android:name="android.service.notification.default_filter_types"
-                android:value="alerting" />
+                android:value="conversations|alerting|silent" />
         </service>
         <service
             android:name=".service.AllowanceFcmService"
