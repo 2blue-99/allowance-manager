@@ -2,6 +2,7 @@ package com.allowance.manager.feature.home
 
 import androidx.lifecycle.viewModelScope
 import com.allowance.manager.core.domain.model.Transaction
+import com.allowance.manager.core.domain.usecase.account.ObserveAccountsUseCase
 import com.allowance.manager.core.domain.usecase.budget.ObserveBudgetStatusUseCase
 import com.allowance.manager.core.domain.usecase.setting.GetShowMainOnlyUseCase
 import com.allowance.manager.core.domain.usecase.setting.SetShowMainOnlyUseCase
@@ -29,6 +30,7 @@ data class HomeUiState(
     val cycleLabel: String = "",
     val transactions: List<Transaction> = emptyList(),
     val showMainOnly: Boolean = true,
+    val canFilter: Boolean = false,     // 등록 계좌가 있어야 메인/전체 필터 의미 있음
     val isLoading: Boolean = true,
 )
 
@@ -36,6 +38,7 @@ data class HomeUiState(
 class HomeViewModel @Inject constructor(
     observeBudgetStatusUseCase: ObserveBudgetStatusUseCase,
     observeCurrentTransactionsUseCase: ObserveCurrentTransactionsUseCase,
+    observeAccountsUseCase: ObserveAccountsUseCase,
     getShowMainOnlyUseCase: GetShowMainOnlyUseCase,
     private val setShowMainOnlyUseCase: SetShowMainOnlyUseCase,
     private val ignoreTransactionUseCase: IgnoreTransactionUseCase,
@@ -51,9 +54,13 @@ class HomeViewModel @Inject constructor(
             combine(
                 observeBudgetStatusUseCase(),
                 observeCurrentTransactionsUseCase(),
+                observeAccountsUseCase(),
                 getShowMainOnlyUseCase(),
-            ) { status, transactions, mainOnly ->
-                val visible = if (mainOnly) transactions.filter { it.isMain } else transactions
+            ) { status, transactions, accounts, mainOnly ->
+                // 등록 계좌가 없으면 감지된 전체를 보여줌(첫 사용 시 감지 확인 + 메인 등록 유도)
+                val hasAccounts = accounts.isNotEmpty()
+                val effectiveMainOnly = mainOnly && hasAccounts
+                val visible = if (effectiveMainOnly) transactions.filter { it.isMain } else transactions
                 HomeUiState(
                     budget = status.budget,
                     spent = status.spent,
@@ -62,7 +69,8 @@ class HomeViewModel @Inject constructor(
                     isOver = status.isOver,
                     cycleLabel = cycleLabel(status.cycle.nextPayday),
                     transactions = visible,
-                    showMainOnly = mainOnly,
+                    showMainOnly = effectiveMainOnly,
+                    canFilter = hasAccounts,
                     isLoading = false,
                 )
             }.collect { _uiState.value = it }

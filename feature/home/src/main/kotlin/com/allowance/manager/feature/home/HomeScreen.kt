@@ -239,7 +239,7 @@ private fun BottomContent(
             verticalArrangement = Arrangement.spacedBy(9.dp),
         ) {
             item { BudgetProgressCard(uiState = uiState) }
-            item { ListHeader(showMainOnly = uiState.showMainOnly, onToggleMainOnly = onToggleMainOnly) }
+            item { ListHeader(showMainOnly = uiState.showMainOnly, canFilter = uiState.canFilter, onToggleMainOnly = onToggleMainOnly) }
 
             if (uiState.transactions.isEmpty()) {
                 item { EmptyState() }
@@ -303,20 +303,22 @@ private fun BudgetProgressCard(uiState: HomeUiState) {
 }
 
 @Composable
-private fun ListHeader(showMainOnly: Boolean, onToggleMainOnly: () -> Unit) {
+private fun ListHeader(showMainOnly: Boolean, canFilter: Boolean, onToggleMainOnly: () -> Unit) {
     Row(
         modifier = Modifier.fillMaxWidth().padding(horizontal = 2.dp, vertical = 2.dp),
         horizontalArrangement = Arrangement.SpaceBetween,
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Text("이번달 내역", fontSize = 12.sp, fontWeight = FontWeight.ExtraBold, color = TextPrimary)
-        Text(
-            text = if (showMainOnly) "전체 보기" else "메인만 보기",
-            fontSize = 10.sp,
-            fontWeight = FontWeight.Bold,
-            color = AccentGreen,
-            modifier = Modifier.clickable(onClick = onToggleMainOnly),
-        )
+        if (canFilter) {
+            Text(
+                text = if (showMainOnly) "전체 보기" else "메인만 보기",
+                fontSize = 10.sp,
+                fontWeight = FontWeight.Bold,
+                color = AccentGreen,
+                modifier = Modifier.clickable(onClick = onToggleMainOnly),
+            )
+        }
     }
 }
 
