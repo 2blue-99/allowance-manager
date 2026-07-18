@@ -29,4 +29,6 @@ dependencies {
     implementation(libs.hilt.navigation.compose)
 
     implementation(libs.timber)
+
+    testImplementation("junit:junit:4.13.2")
 }

@@ -19,7 +19,8 @@
       "Bash(cd \"C:/Users/USER/allowance-manager\")",
       "Bash(grep -E \"BUILD SUCCESSFUL|BUILD FAILED|error:|^e: |: error:\" \"C:/Users/USER/AppData/Local/Temp/claude/C--Users-USER-allowance-manager/c99f33fb-5f77-4e79-b23a-3656a9fbe1ca/scratchpad/build9.log\")",
       "Bash(xargs grep -l \"Theme\\\\|ColorScheme\\\\|primary\")",
-      "Bash(grep -E \"BUILD SUCCESSFUL|BUILD FAILED|e: |error:\" \"C:/Users/USER/AppData/Local/Temp/claude/C--Users-USER-allowance-manager/c99f33fb-5f77-4e79-b23a-3656a9fbe1ca/scratchpad/build12.log\")"
+      "Bash(grep -E \"BUILD SUCCESSFUL|BUILD FAILED|e: |error:\" \"C:/Users/USER/AppData/Local/Temp/claude/C--Users-USER-allowance-manager/c99f33fb-5f77-4e79-b23a-3656a9fbe1ca/scratchpad/build12.log\")",
+      "Bash(./gradlew :core:domain:testDebugUnitTest :app:testDebugUnitTest --console=plain)"
     ]
   }
 }
