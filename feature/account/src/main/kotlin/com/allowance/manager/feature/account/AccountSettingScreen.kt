@@ -3,6 +3,7 @@ package com.allowance.manager.feature.account
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -30,6 +31,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
@@ -86,15 +88,27 @@ fun AccountSettingScreen(
 
         Spacer(Modifier.height(16.dp))
 
-        LazyColumn(modifier = Modifier.weight(1f)) {
-            items(uiState.accounts, key = { it.id }) { account ->
-                AccountRow(
-                    account = account,
-                    onToggleEnabled = onToggleEnabled,
-                    onDelete = onDelete,
-                    onStartEdit = onStartEdit,
+        if (uiState.accounts.isEmpty()) {
+            Box(modifier = Modifier.weight(1f).fillMaxWidth(), contentAlignment = Alignment.Center) {
+                Text(
+                    "아직 등록된 계좌가 없어요.\n아래에서 추가하거나,\n홈에서 감지된 거래를 메인으로 등록하세요.",
+                    fontSize = 12.sp,
+                    color = TextSecondary,
+                    textAlign = TextAlign.Center,
+                    lineHeight = 18.sp,
                 )
-                Spacer(Modifier.height(8.dp))
+            }
+        } else {
+            LazyColumn(modifier = Modifier.weight(1f)) {
+                items(uiState.accounts, key = { it.id }) { account ->
+                    AccountRow(
+                        account = account,
+                        onToggleEnabled = onToggleEnabled,
+                        onDelete = onDelete,
+                        onStartEdit = onStartEdit,
+                    )
+                    Spacer(Modifier.height(8.dp))
+                }
             }
         }
 

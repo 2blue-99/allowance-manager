@@ -2,11 +2,11 @@ package com.allowance.manager.core.ui.theme
 
 import androidx.compose.ui.graphics.Color
 
-// Primary
-val Primary = Color(0xFF4CAF50)
+// Primary — 에메랄드 (홈 히어로 액센트와 통일)
+val Primary = Color(0xFF10B981)
 val OnPrimary = Color(0xFFFFFFFF)
-val PrimaryContainer = Color(0xFFC8E6C9)
-val OnPrimaryContainer = Color(0xFF1B5E20)
+val PrimaryContainer = Color(0xFFECFDF5)
+val OnPrimaryContainer = Color(0xFF065F46)
 
 // Secondary
 val Secondary = Color(0xFF66BB6A)
@@ -41,11 +41,11 @@ val SurfaceTint = Primary
 val Outline = Color(0xFF717971)
 val OutlineVariant = Color(0xFFC1C9BF)
 
-// Dark Primary
-val PrimaryDark = Color(0xFF81C784)
-val OnPrimaryDark = Color(0xFF1B5E20)
-val PrimaryContainerDark = Color(0xFF2E7D32)
-val OnPrimaryContainerDark = Color(0xFFC8E6C9)
+// Dark Primary — 에메랄드
+val PrimaryDark = Color(0xFF34D399)
+val OnPrimaryDark = Color(0xFF064E3B)
+val PrimaryContainerDark = Color(0xFF065F46)
+val OnPrimaryContainerDark = Color(0xFFD1FAE5)
 
 // Dark Secondary
 val SecondaryDark = Color(0xFFA5D6A7)
