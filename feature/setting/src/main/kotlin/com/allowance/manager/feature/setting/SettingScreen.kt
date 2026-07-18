@@ -11,8 +11,10 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -21,6 +23,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 
 private val Bg = Color(0xFFF0F2F6)
 private val TextPrimary = Color(0xFF0D1B2A)
@@ -32,6 +35,8 @@ fun SettingScreen(
     onNavigateToAccount: () -> Unit = {},
     viewModel: SettingViewModel = hiltViewModel(),
 ) {
+    val statusBarEnabled by viewModel.statusBarEnabled.collectAsStateWithLifecycle()
+
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -46,12 +51,19 @@ fun SettingScreen(
 
         Spacer(Modifier.height(20.dp))
 
-        SettingItem(title = "계좌 관리", subtitle = "메인 계좌 등록·수정", onClick = onNavigateToAccount)
+        NavItem(title = "계좌 관리", subtitle = "메인 계좌 등록·수정", onClick = onNavigateToAccount)
+        Spacer(Modifier.height(8.dp))
+        ToggleItem(
+            title = "상태바 알림",
+            subtitle = "이번달 지출을 상태바에 상시 표시",
+            checked = statusBarEnabled,
+            onCheckedChange = viewModel::setStatusBarEnabled,
+        )
     }
 }
 
 @Composable
-private fun SettingItem(title: String, subtitle: String, onClick: () -> Unit) {
+private fun NavItem(title: String, subtitle: String, onClick: () -> Unit) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
@@ -66,5 +78,23 @@ private fun SettingItem(title: String, subtitle: String, onClick: () -> Unit) {
             Text(subtitle, fontSize = 11.sp, color = TextSecondary)
         }
         Text("›", fontSize = 20.sp, color = TextSecondary)
+    }
+}
+
+@Composable
+private fun ToggleItem(title: String, subtitle: String, checked: Boolean, onCheckedChange: (Boolean) -> Unit) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(12.dp))
+            .background(Color.White)
+            .padding(16.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Column(modifier = Modifier.weight(1f)) {
+            Text(title, fontSize = 14.sp, fontWeight = FontWeight.Bold, color = TextPrimary)
+            Text(subtitle, fontSize = 11.sp, color = TextSecondary)
+        }
+        Switch(checked = checked, onCheckedChange = onCheckedChange)
     }
 }

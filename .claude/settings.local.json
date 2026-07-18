@@ -15,7 +15,9 @@
       "Bash(echo \"GRADLE_EXIT=$?\")",
       "Bash(./gradlew :feature:home:compileDebugKotlin --console=plain)",
       "mcp__visualize__read_me",
-      "mcp__visualize__show_widget"
+      "mcp__visualize__show_widget",
+      "Bash(cd \"C:/Users/USER/allowance-manager\")",
+      "Bash(grep -E \"BUILD SUCCESSFUL|BUILD FAILED|error:|^e: |: error:\" \"C:/Users/USER/AppData/Local/Temp/claude/C--Users-USER-allowance-manager/c99f33fb-5f77-4e79-b23a-3656a9fbe1ca/scratchpad/build9.log\")"
     ]
   }
 }

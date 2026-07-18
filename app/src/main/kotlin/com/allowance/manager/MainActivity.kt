@@ -20,6 +20,7 @@ import androidx.navigation.compose.rememberNavController
 import com.allowance.manager.core.designsystem.CommonDialog
 import com.allowance.manager.core.ui.theme.AllowanceManagerTheme
 import com.allowance.manager.navigation.AppNavHost
+import com.allowance.manager.service.StatusBarService
 import com.google.firebase.messaging.FirebaseMessaging
 import dagger.hilt.android.AndroidEntryPoint
 import timber.log.Timber
@@ -50,6 +51,11 @@ class MainActivity : ComponentActivity() {
                     if (uiState.shouldRequestPostNotification && Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
                         postNotificationLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
                     }
+                }
+
+                val statusBarEnabled by viewModel.statusBarEnabled.collectAsState()
+                LaunchedEffect(statusBarEnabled) {
+                    if (statusBarEnabled) StatusBarService.start(this@MainActivity)
                 }
 
                 AppNavHost(navController = navController)

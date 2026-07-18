@@ -1,20 +1,26 @@
 package com.allowance.manager.feature.setting
 
+import androidx.lifecycle.viewModelScope
+import com.allowance.manager.core.domain.usecase.setting.GetStatusBarEnabledUseCase
+import com.allowance.manager.core.domain.usecase.setting.SetStatusBarEnabledUseCase
 import com.allowance.manager.core.ui.BaseViewModel
 import dagger.hilt.android.lifecycle.HiltViewModel
-import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.launch
 import javax.inject.Inject
 
-data class SettingUiState(
-    val isLoading: Boolean = false,
-    val error: String? = null,
-)
-
 @HiltViewModel
-class SettingViewModel @Inject constructor() : BaseViewModel() {
+class SettingViewModel @Inject constructor(
+    getStatusBarEnabledUseCase: GetStatusBarEnabledUseCase,
+    private val setStatusBarEnabledUseCase: SetStatusBarEnabledUseCase,
+) : BaseViewModel() {
 
-    private val _uiState = MutableStateFlow(SettingUiState())
-    val uiState: StateFlow<SettingUiState> = _uiState.asStateFlow()
+    val statusBarEnabled: StateFlow<Boolean> = getStatusBarEnabledUseCase()
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), true)
+
+    fun setStatusBarEnabled(enabled: Boolean) {
+        viewModelScope.launch { setStatusBarEnabledUseCase(enabled) }
+    }
 }

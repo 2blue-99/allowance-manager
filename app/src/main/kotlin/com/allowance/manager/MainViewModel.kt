@@ -4,11 +4,14 @@ import androidx.lifecycle.viewModelScope
 import com.allowance.manager.core.domain.usecase.config.CheckForceUpdateUseCase
 import com.allowance.manager.core.domain.usecase.config.FetchRemoteConfigUseCase
 import com.allowance.manager.core.domain.usecase.config.GetUpdateNoteUseCase
+import com.allowance.manager.core.domain.usecase.setting.GetStatusBarEnabledUseCase
 import com.allowance.manager.core.ui.BaseViewModel
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import javax.inject.Inject
@@ -25,10 +28,14 @@ class MainViewModel @Inject constructor(
     private val fetchRemoteConfigUseCase: FetchRemoteConfigUseCase,
     private val checkForceUpdateUseCase: CheckForceUpdateUseCase,
     private val getUpdateNoteUseCase: GetUpdateNoteUseCase,
+    getStatusBarEnabledUseCase: GetStatusBarEnabledUseCase,
 ) : BaseViewModel() {
 
     private val _uiState = MutableStateFlow(MainUiState())
     val uiState: StateFlow<MainUiState> = _uiState.asStateFlow()
+
+    val statusBarEnabled: StateFlow<Boolean> = getStatusBarEnabledUseCase()
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), false)
 
     init {
         fetchRemoteConfig()
