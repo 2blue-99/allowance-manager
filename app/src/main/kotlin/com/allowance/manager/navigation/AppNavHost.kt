@@ -1,5 +1,8 @@
 package com.allowance.manager.navigation
 
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.NavigationBar
 import androidx.compose.material3.NavigationBarItem
@@ -68,6 +71,10 @@ fun AppNavHost(navController: NavHostController) {
             navController = navController,
             startDestination = SplashRoute,
             modifier = Modifier.padding(innerPadding),
+            enterTransition = { fadeIn(tween(250)) },
+            exitTransition = { fadeOut(tween(250)) },
+            popEnterTransition = { fadeIn(tween(250)) },
+            popExitTransition = { fadeOut(tween(250)) },
         ) {
             splashScreen(
                 onNavigateToHome = {
