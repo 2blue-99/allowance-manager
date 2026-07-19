@@ -37,9 +37,9 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
-        FirebaseMessaging.getInstance().token.addOnSuccessListener { token ->
-            Timber.e("FCM Token: $token")
-        }
+        FirebaseMessaging.getInstance().token
+            .addOnSuccessListener { token -> Timber.tag("FCM").d("토큰: $token") }
+            .addOnFailureListener { e -> Timber.tag("FCM").e(e, "토큰 조회 실패") }
         setContent {
             AllowanceManagerTheme {
                 val navController = rememberNavController()

@@ -12,7 +12,7 @@ class AllowanceFcmService : FirebaseMessagingService() {
 
     override fun onNewToken(token: String) {
         super.onNewToken(token)
-        Timber.d("FCM Token: $token")
+        Timber.tag("FCM").d("새 토큰: $token")
     }
 
     override fun onMessageReceived(message: RemoteMessage) {
