@@ -32,8 +32,29 @@ class AllowanceNotificationListenerService : NotificationListenerService() {
 
     private val serviceScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
 
+    private fun log(message: String) = Timber.tag(TAG).d(message)
+
+    override fun onCreate() {
+        super.onCreate()
+        log("서비스 onCreate")
+    }
+
+    override fun onListenerConnected() {
+        super.onListenerConnected()
+        log("리스너 연결됨 (알림 접근 권한 OK) — 이제 알림을 수신합니다")
+    }
+
+    override fun onListenerDisconnected() {
+        super.onListenerDisconnected()
+        log("리스너 연결 해제됨 (권한 꺼짐 or 재바인딩 필요)")
+    }
+
     override fun onNotificationPosted(sbn: StatusBarNotification) {
-        val extras = sbn.notification?.extras ?: return
+        val extras = sbn.notification?.extras
+        if (extras == null) {
+            log("알림수신 pkg=${sbn.packageName} (extras 없음 → 무시)")
+            return
+        }
 
         // CharSequence로 저장된 제목/본문도 안전하게 추출 (getString은 null 반환됨)
         fun field(key: String): String? =
@@ -48,17 +69,17 @@ class AllowanceNotificationListenerService : NotificationListenerService() {
             field(Notification.EXTRA_INFO_TEXT),
         ).distinct().joinToString(" ")
 
-        Timber.d("알림수신 pkg=${sbn.packageName} title=$title body=$body")
+        log("알림수신 pkg=${sbn.packageName}\n  title=$title\n  body=$body")
 
         val result = NotificationParser.parse(
             packageName = sbn.packageName,
             title = title,
             text = body,
         ) ?: run {
-            Timber.d("파싱 실패(무시) pkg=${sbn.packageName}")
+            log("→ 파싱 실패(무시): 금전 키워드/금액을 못 찾음")
             return
         }
-        Timber.d("파싱 성공 type=${result.type} amount=${result.amount} account=${result.extractedAccount}")
+        log("→ 파싱 성공 type=${result.type} amount=${result.amount} account=${result.extractedAccount} bank=${result.sourceName}")
 
         serviceScope.launch {
             runCatching {
@@ -73,12 +94,17 @@ class AllowanceNotificationListenerService : NotificationListenerService() {
                         rawText = result.content,
                     )
                 )
-            }.onFailure { Timber.e(it, "거래 저장 실패") }
+                log("→ 저장 완료")
+            }.onFailure { Timber.tag(TAG).e(it, "거래 저장 실패") }
         }
     }
 
     override fun onDestroy() {
         super.onDestroy()
         serviceScope.cancel()
+    }
+
+    companion object {
+        private const val TAG = "NOTI"
     }
 }
