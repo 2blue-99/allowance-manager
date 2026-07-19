@@ -58,6 +58,20 @@ class NotificationParserTest {
     }
 
     @Test
+    fun `한 자리 금액(1원)도 인식 - 실제 KB 입금 알림`() {
+        val result = NotificationParser.parse(
+            packageName = "com.kbstar.kbbank",
+            title = "입금 1원",
+            text = "이*름님 07/20 00:15 941602-**-***318 이푸름 FBS입금 1 잔액26,690",
+        )
+        requireNotNull(result)
+        assertEquals(TransactionType.INCOME, result.type)
+        assertEquals(1L, result.amount)
+        assertEquals(26_690L, result.balance)
+        assertTrue(result.extractedAccount?.contains("941602") == true)
+    }
+
+    @Test
     fun `금액 없는 알림 - null`() {
         val result = NotificationParser.parse(
             packageName = "com.kbstar.kbbank",

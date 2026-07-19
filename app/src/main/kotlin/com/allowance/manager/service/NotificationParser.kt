@@ -34,11 +34,11 @@ object NotificationParser {
     private val INCOME_KEYWORDS = listOf("입금", "이체입금", "급여")
     private val EXPENSE_KEYWORDS = listOf("출금", "결제", "사용", "이용", "구매", "이체출금", "승인")
 
-    // "1,000원" / "1,000 원"
-    private val AMOUNT_WON_REGEX = Regex("""([\d,]{2,})\s*원""")
-    // 키워드 뒤 금액: "입금 1,000" / "결제1,000"
+    // "1,000원" / "1원" / "1,000 원" (한 자리 금액도 인식)
+    private val AMOUNT_WON_REGEX = Regex("""(\d[\d,]*)\s*원""")
+    // 키워드 뒤 금액: "입금 1,000" / "결제1,000" / "입금 1"
     private val AMOUNT_NEAR_KEYWORD_REGEX =
-        Regex("""(?:입금|출금|결제|사용|승인|취소|환불)\s*([\d,]{2,})""")
+        Regex("""(?:입금|출금|결제|사용|이용|구매|승인|취소|환불)\s*(\d[\d,]*)""")
     // "잔액225,023"
     private val BALANCE_REGEX = Regex("""잔액\s*([\d,]+)""")
     // 마스킹 계좌번호: 숫자로 시작, * 를 포함하는 토큰 (예: 941602-**-***318, 9416***-61931**)
