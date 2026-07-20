@@ -354,7 +354,7 @@ private fun TransactionCard(tx: Transaction, onClick: () -> Unit) {
                 modifier = Modifier.size(34.dp).clip(RoundedCornerShape(10.dp)).background(if (dim) AmColors.Divider else AmColors.EmeraldBg),
                 contentAlignment = Alignment.Center,
             ) {
-                Text(if (ignored) "🚫" else if (isIncome) "💰" else "💳", fontSize = 15.sp)
+                Text(if (isIncome) "💰" else "💳", fontSize = 15.sp)
             }
             Column {
                 Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(5.dp)) {
