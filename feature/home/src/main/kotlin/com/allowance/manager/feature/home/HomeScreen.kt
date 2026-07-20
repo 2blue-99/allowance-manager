@@ -112,11 +112,11 @@ private fun Hero(uiState: HomeUiState, onNavigateToSetting: () -> Unit) {
         modifier = Modifier
             .fillMaxWidth()
             .background(AmColors.Navy)
-            .padding(horizontal = 22.dp)
-            .padding(top = 16.dp, bottom = 20.dp),
+            .padding(horizontal = 24.dp)
+            .padding(top = 20.dp, bottom = 28.dp),
     ) {
         Row(
-            modifier = Modifier.fillMaxWidth().padding(bottom = 12.dp),
+            modifier = Modifier.fillMaxWidth().padding(bottom = 18.dp),
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically,
         ) {
@@ -153,11 +153,11 @@ private fun IconBtn(label: String, onClick: () -> Unit = {}) {
 private fun BudgetRing(remaining: Long, ratio: Float, isOver: Boolean, modifier: Modifier = Modifier) {
     val percent = ratio.coerceIn(0f, 1f)
     val ringColor = if (isOver) AmColors.Red else AmColors.Emerald
-    val ringSize = 148.dp
-    val strokeWidth = 13.dp
+    val ringSize = 180.dp
+    val strokeWidth = 15.dp
 
     Box(
-        modifier = modifier.size(ringSize).padding(bottom = 12.dp),
+        modifier = modifier.size(ringSize).padding(bottom = 20.dp),
         contentAlignment = Alignment.Center,
     ) {
         Canvas(modifier = Modifier.fillMaxSize()) {
@@ -180,21 +180,21 @@ private fun BudgetRing(remaining: Long, ratio: Float, isOver: Boolean, modifier:
         Column(horizontalAlignment = Alignment.CenterHorizontally) {
             Text(
                 "이번달 남은 금액",
-                fontSize = 9.sp,
+                fontSize = 11.sp,
                 fontWeight = FontWeight.SemiBold,
                 color = Color.White.copy(alpha = 0.4f),
                 letterSpacing = 0.5.sp,
             )
             Text(
                 text = if (isOver) "-${abs(remaining).amountToComma()}원" else "${remaining.amountToComma()}원",
-                fontSize = 26.sp,
+                fontSize = 32.sp,
                 fontWeight = FontWeight.ExtraBold,
                 letterSpacing = (-1.5).sp,
                 color = if (isOver) AmColors.Red else Color.White,
             )
             Text(
                 text = if (isOver) "예산 초과" else "${(percent * 100).toInt()}% 남음",
-                fontSize = 9.sp,
+                fontSize = 11.sp,
                 fontWeight = FontWeight.Bold,
                 color = ringColor,
             )
@@ -208,9 +208,9 @@ private fun StatsPills(uiState: HomeUiState) {
         modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(14.dp)).background(AmColors.HeroPillBg),
     ) {
         PillItem("${uiState.spent.amountToComma()}원", "이번달 지출", Modifier.weight(1f))
-        Box(Modifier.width(1.dp).height(44.dp).background(AmColors.HeroPillLine))
+        Box(Modifier.width(1.dp).height(56.dp).background(AmColors.HeroPillLine))
         PillItem("${uiState.budget.amountToComma()}원", "월 예산", Modifier.weight(1f))
-        Box(Modifier.width(1.dp).height(44.dp).background(AmColors.HeroPillLine))
+        Box(Modifier.width(1.dp).height(56.dp).background(AmColors.HeroPillLine))
         PillItem(uiState.cycleLabel.substringAfter("다음 수급일 ").ifBlank { "-" }, "수급일까지", Modifier.weight(1f), AmColors.Emerald)
     }
 }
@@ -218,11 +218,12 @@ private fun StatsPills(uiState: HomeUiState) {
 @Composable
 private fun PillItem(value: String, label: String, modifier: Modifier = Modifier, valueColor: Color = Color.White) {
     Column(
-        modifier = modifier.padding(vertical = 9.dp),
+        modifier = modifier.padding(vertical = 14.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
-        Text(value, fontSize = 11.sp, fontWeight = FontWeight.ExtraBold, color = valueColor)
-        Text(label, fontSize = 8.sp, color = Color.White.copy(alpha = 0.35f))
+        Text(value, fontSize = 13.sp, fontWeight = FontWeight.ExtraBold, color = valueColor)
+        Spacer(Modifier.height(2.dp))
+        Text(label, fontSize = 10.sp, color = Color.White.copy(alpha = 0.35f))
     }
 }
 
@@ -243,7 +244,6 @@ private fun BottomContent(
             contentPadding = PaddingValues(12.dp),
             verticalArrangement = Arrangement.spacedBy(9.dp),
         ) {
-            item { BudgetProgressCard(uiState = uiState) }
             item { ListHeader(showMainOnly = uiState.showMainOnly, canFilter = uiState.canFilter, onToggleMainOnly = onToggleMainOnly) }
 
             if (uiState.transactions.isEmpty()) {
@@ -253,51 +253,6 @@ private fun BottomContent(
                     TransactionCard(tx = tx, onClick = { onSelect(tx) })
                 }
             }
-        }
-    }
-}
-
-@Composable
-private fun BudgetProgressCard(uiState: HomeUiState) {
-    val percent = if (uiState.budget > 0) {
-        (uiState.spent.toFloat() / uiState.budget).coerceIn(0f, 1f)
-    } else 0f
-    val barColor = if (uiState.isOver) AmColors.Red else AmColors.Emerald
-    val badgeBg = if (uiState.isOver) AmColors.RedBg else AmColors.EmeraldBg
-
-    Column(
-        modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(16.dp)).background(AmColors.CardBg).padding(14.dp),
-    ) {
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            Text("이번달 예산", fontSize = 11.sp, fontWeight = FontWeight.Bold, color = AmColors.TextPrimary)
-            Box(
-                modifier = Modifier.clip(RoundedCornerShape(8.dp)).background(badgeBg).padding(horizontal = 9.dp, vertical = 3.dp),
-            ) {
-                Text(
-                    "${if (uiState.budget > 0) (uiState.spent * 100 / uiState.budget) else 0}%",
-                    fontSize = 11.sp,
-                    fontWeight = FontWeight.ExtraBold,
-                    color = barColor,
-                )
-            }
-        }
-
-        Box(
-            modifier = Modifier.fillMaxWidth().padding(top = 8.dp).height(7.dp).clip(RoundedCornerShape(4.dp)).background(AmColors.ScreenBg),
-        ) {
-            Box(Modifier.fillMaxWidth(percent).height(7.dp).clip(RoundedCornerShape(4.dp)).background(barColor))
-        }
-
-        Row(
-            modifier = Modifier.fillMaxWidth().padding(top = 5.dp),
-            horizontalArrangement = Arrangement.SpaceBetween,
-        ) {
-            Text("${uiState.spent.amountToComma()}원 사용", fontSize = 10.sp, fontWeight = FontWeight.Bold, color = barColor)
-            Text("${uiState.budget.amountToComma()}원 중", fontSize = 10.sp, color = AmColors.TextSecondary)
         }
     }
 }
