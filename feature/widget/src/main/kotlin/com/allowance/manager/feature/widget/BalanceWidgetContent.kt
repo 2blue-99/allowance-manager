@@ -31,15 +31,16 @@ import androidx.glance.text.FontWeight
 import androidx.glance.text.Text
 import androidx.glance.text.TextStyle
 import androidx.glance.unit.ColorProvider
+import com.allowance.manager.core.ui.theme.AmColors
 import java.text.NumberFormat
 import java.util.Locale
 import kotlinx.coroutines.delay
 
-private val ColorPrimary = Color(0xFF191F28)
-private val ColorSecondary = Color(0xFF8B95A1)
-private val ColorNormal = Color.White
-private val ColorFlash = Color(0xFFEDF7EE)
-private val ColorOver = Color(0xFFEF4444)
+private val ColorPrimary = AmColors.Navy
+private val ColorSecondary = AmColors.TextSecondary
+private val ColorNormal = AmColors.CardBg
+private val ColorFlash = AmColors.EmeraldBg
+private val ColorOver = AmColors.Red
 
 @Composable
 fun BalanceWidgetContent(spent: Long, budget: Long, onRefresh: () -> Unit) {
