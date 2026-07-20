@@ -36,12 +36,13 @@ import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.allowance.manager.core.domain.util.amountToComma
+import com.allowance.manager.core.ui.theme.AmColors
 
-private val Bg = Color(0xFFF0F2F6)
-private val Accent = Color(0xFF10B981)
-private val PlaceholderBg = Color(0xFFECECEC)
-private val TextPrimary = Color(0xFF0D1B2A)
-private val TextSecondary = Color(0xFF8A97AA)
+private val Bg = AmColors.ScreenBg
+private val Accent = AmColors.Emerald
+private val PlaceholderBg = AmColors.ChipBg
+private val TextPrimary = AmColors.TextPrimary
+private val TextSecondary = AmColors.TextSecondary
 
 private const val PAYDAY_EOM = 0
 

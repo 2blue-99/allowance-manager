@@ -37,11 +37,12 @@ import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.allowance.manager.core.domain.model.Account
+import com.allowance.manager.core.ui.theme.AmColors
 
-private val Bg = Color(0xFFF0F2F6)
-private val TextPrimary = Color(0xFF0D1B2A)
-private val TextSecondary = Color(0xFF8A97AA)
-private val SpendRed = Color(0xFFEF4444)
+private val Bg = AmColors.ScreenBg
+private val TextPrimary = AmColors.TextPrimary
+private val TextSecondary = AmColors.TextSecondary
+private val SpendRed = AmColors.Red
 
 @Composable
 fun AccountSettingRoute(

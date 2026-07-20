@@ -46,13 +46,14 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.compose.LifecycleEventEffect
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.allowance.manager.core.ui.theme.AmColors
 
-private val Accent = Color(0xFF10B981)
-private val CardBg = Color.White
-private val ScreenBg = Color.White
-private val ChipBg = Color(0xFFECECEC)
-private val TextPrimary = Color(0xFF0D1B2A)
-private val TextSecondary = Color(0xFF8A97AA)
+private val Accent = AmColors.Emerald
+private val CardBg = AmColors.CardBg
+private val ScreenBg = AmColors.CardBg
+private val ChipBg = AmColors.ChipBg
+private val TextPrimary = AmColors.TextPrimary
+private val TextSecondary = AmColors.TextSecondary
 
 private const val PAYDAY_EOM = 0
 private val BUDGET_PRESETS = listOf(300_000L to "30만원", 500_000L to "50만원", 1_000_000L to "100만원")

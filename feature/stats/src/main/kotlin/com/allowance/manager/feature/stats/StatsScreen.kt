@@ -25,16 +25,17 @@ import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.allowance.manager.core.domain.util.amountToComma
+import com.allowance.manager.core.ui.theme.AmColors
 import kotlin.math.abs
 
-private val Accent = Color(0xFF10B981)
-private val AccentBg = Color(0xFFECFDF5)
-private val BarTrack = Color(0xFFE3E7EE)
-private val Bg = Color(0xFFF0F2F6)
-private val TextPrimary = Color(0xFF0D1B2A)
-private val TextSecondary = Color(0xFF8A97AA)
-private val UpRed = Color(0xFFEF4444)
-private val UpRedBg = Color(0xFFFDECEC)
+private val Accent = AmColors.Emerald
+private val AccentBg = AmColors.EmeraldBg
+private val BarTrack = AmColors.BarTrack
+private val Bg = AmColors.ScreenBg
+private val TextPrimary = AmColors.TextPrimary
+private val TextSecondary = AmColors.TextSecondary
+private val UpRed = AmColors.Red
+private val UpRedBg = AmColors.RedBg
 
 @Composable
 fun StatsRoute(

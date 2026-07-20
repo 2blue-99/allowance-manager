@@ -44,26 +44,12 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.allowance.manager.core.domain.model.Transaction
 import com.allowance.manager.core.domain.model.TransactionType
 import com.allowance.manager.core.domain.util.amountToComma
+import com.allowance.manager.core.ui.theme.AmColors
 import java.time.Instant
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 import java.util.Locale
 import kotlin.math.abs
-
-// ── 색상 ──────────────────────────────────────────────
-private val HeroBg = Color(0xFF0D1B2A)
-private val AccentGreen = Color(0xFF10B981)
-private val AccentBg = Color(0xFFECFDF5)
-private val BottomBg = Color(0xFFF0F2F6)
-private val TextPrimary = Color(0xFF0D1B2A)
-private val TextSecondary = Color(0xFF8A97AA)
-private val CardBg = Color.White
-private val SpendRed = Color(0xFFEF4444)
-private val PillBg = Color(0x0FFFFFFF)
-private val PillDivider = Color(0x14FFFFFF)
-private val RingTrack = Color(0x12FFFFFF)
-private val IconBtnBg = Color(0x14FFFFFF)
-private val Divider = Color(0xFFF4F6FA)
 
 @Composable
 fun HomeRoute(
@@ -96,7 +82,7 @@ fun HomeScreen(
     var selected by remember { mutableStateOf<Transaction?>(null) }
 
     Box(modifier = modifier.fillMaxSize()) {
-        Column(modifier = Modifier.fillMaxSize().background(BottomBg)) {
+        Column(modifier = Modifier.fillMaxSize().background(AmColors.ScreenBg)) {
             Hero(uiState = uiState, onNavigateToSetting = onNavigateToSetting)
             BottomContent(
                 uiState = uiState,
@@ -125,7 +111,7 @@ private fun Hero(uiState: HomeUiState, onNavigateToSetting: () -> Unit) {
     Column(
         modifier = Modifier
             .fillMaxWidth()
-            .background(HeroBg)
+            .background(AmColors.Navy)
             .padding(horizontal = 22.dp)
             .padding(top = 16.dp, bottom = 20.dp),
     ) {
@@ -155,7 +141,7 @@ private fun IconBtn(label: String, onClick: () -> Unit = {}) {
         modifier = Modifier
             .size(30.dp)
             .clip(RoundedCornerShape(50))
-            .background(IconBtnBg)
+            .background(AmColors.HeroIconBg)
             .clickable(onClick = onClick),
         contentAlignment = Alignment.Center,
     ) {
@@ -166,7 +152,7 @@ private fun IconBtn(label: String, onClick: () -> Unit = {}) {
 @Composable
 private fun BudgetRing(remaining: Long, ratio: Float, isOver: Boolean, modifier: Modifier = Modifier) {
     val percent = ratio.coerceIn(0f, 1f)
-    val ringColor = if (isOver) SpendRed else AccentGreen
+    val ringColor = if (isOver) AmColors.Red else AmColors.Emerald
     val ringSize = 148.dp
     val strokeWidth = 13.dp
 
@@ -179,7 +165,7 @@ private fun BudgetRing(remaining: Long, ratio: Float, isOver: Boolean, modifier:
             val inset = strokeWidth.toPx() / 2f
             val arcSize = Size(size.width - inset * 2, size.height - inset * 2)
             val topLeft = Offset(inset, inset)
-            drawArc(RingTrack, 0f, 360f, false, topLeft, arcSize, style = stroke)
+            drawArc(AmColors.HeroRingTrack, 0f, 360f, false, topLeft, arcSize, style = stroke)
             drawArc(
                 color = ringColor,
                 startAngle = -90f,
@@ -204,7 +190,7 @@ private fun BudgetRing(remaining: Long, ratio: Float, isOver: Boolean, modifier:
                 fontSize = 26.sp,
                 fontWeight = FontWeight.ExtraBold,
                 letterSpacing = (-1.5).sp,
-                color = if (isOver) SpendRed else Color.White,
+                color = if (isOver) AmColors.Red else Color.White,
             )
             Text(
                 text = if (isOver) "예산 초과" else "${(percent * 100).toInt()}% 남음",
@@ -219,13 +205,13 @@ private fun BudgetRing(remaining: Long, ratio: Float, isOver: Boolean, modifier:
 @Composable
 private fun StatsPills(uiState: HomeUiState) {
     Row(
-        modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(14.dp)).background(PillBg),
+        modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(14.dp)).background(AmColors.HeroPillBg),
     ) {
         PillItem("${uiState.spent.amountToComma()}원", "이번달 지출", Modifier.weight(1f))
-        Box(Modifier.width(1.dp).height(44.dp).background(PillDivider))
+        Box(Modifier.width(1.dp).height(44.dp).background(AmColors.HeroPillLine))
         PillItem("${uiState.budget.amountToComma()}원", "월 예산", Modifier.weight(1f))
-        Box(Modifier.width(1.dp).height(44.dp).background(PillDivider))
-        PillItem(uiState.cycleLabel.substringAfter("다음 수급일 ").ifBlank { "-" }, "수급일까지", Modifier.weight(1f), AccentGreen)
+        Box(Modifier.width(1.dp).height(44.dp).background(AmColors.HeroPillLine))
+        PillItem(uiState.cycleLabel.substringAfter("다음 수급일 ").ifBlank { "-" }, "수급일까지", Modifier.weight(1f), AmColors.Emerald)
     }
 }
 
@@ -251,7 +237,7 @@ private fun BottomContent(
     Box(
         modifier = modifier
             .clip(RoundedCornerShape(topStart = 22.dp, topEnd = 22.dp))
-            .background(BottomBg),
+            .background(AmColors.ScreenBg),
     ) {
         LazyColumn(
             contentPadding = PaddingValues(12.dp),
@@ -276,18 +262,18 @@ private fun BudgetProgressCard(uiState: HomeUiState) {
     val percent = if (uiState.budget > 0) {
         (uiState.spent.toFloat() / uiState.budget).coerceIn(0f, 1f)
     } else 0f
-    val barColor = if (uiState.isOver) SpendRed else AccentGreen
-    val badgeBg = if (uiState.isOver) Color(0xFFFDECEC) else AccentBg
+    val barColor = if (uiState.isOver) AmColors.Red else AmColors.Emerald
+    val badgeBg = if (uiState.isOver) AmColors.RedBg else AmColors.EmeraldBg
 
     Column(
-        modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(16.dp)).background(CardBg).padding(14.dp),
+        modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(16.dp)).background(AmColors.CardBg).padding(14.dp),
     ) {
         Row(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            Text("이번달 예산", fontSize = 11.sp, fontWeight = FontWeight.Bold, color = TextPrimary)
+            Text("이번달 예산", fontSize = 11.sp, fontWeight = FontWeight.Bold, color = AmColors.TextPrimary)
             Box(
                 modifier = Modifier.clip(RoundedCornerShape(8.dp)).background(badgeBg).padding(horizontal = 9.dp, vertical = 3.dp),
             ) {
@@ -301,7 +287,7 @@ private fun BudgetProgressCard(uiState: HomeUiState) {
         }
 
         Box(
-            modifier = Modifier.fillMaxWidth().padding(top = 8.dp).height(7.dp).clip(RoundedCornerShape(4.dp)).background(BottomBg),
+            modifier = Modifier.fillMaxWidth().padding(top = 8.dp).height(7.dp).clip(RoundedCornerShape(4.dp)).background(AmColors.ScreenBg),
         ) {
             Box(Modifier.fillMaxWidth(percent).height(7.dp).clip(RoundedCornerShape(4.dp)).background(barColor))
         }
@@ -311,7 +297,7 @@ private fun BudgetProgressCard(uiState: HomeUiState) {
             horizontalArrangement = Arrangement.SpaceBetween,
         ) {
             Text("${uiState.spent.amountToComma()}원 사용", fontSize = 10.sp, fontWeight = FontWeight.Bold, color = barColor)
-            Text("${uiState.budget.amountToComma()}원 중", fontSize = 10.sp, color = TextSecondary)
+            Text("${uiState.budget.amountToComma()}원 중", fontSize = 10.sp, color = AmColors.TextSecondary)
         }
     }
 }
@@ -323,13 +309,13 @@ private fun ListHeader(showMainOnly: Boolean, canFilter: Boolean, onToggleMainOn
         horizontalArrangement = Arrangement.SpaceBetween,
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        Text("이번달 내역", fontSize = 12.sp, fontWeight = FontWeight.ExtraBold, color = TextPrimary)
+        Text("이번달 내역", fontSize = 12.sp, fontWeight = FontWeight.ExtraBold, color = AmColors.TextPrimary)
         if (canFilter) {
             Text(
                 text = if (showMainOnly) "전체 보기" else "메인만 보기",
                 fontSize = 10.sp,
                 fontWeight = FontWeight.Bold,
-                color = AccentGreen,
+                color = AmColors.Emerald,
                 modifier = Modifier.clickable(onClick = onToggleMainOnly),
             )
         }
@@ -339,23 +325,25 @@ private fun ListHeader(showMainOnly: Boolean, canFilter: Boolean, onToggleMainOn
 @Composable
 private fun EmptyState() {
     Box(
-        modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(16.dp)).background(CardBg).padding(vertical = 28.dp),
+        modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(16.dp)).background(AmColors.CardBg).padding(vertical = 28.dp),
         contentAlignment = Alignment.Center,
     ) {
-        Text("이번달 내역이 없어요", fontSize = 11.sp, color = TextSecondary)
+        Text("이번달 내역이 없어요", fontSize = 11.sp, color = AmColors.TextSecondary)
     }
 }
 
 @Composable
 private fun TransactionCard(tx: Transaction, onClick: () -> Unit) {
-    val dim = tx.isIgnored || !tx.isMain
+    val ignored = tx.isIgnored
+    val dim = ignored || !tx.isMain
     val isIncome = tx.type == TransactionType.INCOME || tx.amount < 0
 
     Row(
         modifier = Modifier
             .fillMaxWidth()
             .clip(RoundedCornerShape(16.dp))
-            .background(CardBg)
+            // 무시 항목은 카드 자체를 회색으로 → 합계에서 빠졌음을 확실히 표현
+            .background(if (ignored) AmColors.IgnoredBg else AmColors.CardBg)
             .clickable(onClick = onClick)
             .padding(14.dp),
         horizontalArrangement = Arrangement.SpaceBetween,
@@ -363,10 +351,10 @@ private fun TransactionCard(tx: Transaction, onClick: () -> Unit) {
     ) {
         Row(horizontalArrangement = Arrangement.spacedBy(9.dp), verticalAlignment = Alignment.CenterVertically) {
             Box(
-                modifier = Modifier.size(34.dp).clip(RoundedCornerShape(10.dp)).background(if (dim) Divider else AccentBg),
+                modifier = Modifier.size(34.dp).clip(RoundedCornerShape(10.dp)).background(if (dim) AmColors.Divider else AmColors.EmeraldBg),
                 contentAlignment = Alignment.Center,
             ) {
-                Text(if (isIncome) "💰" else "💳", fontSize = 15.sp)
+                Text(if (ignored) "🚫" else if (isIncome) "💰" else "💳", fontSize = 15.sp)
             }
             Column {
                 Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(5.dp)) {
@@ -374,16 +362,21 @@ private fun TransactionCard(tx: Transaction, onClick: () -> Unit) {
                         tx.sourceName,
                         fontSize = 12.sp,
                         fontWeight = FontWeight.Bold,
-                        color = if (dim) TextSecondary else TextPrimary,
+                        color = if (dim) AmColors.TextSecondary else AmColors.TextPrimary,
+                        textDecoration = if (ignored) TextDecoration.LineThrough else TextDecoration.None,
                     )
-                    if (!tx.isMain) {
-                        Box(Modifier.clip(RoundedCornerShape(5.dp)).background(Divider).padding(horizontal = 5.dp, vertical = 1.dp)) {
-                            Text("미등록", fontSize = 8.sp, color = TextSecondary)
+                    if (ignored) {
+                        Box(Modifier.clip(RoundedCornerShape(5.dp)).background(AmColors.CardBg).padding(horizontal = 5.dp, vertical = 1.dp)) {
+                            Text("무시됨", fontSize = 8.sp, fontWeight = FontWeight.Bold, color = AmColors.TextSecondary)
+                        }
+                    } else if (!tx.isMain) {
+                        Box(Modifier.clip(RoundedCornerShape(5.dp)).background(AmColors.Divider).padding(horizontal = 5.dp, vertical = 1.dp)) {
+                            Text("미등록", fontSize = 8.sp, color = AmColors.TextSecondary)
                         }
                     }
                 }
                 val subtitle = tx.memo?.takeIf { it.isNotBlank() } ?: formatTime(tx.createdAt)
-                Text(subtitle, fontSize = 9.sp, color = Color(0xFFA0AABB))
+                Text(subtitle, fontSize = 9.sp, color = AmColors.TextTertiary)
             }
         }
         Text(
@@ -391,7 +384,7 @@ private fun TransactionCard(tx: Transaction, onClick: () -> Unit) {
             fontSize = 12.sp,
             fontWeight = FontWeight.ExtraBold,
             color = amountColor(tx, dim),
-            textDecoration = if (tx.isIgnored) TextDecoration.LineThrough else TextDecoration.None,
+            textDecoration = if (ignored) TextDecoration.LineThrough else TextDecoration.None,
         )
     }
 }
@@ -408,12 +401,12 @@ private fun TransactionActionSheet(
 ) {
     var memo by remember(tx.id) { mutableStateOf(tx.memo.orEmpty()) }
 
-    ModalBottomSheet(onDismissRequest = onDismiss, containerColor = CardBg) {
+    ModalBottomSheet(onDismissRequest = onDismiss, containerColor = AmColors.CardBg) {
         Column(modifier = Modifier.fillMaxWidth().padding(horizontal = 20.dp).padding(bottom = 24.dp)) {
             Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
                 Column(Modifier.weight(1f)) {
-                    Text(tx.sourceName, fontSize = 15.sp, fontWeight = FontWeight.ExtraBold, color = TextPrimary)
-                    Text(formatTime(tx.createdAt), fontSize = 11.sp, color = TextSecondary)
+                    Text(tx.sourceName, fontSize = 15.sp, fontWeight = FontWeight.ExtraBold, color = AmColors.TextPrimary)
+                    Text(formatTime(tx.createdAt), fontSize = 11.sp, color = AmColors.TextSecondary)
                 }
                 Text(signedAmount(tx), fontSize = 15.sp, fontWeight = FontWeight.ExtraBold, color = amountColor(tx, false))
             }
@@ -426,15 +419,15 @@ private fun TransactionActionSheet(
                 singleLine = true,
                 modifier = Modifier.fillMaxWidth(),
             )
-            SheetAction("메모 저장", AccentGreen) { onUpdateMemo(tx.id, memo); onDismiss() }
+            SheetAction("메모 저장", AmColors.Emerald) { onUpdateMemo(tx.id, memo); onDismiss() }
 
             if (!tx.isMain && tx.extractedAccount != null) {
-                SheetAction("메인으로 등록", AccentGreen) { onPromoteToMain(tx); onDismiss() }
+                SheetAction("메인으로 등록", AmColors.Emerald) { onPromoteToMain(tx); onDismiss() }
             }
-            SheetAction(if (tx.isIgnored) "무시 취소" else "무시 처리 (합계 제외)", TextPrimary) {
+            SheetAction(if (tx.isIgnored) "무시 취소" else "무시 처리 (합계 제외)", AmColors.TextPrimary) {
                 onSetIgnored(tx.id, !tx.isIgnored); onDismiss()
             }
-            SheetAction("삭제", SpendRed) { onDelete(tx.id); onDismiss() }
+            SheetAction("삭제", AmColors.Red) { onDelete(tx.id); onDismiss() }
         }
     }
 }
@@ -461,9 +454,9 @@ private fun signedAmount(tx: Transaction): String {
 }
 
 private fun amountColor(tx: Transaction, dim: Boolean): Color = when {
-    dim -> TextSecondary
-    tx.type == TransactionType.INCOME || tx.amount < 0 -> AccentGreen
-    else -> SpendRed
+    dim -> AmColors.TextSecondary
+    tx.type == TransactionType.INCOME || tx.amount < 0 -> AmColors.Emerald
+    else -> AmColors.Red
 }
 
 private val timeFormatter: DateTimeFormatter = DateTimeFormatter.ofPattern("a h:mm", Locale.KOREAN)

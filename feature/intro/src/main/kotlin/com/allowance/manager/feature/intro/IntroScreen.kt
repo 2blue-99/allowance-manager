@@ -34,11 +34,12 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.allowance.manager.core.ui.theme.AmColors
 
-private val Accent = Color(0xFF10B981)
-private val PlaceholderBg = Color(0xFFECECEC)
-private val TextPrimary = Color(0xFF0D1B2A)
-private val TextSecondary = Color(0xFF8A97AA)
+private val Accent = AmColors.Emerald
+private val PlaceholderBg = AmColors.ChipBg
+private val TextPrimary = AmColors.TextPrimary
+private val TextSecondary = AmColors.TextSecondary
 
 private data class IntroPage(val title: String, val description: String)
 
