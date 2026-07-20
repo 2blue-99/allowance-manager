@@ -367,7 +367,7 @@ private fun TransactionCard(tx: Transaction, onClick: () -> Unit) {
                     )
                     if (ignored) {
                         Box(Modifier.clip(RoundedCornerShape(5.dp)).background(AmColors.CardBg).padding(horizontal = 5.dp, vertical = 1.dp)) {
-                            Text("무시됨", fontSize = 8.sp, fontWeight = FontWeight.Bold, color = AmColors.TextSecondary)
+                            Text("숨김", fontSize = 8.sp, fontWeight = FontWeight.Bold, color = AmColors.TextSecondary)
                         }
                     } else if (!tx.isMain) {
                         Box(Modifier.clip(RoundedCornerShape(5.dp)).background(AmColors.Divider).padding(horizontal = 5.dp, vertical = 1.dp)) {
@@ -424,7 +424,7 @@ private fun TransactionActionSheet(
             if (!tx.isMain && tx.extractedAccount != null) {
                 SheetAction("메인으로 등록", AmColors.Emerald) { onPromoteToMain(tx); onDismiss() }
             }
-            SheetAction(if (tx.isIgnored) "무시 취소" else "무시 처리 (합계 제외)", AmColors.TextPrimary) {
+            SheetAction(if (tx.isIgnored) "숨김 해제" else "숨김 처리 (합계 제외)", AmColors.TextPrimary) {
                 onSetIgnored(tx.id, !tx.isIgnored); onDismiss()
             }
             SheetAction("삭제", AmColors.Red) { onDelete(tx.id); onDismiss() }
