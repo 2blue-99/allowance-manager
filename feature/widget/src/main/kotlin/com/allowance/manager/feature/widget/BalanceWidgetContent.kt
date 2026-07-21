@@ -31,7 +31,7 @@ import androidx.glance.text.FontWeight
 import androidx.glance.text.Text
 import androidx.glance.text.TextStyle
 import androidx.glance.unit.ColorProvider
-import com.allowance.manager.core.ui.theme.AmColors
+import com.allowance.manager.core.designsystem.theme.AmColors
 import java.text.NumberFormat
 import java.util.Locale
 import kotlinx.coroutines.delay

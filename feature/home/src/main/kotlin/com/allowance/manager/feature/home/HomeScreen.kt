@@ -44,7 +44,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.allowance.manager.core.domain.model.Transaction
 import com.allowance.manager.core.domain.model.TransactionType
 import com.allowance.manager.core.domain.util.amountToComma
-import com.allowance.manager.core.ui.theme.AmColors
+import com.allowance.manager.core.designsystem.theme.AmColors
 import java.time.Instant
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter

@@ -2,8 +2,6 @@ package com.allowance.manager.navigation
 
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.tween
-import androidx.compose.animation.fadeIn
-import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
@@ -36,7 +34,8 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.allowance.manager.core.ui.theme.AmColors
+import com.allowance.manager.core.designsystem.anim.AmMotion
+import com.allowance.manager.core.designsystem.theme.AmColors
 import androidx.navigation.NavDestination
 import androidx.navigation.NavDestination.Companion.hasRoute
 import androidx.navigation.NavDestination.Companion.hierarchy
@@ -113,10 +112,10 @@ fun AppNavHost(navController: NavHostController) {
             navController = navController,
             startDestination = SplashRoute,
             modifier = Modifier.padding(innerPadding),
-            enterTransition = { fadeIn(tween(250)) },
-            exitTransition = { fadeOut(tween(250)) },
-            popEnterTransition = { fadeIn(tween(250)) },
-            popExitTransition = { fadeOut(tween(250)) },
+            enterTransition = { AmMotion.fadeEnter() },
+            exitTransition = { AmMotion.fadeExit() },
+            popEnterTransition = { AmMotion.fadeEnter() },
+            popExitTransition = { AmMotion.fadeExit() },
         ) {
             splashScreen(
                 onNavigateToHome = {

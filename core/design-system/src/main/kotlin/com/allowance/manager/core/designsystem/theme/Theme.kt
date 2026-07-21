@@ -1,4 +1,4 @@
-package com.allowance.manager.core.ui.theme
+package com.allowance.manager.core.designsystem.theme
 
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.lightColorScheme

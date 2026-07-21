@@ -25,7 +25,7 @@ import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.allowance.manager.core.domain.util.amountToComma
-import com.allowance.manager.core.ui.theme.AmColors
+import com.allowance.manager.core.designsystem.theme.AmColors
 import kotlin.math.abs
 
 private val Accent = AmColors.Emerald

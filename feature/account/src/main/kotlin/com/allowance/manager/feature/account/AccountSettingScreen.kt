@@ -37,7 +37,7 @@ import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.allowance.manager.core.domain.model.Account
-import com.allowance.manager.core.ui.theme.AmColors
+import com.allowance.manager.core.designsystem.theme.AmColors
 
 private val Bg = AmColors.ScreenBg
 private val TextPrimary = AmColors.TextPrimary
