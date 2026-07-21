@@ -90,3 +90,6 @@ com_crashlytics_export_strings.xml
 crashlytics-build.properties
 fabric.properties
 /app/src/debug/google-services.json
+
+# Claude context (로컬 관리)
+CLAUDE.md
