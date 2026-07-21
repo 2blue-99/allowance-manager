@@ -1,7 +1,5 @@
 package com.allowance.manager.feature.intro
 
-import androidx.compose.animation.Crossfade
-import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -11,9 +9,12 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.pager.HorizontalPager
+import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Button
@@ -21,9 +22,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableIntStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -34,7 +33,8 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import com.allowance.manager.core.ui.theme.AmColors
+import com.allowance.manager.core.designsystem.theme.AmColors
+import kotlinx.coroutines.launch
 
 private val Accent = AmColors.Emerald
 private val PlaceholderBg = AmColors.ChipBg
@@ -64,13 +64,19 @@ fun IntroRoute(
 
 @Composable
 fun IntroScreen(onFinish: () -> Unit = {}) {
-    var page by remember { mutableIntStateOf(0) }
-    val isLast = page == introPages.size - 1
+    val pagerState = rememberPagerState(pageCount = { introPages.size })
+    val scope = rememberCoroutineScope()
+    val isLast = pagerState.currentPage == introPages.size - 1
 
+    // 좌우 패딩은 Column이 아니라 각 요소/페이저 contentPadding으로 처리해야
+    // 페이저가 full-width로 동작하며 페이지가 잘리지 않고 부드럽게 넘어감.
     Column(
-        modifier = Modifier.fillMaxSize().background(Color.White).padding(24.dp),
+        modifier = Modifier.fillMaxSize().background(Color.White).padding(vertical = 24.dp),
     ) {
-        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
+        Row(
+            modifier = Modifier.fillMaxWidth().padding(horizontal = 24.dp),
+            horizontalArrangement = Arrangement.End,
+        ) {
             if (!isLast) {
                 Text("건너뛰기", fontSize = 13.sp, color = TextSecondary, modifier = Modifier.clickable(onClick = onFinish))
             } else {
@@ -78,22 +84,26 @@ fun IntroScreen(onFinish: () -> Unit = {}) {
             }
         }
 
-        // 슬라이드 전환: 페이드 인/아웃
-        Crossfade(
-            targetState = page,
-            animationSpec = tween(durationMillis = 350),
-            label = "intro",
+        // 좌우 스와이프로 슬라이드 전환 (버튼으로도 이동 가능).
+        // contentPadding으로 페이지를 인셋 → 옆 페이지가 살짝 보이며 자연스럽게 슬라이드.
+        HorizontalPager(
+            state = pagerState,
+            contentPadding = PaddingValues(horizontal = 24.dp),
+            pageSpacing = 16.dp,
             modifier = Modifier.fillMaxWidth().weight(1f),
         ) { index ->
             IntroSlide(introPages[index])
         }
 
-        PageIndicator(current = page)
+        PageIndicator(current = pagerState.currentPage)
         Spacer(Modifier.height(16.dp))
 
         Button(
-            onClick = { if (isLast) onFinish() else page++ },
-            modifier = Modifier.fillMaxWidth(),
+            onClick = {
+                if (isLast) onFinish()
+                else scope.launch { pagerState.animateScrollToPage(pagerState.currentPage + 1) }
+            },
+            modifier = Modifier.fillMaxWidth().padding(horizontal = 24.dp),
         ) { Text(if (isLast) "시작하기" else "다음") }
     }
 }
