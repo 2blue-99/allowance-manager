@@ -19,7 +19,6 @@ import javax.inject.Inject
 data class MainUiState(
     val showForceUpdateDialog: Boolean = false,
     val updateNote: String = "",
-    val shouldRequestPostNotification: Boolean = false,
 )
 
 @HiltViewModel
@@ -46,15 +45,6 @@ class MainViewModel @Inject constructor(
                 .onSuccess { checkForceUpdate() }
                 .onFailure { setError(it.message) }
         }
-    }
-
-    // 알림 접근(리스너) 권한 유도는 온보딩 한 곳에서만. 여기선 POST_NOTIFICATIONS(상태바 표시용)만 처리.
-    fun onPostNotificationChecked(isPostNotificationGranted: Boolean) {
-        _uiState.update { it.copy(shouldRequestPostNotification = !isPostNotificationGranted) }
-    }
-
-    fun onPostNotificationRequested() {
-        _uiState.update { it.copy(shouldRequestPostNotification = false) }
     }
 
     private fun checkForceUpdate() {
