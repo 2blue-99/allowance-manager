@@ -1,4 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <style name="Theme.AllowanceManager" parent="android:Theme.Material.Light.NoActionBar" />
+    <style name="Theme.AllowanceManager" parent="android:Theme.Material.Light.NoActionBar">
+        <!-- 라이트 모드 전용: 시스템 강제 다크 비활성화 -->
+        <item name="android:forceDarkAllowed">false</item>
+    </style>
 </resources>

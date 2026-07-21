@@ -3,10 +3,12 @@ package com.allowance.manager
 import android.Manifest
 import android.content.Intent
 import android.content.pm.PackageManager
+import android.graphics.Color
 import android.net.Uri
 import android.os.Build
 import android.os.Bundle
 import androidx.activity.ComponentActivity
+import androidx.activity.SystemBarStyle
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.result.contract.ActivityResultContracts
@@ -36,7 +38,11 @@ class MainActivity : ComponentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        enableEdgeToEdge()
+        // 라이트 모드 전용 앱: 시스템 다크 모드와 무관하게 상태바/내비바 아이콘을 어둡게 고정.
+        enableEdgeToEdge(
+            statusBarStyle = SystemBarStyle.light(Color.TRANSPARENT, Color.TRANSPARENT),
+            navigationBarStyle = SystemBarStyle.light(Color.TRANSPARENT, Color.TRANSPARENT),
+        )
         FirebaseMessaging.getInstance().token
             .addOnSuccessListener { token -> Timber.tag("FCM").d("토큰: $token") }
             .addOnFailureListener { e -> Timber.tag("FCM").e(e, "토큰 조회 실패") }
