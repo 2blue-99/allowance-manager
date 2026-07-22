@@ -2,7 +2,7 @@ package com.allowance.manager.feature.intro
 
 import androidx.lifecycle.viewModelScope
 import com.allowance.manager.core.domain.usecase.onboarding.SetIntroShownUseCase
-import com.allowance.manager.core.ui.BaseViewModel
+import com.allowance.manager.core.common.BaseViewModel
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow

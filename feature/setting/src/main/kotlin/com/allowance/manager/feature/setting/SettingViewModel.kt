@@ -7,7 +7,7 @@ import com.allowance.manager.core.domain.usecase.budget.SetMonthlyBudgetUseCase
 import com.allowance.manager.core.domain.usecase.budget.SetPaydayUseCase
 import com.allowance.manager.core.domain.usecase.setting.GetStatusBarEnabledUseCase
 import com.allowance.manager.core.domain.usecase.setting.SetStatusBarEnabledUseCase
-import com.allowance.manager.core.ui.BaseViewModel
+import com.allowance.manager.core.common.BaseViewModel
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow

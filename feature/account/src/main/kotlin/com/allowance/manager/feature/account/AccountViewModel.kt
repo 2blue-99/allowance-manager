@@ -6,7 +6,7 @@ import com.allowance.manager.core.domain.usecase.account.AddAccountUseCase
 import com.allowance.manager.core.domain.usecase.account.DeleteAccountUseCase
 import com.allowance.manager.core.domain.usecase.account.ObserveAccountsUseCase
 import com.allowance.manager.core.domain.usecase.account.UpdateAccountUseCase
-import com.allowance.manager.core.ui.BaseViewModel
+import com.allowance.manager.core.common.BaseViewModel
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow

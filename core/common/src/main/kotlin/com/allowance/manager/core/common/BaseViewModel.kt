@@ -1,4 +1,4 @@
-package com.allowance.manager.core.ui
+package com.allowance.manager.core.common
 
 import androidx.lifecycle.ViewModel
 import kotlinx.coroutines.flow.MutableStateFlow

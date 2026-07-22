@@ -5,7 +5,7 @@ import com.allowance.manager.core.domain.usecase.config.CheckForceUpdateUseCase
 import com.allowance.manager.core.domain.usecase.config.FetchRemoteConfigUseCase
 import com.allowance.manager.core.domain.usecase.config.GetUpdateNoteUseCase
 import com.allowance.manager.core.domain.usecase.setting.GetStatusBarEnabledUseCase
-import com.allowance.manager.core.ui.BaseViewModel
+import com.allowance.manager.core.common.BaseViewModel
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted

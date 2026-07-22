@@ -3,7 +3,7 @@ package com.allowance.manager.feature.splash
 import androidx.lifecycle.viewModelScope
 import com.allowance.manager.core.domain.usecase.onboarding.GetIntroShownUseCase
 import com.allowance.manager.core.domain.usecase.onboarding.GetOnboardingDoneUseCase
-import com.allowance.manager.core.ui.BaseViewModel
+import com.allowance.manager.core.common.BaseViewModel
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow

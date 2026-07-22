@@ -28,6 +28,8 @@ android {
 dependencies {
     // 디자인 시스템(토큰·기초 컴포넌트)을 api로 재노출 → core:ui를 쓰는 모듈이 토큰에 바로 접근
     api(project(":core:design-system"))
+    // presentation 공통 인프라(BaseViewModel 등)도 재노출
+    api(project(":core:common"))
 
     implementation(platform(libs.androidx.compose.bom))
     implementation(libs.androidx.compose.ui)

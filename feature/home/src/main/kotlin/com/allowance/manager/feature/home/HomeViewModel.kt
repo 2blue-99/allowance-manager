@@ -11,7 +11,7 @@ import com.allowance.manager.core.domain.usecase.transaction.IgnoreTransactionUs
 import com.allowance.manager.core.domain.usecase.transaction.ObserveCurrentTransactionsUseCase
 import com.allowance.manager.core.domain.usecase.transaction.PromoteToMainUseCase
 import com.allowance.manager.core.domain.usecase.transaction.UpdateTransactionMemoUseCase
-import com.allowance.manager.core.ui.BaseViewModel
+import com.allowance.manager.core.common.BaseViewModel
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
