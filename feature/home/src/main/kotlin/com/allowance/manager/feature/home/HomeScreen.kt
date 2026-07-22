@@ -20,7 +20,6 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ModalBottomSheet
-import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -44,7 +43,11 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.allowance.manager.core.domain.model.Transaction
 import com.allowance.manager.core.domain.model.TransactionType
 import com.allowance.manager.core.domain.util.amountToComma
+import com.allowance.manager.core.designsystem.component.AmCard
+import com.allowance.manager.core.designsystem.component.AmTextButton
+import com.allowance.manager.core.designsystem.component.AmTextField
 import com.allowance.manager.core.designsystem.theme.AmColors
+import com.allowance.manager.core.designsystem.theme.AmShape
 import java.time.Instant
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
@@ -205,7 +208,7 @@ private fun BudgetRing(remaining: Long, ratio: Float, isOver: Boolean, modifier:
 @Composable
 private fun StatsPills(uiState: HomeUiState) {
     Row(
-        modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(14.dp)).background(AmColors.HeroPillBg),
+        modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(11.dp)).background(AmColors.HeroPillBg),
     ) {
         PillItem("${uiState.spent.amountToComma()}원", "이번달 지출", Modifier.weight(1f))
         Box(Modifier.width(1.dp).height(56.dp).background(AmColors.HeroPillLine))
@@ -237,7 +240,7 @@ private fun BottomContent(
 ) {
     Box(
         modifier = modifier
-            .clip(RoundedCornerShape(topStart = 22.dp, topEnd = 22.dp))
+            .clip(AmShape.sheetTop)
             .background(AmColors.ScreenBg),
     ) {
         LazyColumn(
@@ -266,12 +269,11 @@ private fun ListHeader(showMainOnly: Boolean, canFilter: Boolean, onToggleMainOn
     ) {
         Text("이번달 내역", fontSize = 12.sp, fontWeight = FontWeight.ExtraBold, color = AmColors.TextPrimary)
         if (canFilter) {
-            Text(
+            AmTextButton(
                 text = if (showMainOnly) "전체 보기" else "메인만 보기",
-                fontSize = 10.sp,
-                fontWeight = FontWeight.Bold,
+                onClick = onToggleMainOnly,
                 color = AmColors.Emerald,
-                modifier = Modifier.clickable(onClick = onToggleMainOnly),
+                fontSize = 10.sp,
             )
         }
     }
@@ -279,11 +281,10 @@ private fun ListHeader(showMainOnly: Boolean, canFilter: Boolean, onToggleMainOn
 
 @Composable
 private fun EmptyState() {
-    Box(
-        modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(16.dp)).background(AmColors.CardBg).padding(vertical = 28.dp),
-        contentAlignment = Alignment.Center,
-    ) {
-        Text("이번달 내역이 없어요", fontSize = 11.sp, color = AmColors.TextSecondary)
+    AmCard(modifier = Modifier.fillMaxWidth(), contentPadding = PaddingValues(vertical = 28.dp)) {
+        Box(modifier = Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
+            Text("이번달 내역이 없어요", fontSize = 11.sp, color = AmColors.TextSecondary)
+        }
     }
 }
 
@@ -293,20 +294,21 @@ private fun TransactionCard(tx: Transaction, onClick: () -> Unit) {
     val dim = ignored || !tx.isMain
     val isIncome = tx.type == TransactionType.INCOME || tx.amount < 0
 
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clip(RoundedCornerShape(16.dp))
-            // 무시 항목은 카드 자체를 회색으로 → 합계에서 빠졌음을 확실히 표현
-            .background(if (ignored) AmColors.IgnoredBg else AmColors.CardBg)
-            .clickable(onClick = onClick)
-            .padding(14.dp),
-        horizontalArrangement = Arrangement.SpaceBetween,
-        verticalAlignment = Alignment.CenterVertically,
+    AmCard(
+        modifier = Modifier.fillMaxWidth(),
+        // 무시 항목은 카드 자체를 회색으로 → 합계에서 빠졌음을 확실히 표현
+        color = if (ignored) AmColors.IgnoredBg else AmColors.CardBg,
+        contentPadding = PaddingValues(14.dp),
+        onClick = onClick,
     ) {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
         Row(horizontalArrangement = Arrangement.spacedBy(9.dp), verticalAlignment = Alignment.CenterVertically) {
             Box(
-                modifier = Modifier.size(34.dp).clip(RoundedCornerShape(10.dp)).background(if (dim) AmColors.Divider else AmColors.EmeraldBg),
+                modifier = Modifier.size(34.dp).clip(RoundedCornerShape(8.dp)).background(if (dim) AmColors.Divider else AmColors.EmeraldBg),
                 contentAlignment = Alignment.Center,
             ) {
                 Text(if (isIncome) "💰" else "💳", fontSize = 15.sp)
@@ -341,6 +343,7 @@ private fun TransactionCard(tx: Transaction, onClick: () -> Unit) {
             color = amountColor(tx, dim),
             textDecoration = if (ignored) TextDecoration.LineThrough else TextDecoration.None,
         )
+        }
     }
 }
 
@@ -367,11 +370,10 @@ private fun TransactionActionSheet(
             }
 
             Spacer(Modifier.height(16.dp))
-            OutlinedTextField(
+            AmTextField(
                 value = memo,
                 onValueChange = { memo = it },
-                label = { Text("메모") },
-                singleLine = true,
+                label = "메모",
                 modifier = Modifier.fillMaxWidth(),
             )
             SheetAction("메모 저장", AmColors.Emerald) { onUpdateMemo(tx.id, memo); onDismiss() }

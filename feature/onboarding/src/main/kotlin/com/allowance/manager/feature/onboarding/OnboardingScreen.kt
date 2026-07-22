@@ -12,9 +12,7 @@ import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.expandVertically
 import androidx.compose.animation.fadeIn
 import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -24,12 +22,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material3.Button
-import androidx.compose.material3.OutlinedButton
-import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -40,8 +33,6 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
@@ -54,13 +45,16 @@ import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.compose.LifecycleEventEffect
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.allowance.manager.core.designsystem.anim.AmMotion
+import com.allowance.manager.core.designsystem.component.AmButton
+import com.allowance.manager.core.designsystem.component.AmCard
+import com.allowance.manager.core.designsystem.component.AmChip
+import com.allowance.manager.core.designsystem.component.AmTextField
 import com.allowance.manager.core.designsystem.theme.AmColors
+import com.allowance.manager.core.designsystem.theme.AmSpacing
 import kotlinx.coroutines.delay
 
 private val Accent = AmColors.Emerald
-private val CardBg = AmColors.CardBg
 private val ScreenBg = AmColors.CardBg
-private val ChipBg = AmColors.ChipBg
 private val TextPrimary = AmColors.TextPrimary
 private val TextSecondary = AmColors.TextSecondary
 
@@ -186,10 +180,11 @@ private fun PermissionScreen(
             granted = listenerGranted,
         )
         Spacer(Modifier.weight(1f))
-        Button(
+        AmButton(
+            text = "권한 허용하기",
             onClick = onAllow,
             modifier = Modifier.fillMaxWidth(),
-        ) { Text("권한 허용하기") }
+        )
     }
 }
 
@@ -200,28 +195,23 @@ private fun PermissionRow(
     desc: String,
     granted: Boolean,
 ) {
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clip(RoundedCornerShape(16.dp))
-            .background(CardBg)
-            .padding(16.dp),
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        Text(emoji, fontSize = 28.sp)
-        Spacer(Modifier.width(12.dp))
-        Column(modifier = Modifier.weight(1f)) {
-            Text(title, fontSize = 14.sp, fontWeight = FontWeight.ExtraBold, color = TextPrimary)
-            Spacer(Modifier.height(2.dp))
-            Text(desc, fontSize = 12.sp, color = TextSecondary)
+    AmCard(modifier = Modifier.fillMaxWidth()) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Text(emoji, fontSize = 28.sp)
+            Spacer(Modifier.width(AmSpacing.md))
+            Column(modifier = Modifier.weight(1f)) {
+                Text(title, fontSize = 14.sp, fontWeight = FontWeight.ExtraBold, color = TextPrimary)
+                Spacer(Modifier.height(2.dp))
+                Text(desc, fontSize = 12.sp, color = TextSecondary)
+            }
+            Spacer(Modifier.width(AmSpacing.md))
+            Text(
+                text = if (granted) "✓ 허용됨" else "필요",
+                fontSize = 13.sp,
+                fontWeight = FontWeight.Bold,
+                color = if (granted) Accent else TextSecondary,
+            )
         }
-        Spacer(Modifier.width(12.dp))
-        Text(
-            text = if (granted) "✓ 허용됨" else "필요",
-            fontSize = 13.sp,
-            fontWeight = FontWeight.Bold,
-            color = if (granted) Accent else TextSecondary,
-        )
     }
 }
 
@@ -265,28 +255,24 @@ private fun InfoScreen(
             }
         }
 
-        Spacer(Modifier.height(12.dp))
-        Button(
+        Spacer(Modifier.height(AmSpacing.md))
+        AmButton(
+            text = if (isLast) "시작하기" else "다음",
             onClick = { if (isLast) onFinish() else revealed++ },
             enabled = if (isLast) uiState.canFinish else true,
             modifier = Modifier.fillMaxWidth(),
-        ) { Text(if (isLast) "시작하기" else "다음") }
+        )
     }
 }
 
 @Composable
 private fun Section(title: String, content: @Composable () -> Unit) {
-    Column(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(bottom = 12.dp)
-            .clip(RoundedCornerShape(16.dp))
-            .background(CardBg)
-            .padding(16.dp),
-    ) {
-        Text(title, fontSize = 13.sp, fontWeight = FontWeight.ExtraBold, color = TextPrimary)
-        Spacer(Modifier.height(10.dp))
-        content()
+    AmCard(modifier = Modifier.fillMaxWidth().padding(bottom = AmSpacing.md)) {
+        Column {
+            Text(title, fontSize = 13.sp, fontWeight = FontWeight.ExtraBold, color = TextPrimary)
+            Spacer(Modifier.height(AmSpacing.sm + 2.dp))
+            content()
+        }
     }
 }
 
@@ -299,18 +285,16 @@ private fun AccountSection(
 ) {
     Section("계좌 등록 (선택)") {
         Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-            OutlinedTextField(
+            AmTextField(
                 value = bankName,
                 onValueChange = onBankNameChange,
-                label = { Text("은행/앱 이름 (예: 신한은행)") },
-                singleLine = true,
+                label = "은행/앱 이름 (예: 신한은행)",
                 modifier = Modifier.fillMaxWidth(),
             )
-            OutlinedTextField(
+            AmTextField(
                 value = accountPattern,
                 onValueChange = onAccountPatternChange,
-                label = { Text("계좌 패턴 (예: 941602-**-***318)") },
-                singleLine = true,
+                label = "계좌 패턴 (예: 941602-**-***318)",
                 modifier = Modifier.fillMaxWidth(),
             )
             Text("* 나중에 홈에서 감지된 거래로도 등록할 수 있어요.", fontSize = 11.sp, color = TextSecondary)
@@ -322,17 +306,16 @@ private fun AccountSection(
 private fun BudgetSection(budgetInput: String, budget: Long, onBudgetChange: (String) -> Unit) {
     Section("이번달 예산") {
         Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-            OutlinedTextField(
+            AmTextField(
                 value = budgetInput,
                 onValueChange = { onBudgetChange(it.filter { c -> c.isDigit() }) },
-                label = { Text("월 예산 (원)") },
-                singleLine = true,
-                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                label = "월 예산 (원)",
+                keyboardType = KeyboardType.Number,
                 modifier = Modifier.fillMaxWidth(),
             )
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 BUDGET_PRESETS.forEach { (amount, label) ->
-                    OptionChip(label = label, selected = budget == amount) { onBudgetChange(amount.toString()) }
+                    AmChip(label = label, selected = budget == amount) { onBudgetChange(amount.toString()) }
                 }
             }
         }
@@ -344,35 +327,21 @@ private fun PaydaySection(payday: Int, onPaydayChange: (Int) -> Unit) {
     Section("수급일") {
         Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                OptionChip("15일", payday == 15) { onPaydayChange(15) }
-                OptionChip("25일", payday == 25) { onPaydayChange(25) }
-                OptionChip("말일", payday == PAYDAY_EOM) { onPaydayChange(PAYDAY_EOM) }
+                AmChip("15일", payday == 15) { onPaydayChange(15) }
+                AmChip("25일", payday == 25) { onPaydayChange(25) }
+                AmChip("말일", payday == PAYDAY_EOM) { onPaydayChange(PAYDAY_EOM) }
             }
-            OutlinedTextField(
+            AmTextField(
                 value = if (payday in 1..31) payday.toString() else "",
                 onValueChange = { v ->
                     val day = v.filter { it.isDigit() }.toIntOrNull()?.coerceIn(1, 31)
                     if (day != null) onPaydayChange(day)
                 },
-                label = { Text("직접 입력 (1~31)") },
-                singleLine = true,
-                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                label = "직접 입력 (1~31)",
+                keyboardType = KeyboardType.Number,
                 modifier = Modifier.fillMaxWidth(),
             )
         }
-    }
-}
-
-@Composable
-private fun OptionChip(label: String, selected: Boolean, onClick: () -> Unit) {
-    Box(
-        modifier = Modifier
-            .clip(RoundedCornerShape(12.dp))
-            .background(if (selected) Accent else ChipBg)
-            .clickable(onClick = onClick)
-            .padding(horizontal = 16.dp, vertical = 9.dp),
-    ) {
-        Text(label, color = if (selected) Color.White else TextPrimary, fontWeight = FontWeight.Bold, fontSize = 13.sp)
     }
 }
 

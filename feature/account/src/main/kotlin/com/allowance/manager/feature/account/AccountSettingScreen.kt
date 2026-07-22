@@ -1,7 +1,6 @@
 package com.allowance.manager.feature.account
 
 import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -14,10 +13,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.Button
-import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -28,21 +24,20 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
-import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import com.allowance.manager.core.domain.model.Account
+import com.allowance.manager.core.designsystem.component.AmButton
+import com.allowance.manager.core.designsystem.component.AmCard
+import com.allowance.manager.core.designsystem.component.AmScreenHeader
+import com.allowance.manager.core.designsystem.component.AmTextButton
+import com.allowance.manager.core.designsystem.component.AmTextField
 import com.allowance.manager.core.designsystem.theme.AmColors
-
-private val Bg = AmColors.ScreenBg
-private val TextPrimary = AmColors.TextPrimary
-private val TextSecondary = AmColors.TextSecondary
-private val SpendRed = AmColors.Red
+import com.allowance.manager.core.designsystem.theme.AmShape
+import com.allowance.manager.core.designsystem.theme.AmSpacing
+import com.allowance.manager.core.domain.model.Account
 
 @Composable
 fun AccountSettingRoute(
@@ -78,23 +73,19 @@ fun AccountSettingScreen(
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .background(Bg)
-            .padding(20.dp),
+            .background(AmColors.ScreenBg)
+            .padding(AmSpacing.xl),
     ) {
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            Text("←", fontSize = 22.sp, color = TextPrimary, modifier = Modifier.clickable(onClick = onBack))
-            Spacer(Modifier.width(12.dp))
-            Text("계좌 관리", fontSize = 18.sp, fontWeight = FontWeight.Bold, color = TextPrimary)
-        }
+        AmScreenHeader(title = "계좌 관리", onBack = onBack)
 
-        Spacer(Modifier.height(16.dp))
+        Spacer(Modifier.height(AmSpacing.lg))
 
         if (uiState.accounts.isEmpty()) {
             Box(modifier = Modifier.weight(1f).fillMaxWidth(), contentAlignment = Alignment.Center) {
                 Text(
                     "아직 등록된 계좌가 없어요.\n아래에서 추가하거나,\n홈에서 감지된 거래를 메인으로 등록하세요.",
                     fontSize = 12.sp,
-                    color = TextSecondary,
+                    color = AmColors.TextSecondary,
                     textAlign = TextAlign.Center,
                     lineHeight = 18.sp,
                 )
@@ -108,12 +99,12 @@ fun AccountSettingScreen(
                         onDelete = onDelete,
                         onStartEdit = onStartEdit,
                     )
-                    Spacer(Modifier.height(8.dp))
+                    Spacer(Modifier.height(AmSpacing.sm))
                 }
             }
         }
 
-        Spacer(Modifier.height(8.dp))
+        Spacer(Modifier.height(AmSpacing.sm))
         AddAccountForm(onAdd = onAdd)
     }
 
@@ -134,24 +125,19 @@ private fun AccountRow(
     onDelete: (Account) -> Unit,
     onStartEdit: (Account) -> Unit,
 ) {
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clip(RoundedCornerShape(12.dp))
-            .background(Color.White)
-            .padding(14.dp),
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        Column(modifier = Modifier.weight(1f)) {
-            Text(account.bankName, fontSize = 14.sp, fontWeight = FontWeight.Bold, color = TextPrimary)
-            Text(account.accountPattern, fontSize = 11.sp, color = TextSecondary)
-            Row {
-                Text("수정", fontSize = 11.sp, color = TextSecondary, modifier = Modifier.clickable { onStartEdit(account) })
-                Spacer(Modifier.width(12.dp))
-                Text("삭제", fontSize = 11.sp, color = SpendRed, modifier = Modifier.clickable { onDelete(account) })
+    AmCard(modifier = Modifier.fillMaxWidth(), shape = AmShape.cardSmall) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Column(modifier = Modifier.weight(1f)) {
+                Text(account.bankName, fontSize = 14.sp, fontWeight = FontWeight.Bold, color = AmColors.TextPrimary)
+                Text(account.accountPattern, fontSize = 11.sp, color = AmColors.TextSecondary)
+                Row {
+                    AmTextButton("수정", onClick = { onStartEdit(account) }, color = AmColors.TextSecondary, fontSize = 11.sp)
+                    Spacer(Modifier.width(AmSpacing.md))
+                    AmTextButton("삭제", onClick = { onDelete(account) }, color = AmColors.Red, fontSize = 11.sp)
+                }
             }
+            Switch(checked = account.enabled, onCheckedChange = { onToggleEnabled(account, it) })
         }
-        Switch(checked = account.enabled, onCheckedChange = { onToggleEnabled(account, it) })
     }
 }
 
@@ -160,38 +146,32 @@ private fun AddAccountForm(onAdd: (String, String) -> Unit) {
     var bankName by remember { mutableStateOf("") }
     var pattern by remember { mutableStateOf("") }
 
-    Column(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clip(RoundedCornerShape(12.dp))
-            .background(Color.White)
-            .padding(14.dp),
-        verticalArrangement = Arrangement.spacedBy(8.dp),
-    ) {
-        Text("계좌 추가", fontSize = 13.sp, fontWeight = FontWeight.Bold, color = TextPrimary)
-        OutlinedTextField(
-            value = bankName,
-            onValueChange = { bankName = it },
-            label = { Text("은행/앱 이름") },
-            singleLine = true,
-            modifier = Modifier.fillMaxWidth(),
-        )
-        OutlinedTextField(
-            value = pattern,
-            onValueChange = { pattern = it },
-            label = { Text("계좌 패턴 (예: 941602-**-***318)") },
-            singleLine = true,
-            modifier = Modifier.fillMaxWidth(),
-        )
-        Button(
-            onClick = {
-                onAdd(bankName, pattern)
-                bankName = ""
-                pattern = ""
-            },
-            enabled = pattern.isNotBlank(),
-            modifier = Modifier.fillMaxWidth(),
-        ) { Text("추가") }
+    AmCard(modifier = Modifier.fillMaxWidth(), shape = AmShape.cardSmall) {
+        Column(verticalArrangement = Arrangement.spacedBy(AmSpacing.sm)) {
+            Text("계좌 추가", fontSize = 13.sp, fontWeight = FontWeight.Bold, color = AmColors.TextPrimary)
+            AmTextField(
+                value = bankName,
+                onValueChange = { bankName = it },
+                label = "은행/앱 이름",
+                modifier = Modifier.fillMaxWidth(),
+            )
+            AmTextField(
+                value = pattern,
+                onValueChange = { pattern = it },
+                label = "계좌 패턴 (예: 941602-**-***318)",
+                modifier = Modifier.fillMaxWidth(),
+            )
+            AmButton(
+                text = "추가",
+                onClick = {
+                    onAdd(bankName, pattern)
+                    bankName = ""
+                    pattern = ""
+                },
+                enabled = pattern.isNotBlank(),
+                modifier = Modifier.fillMaxWidth(),
+            )
+        }
     }
 }
 
@@ -206,18 +186,16 @@ private fun EditAccountDialog(
         onDismissRequest = onCancel,
         title = { Text("계좌 수정") },
         text = {
-            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                OutlinedTextField(
+            Column(verticalArrangement = Arrangement.spacedBy(AmSpacing.sm)) {
+                AmTextField(
                     value = account.bankName,
                     onValueChange = { onChange(it, account.accountPattern) },
-                    label = { Text("은행/앱 이름") },
-                    singleLine = true,
+                    label = "은행/앱 이름",
                 )
-                OutlinedTextField(
+                AmTextField(
                     value = account.accountPattern,
                     onValueChange = { onChange(account.bankName, it) },
-                    label = { Text("계좌 패턴") },
-                    singleLine = true,
+                    label = "계좌 패턴",
                 )
             }
         },

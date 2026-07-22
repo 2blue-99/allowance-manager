@@ -1,7 +1,6 @@
 package com.allowance.manager.feature.intro
 
 import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -17,7 +16,6 @@ import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.Button
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -33,6 +31,8 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.allowance.manager.core.designsystem.component.AmButton
+import com.allowance.manager.core.designsystem.component.AmTextButton
 import com.allowance.manager.core.designsystem.theme.AmColors
 import kotlinx.coroutines.launch
 
@@ -78,7 +78,7 @@ fun IntroScreen(onFinish: () -> Unit = {}) {
             horizontalArrangement = Arrangement.End,
         ) {
             if (!isLast) {
-                Text("건너뛰기", fontSize = 13.sp, color = TextSecondary, modifier = Modifier.clickable(onClick = onFinish))
+                AmTextButton("건너뛰기", onClick = onFinish, color = TextSecondary, fontWeight = FontWeight.Normal)
             } else {
                 Spacer(Modifier.height(18.dp))
             }
@@ -98,13 +98,14 @@ fun IntroScreen(onFinish: () -> Unit = {}) {
         PageIndicator(current = pagerState.currentPage)
         Spacer(Modifier.height(16.dp))
 
-        Button(
+        AmButton(
+            text = if (isLast) "시작하기" else "다음",
             onClick = {
                 if (isLast) onFinish()
                 else scope.launch { pagerState.animateScrollToPage(pagerState.currentPage + 1) }
             },
             modifier = Modifier.fillMaxWidth().padding(horizontal = 24.dp),
-        ) { Text(if (isLast) "시작하기" else "다음") }
+        )
     }
 }
 
@@ -120,7 +121,7 @@ private fun IntroSlide(page: IntroPage) {
                 .fillMaxWidth()
                 .weight(1f)
                 .padding(vertical = 12.dp)
-                .clip(RoundedCornerShape(20.dp))
+                .clip(RoundedCornerShape(16.dp))
                 .background(PlaceholderBg),
             contentAlignment = Alignment.Center,
         ) {

@@ -18,24 +18,18 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import com.allowance.manager.core.domain.util.amountToComma
+import com.allowance.manager.core.designsystem.component.AmCard
+import com.allowance.manager.core.designsystem.component.AmScreenHeader
+import com.allowance.manager.core.designsystem.component.AmStatusChip
 import com.allowance.manager.core.designsystem.theme.AmColors
+import com.allowance.manager.core.designsystem.theme.AmSpacing
+import com.allowance.manager.core.domain.util.amountToComma
 import kotlin.math.abs
-
-private val Accent = AmColors.Emerald
-private val AccentBg = AmColors.EmeraldBg
-private val BarTrack = AmColors.BarTrack
-private val Bg = AmColors.ScreenBg
-private val TextPrimary = AmColors.TextPrimary
-private val TextSecondary = AmColors.TextSecondary
-private val UpRed = AmColors.Red
-private val UpRedBg = AmColors.RedBg
 
 @Composable
 fun StatsRoute(
@@ -48,37 +42,34 @@ fun StatsRoute(
 @Composable
 fun StatsScreen(uiState: StatsUiState) {
     Column(
-        modifier = Modifier.fillMaxSize().background(Bg).padding(20.dp),
+        modifier = Modifier.fillMaxSize().background(AmColors.ScreenBg).padding(AmSpacing.xl),
     ) {
-        Text("통계", fontSize = 18.sp, fontWeight = FontWeight.ExtraBold, color = TextPrimary)
-        Spacer(Modifier.height(20.dp))
+        AmScreenHeader(title = "통계")
+        Spacer(Modifier.height(AmSpacing.xl))
         SummaryCard(currentMonthTotal = uiState.currentMonthTotal, prevMonthDiff = uiState.prevMonthDiff)
-        Spacer(Modifier.height(12.dp))
+        Spacer(Modifier.height(AmSpacing.md))
         BarChartCard(bars = uiState.bars)
     }
 }
 
 @Composable
 private fun SummaryCard(currentMonthTotal: Long, prevMonthDiff: Long) {
-    Column(
-        modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(16.dp)).background(Color.White).padding(18.dp),
-    ) {
-        Text("이번달 지출", fontSize = 12.sp, color = TextSecondary)
-        Spacer(Modifier.height(6.dp))
-        Text("${currentMonthTotal.amountToComma()}원", fontSize = 28.sp, fontWeight = FontWeight.ExtraBold, color = TextPrimary)
-        Spacer(Modifier.height(10.dp))
+    AmCard(modifier = Modifier.fillMaxWidth()) {
+        Column {
+            Text("이번달 지출", fontSize = 12.sp, color = AmColors.TextSecondary)
+            Spacer(Modifier.height(AmSpacing.xs + 2.dp))
+            Text("${currentMonthTotal.amountToComma()}원", fontSize = 28.sp, fontWeight = FontWeight.ExtraBold, color = AmColors.TextPrimary)
+            Spacer(Modifier.height(AmSpacing.sm + 2.dp))
 
-        val (arrow, color, chipBg) = when {
-            prevMonthDiff > 0 -> Triple("▲", UpRed, UpRedBg)
-            prevMonthDiff < 0 -> Triple("▼", Accent, AccentBg)
-            else -> Triple("–", TextSecondary, Bg)
-        }
-        Box(modifier = Modifier.clip(RoundedCornerShape(8.dp)).background(chipBg).padding(horizontal = 10.dp, vertical = 5.dp)) {
-            Text(
+            val (arrow, color, chipBg) = when {
+                prevMonthDiff > 0 -> Triple("▲", AmColors.Red, AmColors.RedBg)
+                prevMonthDiff < 0 -> Triple("▼", AmColors.Emerald, AmColors.EmeraldBg)
+                else -> Triple("–", AmColors.TextSecondary, AmColors.ScreenBg)
+            }
+            AmStatusChip(
                 text = if (prevMonthDiff == 0L) "지난달과 동일" else "지난달 대비 $arrow ${abs(prevMonthDiff).amountToComma()}원",
-                fontSize = 11.sp,
-                fontWeight = FontWeight.Bold,
                 color = color,
+                background = chipBg,
             )
         }
     }
@@ -86,53 +77,53 @@ private fun SummaryCard(currentMonthTotal: Long, prevMonthDiff: Long) {
 
 @Composable
 private fun BarChartCard(bars: List<MonthBar>) {
-    Column(
-        modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(16.dp)).background(Color.White).padding(18.dp),
-    ) {
-        Text("최근 6개월", fontSize = 13.sp, fontWeight = FontWeight.ExtraBold, color = TextPrimary)
-        Spacer(Modifier.height(18.dp))
+    AmCard(modifier = Modifier.fillMaxWidth()) {
+        Column {
+            Text("최근 6개월", fontSize = 13.sp, fontWeight = FontWeight.ExtraBold, color = AmColors.TextPrimary)
+            Spacer(Modifier.height(AmSpacing.lg + 2.dp))
 
-        val max = (bars.maxOfOrNull { it.total } ?: 0L).coerceAtLeast(1L)
-        val chartHeight = 130.dp
+            val max = (bars.maxOfOrNull { it.total } ?: 0L).coerceAtLeast(1L)
+            val chartHeight = 130.dp
 
-        Row(
-            modifier = Modifier.fillMaxWidth().height(chartHeight + 44.dp),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.Bottom,
-        ) {
-            bars.forEach { bar ->
-                val fraction = (bar.total.toFloat() / max).coerceIn(0f, 1f)
-                Column(
-                    horizontalAlignment = Alignment.CenterHorizontally,
-                    verticalArrangement = Arrangement.Bottom,
-                    modifier = Modifier.weight(1f),
-                ) {
-                    Text(
-                        text = if (bar.total > 0) "${bar.total / 10000}만" else "",
-                        fontSize = 9.sp,
-                        fontWeight = FontWeight.Bold,
-                        color = if (bar.isCurrent) Accent else TextSecondary,
-                    )
-                    Spacer(Modifier.height(4.dp))
-                    Box(
-                        modifier = Modifier.width(22.dp).height(chartHeight),
-                        contentAlignment = Alignment.BottomCenter,
+            Row(
+                modifier = Modifier.fillMaxWidth().height(chartHeight + 44.dp),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.Bottom,
+            ) {
+                bars.forEach { bar ->
+                    val fraction = (bar.total.toFloat() / max).coerceIn(0f, 1f)
+                    Column(
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        verticalArrangement = Arrangement.Bottom,
+                        modifier = Modifier.weight(1f),
                     ) {
+                        Text(
+                            text = if (bar.total > 0) "${bar.total / 10000}만" else "",
+                            fontSize = 9.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = if (bar.isCurrent) AmColors.Emerald else AmColors.TextSecondary,
+                        )
+                        Spacer(Modifier.height(AmSpacing.xs))
                         Box(
-                            modifier = Modifier
-                                .width(22.dp)
-                                .height((chartHeight) * fraction)
-                                .clip(RoundedCornerShape(topStart = 7.dp, topEnd = 7.dp))
-                                .background(if (bar.isCurrent) Accent else BarTrack),
+                            modifier = Modifier.width(22.dp).height(chartHeight),
+                            contentAlignment = Alignment.BottomCenter,
+                        ) {
+                            Box(
+                                modifier = Modifier
+                                    .width(22.dp)
+                                    .height((chartHeight) * fraction)
+                                    .clip(RoundedCornerShape(topStart = 7.dp, topEnd = 7.dp))
+                                    .background(if (bar.isCurrent) AmColors.Emerald else AmColors.BarTrack),
+                            )
+                        }
+                        Spacer(Modifier.height(AmSpacing.sm))
+                        Text(
+                            bar.label,
+                            fontSize = 10.sp,
+                            color = if (bar.isCurrent) AmColors.TextPrimary else AmColors.TextSecondary,
+                            fontWeight = if (bar.isCurrent) FontWeight.Bold else FontWeight.Normal,
                         )
                     }
-                    Spacer(Modifier.height(8.dp))
-                    Text(
-                        bar.label,
-                        fontSize = 10.sp,
-                        color = if (bar.isCurrent) TextPrimary else TextSecondary,
-                        fontWeight = if (bar.isCurrent) FontWeight.Bold else FontWeight.Normal,
-                    )
                 }
             }
         }
