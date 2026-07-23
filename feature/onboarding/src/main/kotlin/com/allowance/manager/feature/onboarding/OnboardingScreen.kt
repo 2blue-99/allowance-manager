@@ -14,6 +14,7 @@ import androidx.compose.animation.fadeIn
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -27,7 +28,6 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -35,6 +35,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -48,7 +49,7 @@ import com.allowance.manager.core.designsystem.anim.AmMotion
 import com.allowance.manager.core.designsystem.component.AmButton
 import com.allowance.manager.core.designsystem.component.AmCard
 import com.allowance.manager.core.designsystem.component.AmChip
-import com.allowance.manager.core.designsystem.component.AmTextField
+import com.allowance.manager.core.designsystem.component.AmLineTextField
 import com.allowance.manager.core.designsystem.theme.AmColors
 import com.allowance.manager.core.designsystem.theme.AmSpacing
 import kotlinx.coroutines.delay
@@ -112,7 +113,7 @@ fun OnboardingRoute(
     // 알림 접근이 허용되면 0.5초 뒤에 정보 화면으로 전환 (✓ 상태를 잠깐 노출).
     LaunchedEffect(permissionGranted) {
         if (permissionGranted && !showInfo) {
-            delay(500)
+            delay(300)
             showInfo = true
         }
     }
@@ -225,27 +226,26 @@ private fun InfoScreen(
     onPaydayChange: (Int) -> Unit,
     onFinish: () -> Unit,
 ) {
-    // 1=계좌, 2=+예산, 3=+수급일. 새 항목은 위에 추가되고 기존은 아래로 밀림.
-    var revealed by remember { mutableIntStateOf(1) }
-    val isLast = revealed >= 3
+    // 자동 진행: 월급일 확정 → 용돈 노출 → 용돈 확정 → 계좌(선택) + 시작하기 노출.
+    // 새 항목은 위에 추가되고 기존은 아래로 밀림.
+    // payday는 기본값이 있어 값 유무로 판정 불가 → 사용자 동작(칩 탭 / 키보드 '다음')으로 확정 처리.
+    var paydayDone by remember { mutableStateOf(false) }
+    var budgetDone by remember { mutableStateOf(false) }
 
     Column(
-        modifier = Modifier.fillMaxSize().background(ScreenBg).padding(24.dp),
+        modifier = Modifier.fillMaxSize().background(ScreenBg).padding(horizontal = 24.dp).padding(top = 30.dp),
     ) {
-        Text("기본 정보를 입력해요", fontSize = 22.sp, fontWeight = FontWeight.ExtraBold, color = TextPrimary)
+        Text("기본 정보를 입력해요", fontSize = 30.sp, fontWeight = FontWeight.ExtraBold, color = TextPrimary)
         Spacer(Modifier.height(6.dp))
-        Text("설정에서 언제든 바꿀 수 있어요.", fontSize = 13.sp, color = TextSecondary)
-        Spacer(Modifier.height(20.dp))
+        Text("설정에서 언제든 바꿀 수 있어요.", fontSize = 16.sp, color = TextSecondary)
+        Spacer(Modifier.height(36.dp))
 
-        Column(modifier = Modifier.weight(1f).verticalScroll(rememberScrollState())) {
-            // 위(최신) → 아래(기존): 수급일 → 예산 → 계좌
-            AnimatedVisibility(visible = revealed >= 3, enter = fadeIn() + expandVertically()) {
-                PaydaySection(payday = uiState.payday, onPaydayChange = onPaydayChange)
-            }
-            AnimatedVisibility(visible = revealed >= 2, enter = fadeIn() + expandVertically()) {
-                BudgetSection(budgetInput = uiState.budgetInput, budget = uiState.budget, onBudgetChange = onBudgetChange)
-            }
-            AnimatedVisibility(visible = revealed >= 1, enter = fadeIn() + expandVertically()) {
+        Column(
+            modifier = Modifier.weight(1f).verticalScroll(rememberScrollState()),
+            verticalArrangement = Arrangement.spacedBy(40.dp)
+        ) {
+            // 세번째 : 계좌 (선택) — 용돈 확정 후 노출
+            AnimatedVisibility(visible = budgetDone, enter = fadeIn() + expandVertically()) {
                 AccountSection(
                     bankName = uiState.bankName,
                     accountPattern = uiState.accountPattern,
@@ -253,23 +253,46 @@ private fun InfoScreen(
                     onAccountPatternChange = onAccountPatternChange,
                 )
             }
+            // 두번째 : 용돈 — 월급일 확정 후 노출
+            AnimatedVisibility(visible = paydayDone, enter = fadeIn() + expandVertically()) {
+                BudgetSection(
+                    budgetInput = uiState.budgetInput,
+                    budget = uiState.budget,
+                    onBudgetChange = onBudgetChange,
+                    onCommit = { if (uiState.budget > 0) budgetDone = true },
+                )
+            }
+            // 첫번째 : 월급일 — 항상 노출
+            PaydaySection(
+                payday = uiState.payday,
+                onPaydayChange = onPaydayChange,
+                onCommit = { paydayDone = true },
+            )
         }
 
-        Spacer(Modifier.height(AmSpacing.md))
-        AmButton(
-            text = if (isLast) "시작하기" else "다음",
-            onClick = { if (isLast) onFinish() else revealed++ },
-            enabled = if (isLast) uiState.canFinish else true,
-            modifier = Modifier.fillMaxWidth(),
-        )
+        // 마지막 단계까지 왔을 때만 노출 (계좌는 선택이라 비워도 시작 가능)
+        AnimatedVisibility(visible = budgetDone, enter = fadeIn() + expandVertically()) {
+            Column {
+                Spacer(Modifier.height(AmSpacing.md))
+                AmButton(
+                    text = "시작하기",
+                    onClick = onFinish,
+                    enabled = uiState.canFinish,
+                    modifier = Modifier.fillMaxWidth(),
+                )
+            }
+        }
     }
 }
 
 @Composable
 private fun Section(title: String, content: @Composable () -> Unit) {
-    AmCard(modifier = Modifier.fillMaxWidth().padding(bottom = AmSpacing.md)) {
+    AmCard(
+        modifier = Modifier.fillMaxWidth(),
+        contentPadding = PaddingValues(vertical = 0.dp),
+    ) {
         Column {
-            Text(title, fontSize = 13.sp, fontWeight = FontWeight.ExtraBold, color = TextPrimary)
+            Text(title, fontSize = 22.sp, fontWeight = FontWeight.ExtraBold, color = TextPrimary)
             Spacer(Modifier.height(AmSpacing.sm + 2.dp))
             content()
         }
@@ -283,39 +306,50 @@ private fun AccountSection(
     onBankNameChange: (String) -> Unit,
     onAccountPatternChange: (String) -> Unit,
 ) {
-    Section("계좌 등록 (선택)") {
+    Section("용돈 계좌를 입력해주세요!") {
         Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-            AmTextField(
+            Text("은행과 계좌 번호로 입출금 알림을 자동 감지해요.", fontSize = 14.sp, color = TextSecondary)
+            AmLineTextField(
                 value = bankName,
                 onValueChange = onBankNameChange,
-                label = "은행/앱 이름 (예: 신한은행)",
+                hint = "ex. 국민은행",
                 modifier = Modifier.fillMaxWidth(),
             )
-            AmTextField(
+            AmLineTextField(
                 value = accountPattern,
                 onValueChange = onAccountPatternChange,
-                label = "계좌 패턴 (예: 941602-**-***318)",
+                hint = "ex. 941111-11-111111",
+                keyboardType = KeyboardType.Number,
                 modifier = Modifier.fillMaxWidth(),
             )
-            Text("* 나중에 홈에서 감지된 거래로도 등록할 수 있어요.", fontSize = 11.sp, color = TextSecondary)
         }
     }
 }
 
 @Composable
-private fun BudgetSection(budgetInput: String, budget: Long, onBudgetChange: (String) -> Unit) {
-    Section("이번달 예산") {
+private fun BudgetSection(
+    budgetInput: String,
+    budget: Long,
+    onBudgetChange: (String) -> Unit,
+    onCommit: () -> Unit,
+) {
+    Section("월 용돈이 얼마인가요?") {
         Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-            AmTextField(
+            AmLineTextField(
                 value = budgetInput,
                 onValueChange = { onBudgetChange(it.filter { c -> c.isDigit() }) },
-                label = "월 예산 (원)",
+                hint = "ex. 500,000",
                 keyboardType = KeyboardType.Number,
+                imeAction = ImeAction.Done,
+                onImeAction = onCommit,
                 modifier = Modifier.fillMaxWidth(),
             )
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 BUDGET_PRESETS.forEach { (amount, label) ->
-                    AmChip(label = label, selected = budget == amount) { onBudgetChange(amount.toString()) }
+                    AmChip(label = label, selected = budget == amount) {
+                        onBudgetChange(amount.toString())
+                        onCommit()
+                    }
                 }
             }
         }
@@ -323,24 +357,32 @@ private fun BudgetSection(budgetInput: String, budget: Long, onBudgetChange: (St
 }
 
 @Composable
-private fun PaydaySection(payday: Int, onPaydayChange: (Int) -> Unit) {
-    Section("수급일") {
+private fun PaydaySection(
+    payday: Int,
+    onPaydayChange: (Int) -> Unit,
+    onCommit: () -> Unit,
+) {
+    Section("월급일이 언제인가요?") {
         Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                AmChip("15일", payday == 15) { onPaydayChange(15) }
-                AmChip("25일", payday == 25) { onPaydayChange(25) }
-                AmChip("말일", payday == PAYDAY_EOM) { onPaydayChange(PAYDAY_EOM) }
-            }
-            AmTextField(
+
+            AmLineTextField(
                 value = if (payday in 1..31) payday.toString() else "",
                 onValueChange = { v ->
                     val day = v.filter { it.isDigit() }.toIntOrNull()?.coerceIn(1, 31)
                     if (day != null) onPaydayChange(day)
                 },
-                label = "직접 입력 (1~31)",
+                hint = "직접 입력",
                 keyboardType = KeyboardType.Number,
+                imeAction = ImeAction.Done,
+                onImeAction = onCommit,
                 modifier = Modifier.fillMaxWidth(),
             )
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                AmChip("15일", payday == 15) { onPaydayChange(15); onCommit() }
+                AmChip("20일", payday == 20) { onPaydayChange(20); onCommit() }
+                AmChip("25일", payday == 25) { onPaydayChange(25); onCommit() }
+                AmChip("말일", payday == PAYDAY_EOM) { onPaydayChange(PAYDAY_EOM); onCommit() }
+            }
         }
     }
 }
