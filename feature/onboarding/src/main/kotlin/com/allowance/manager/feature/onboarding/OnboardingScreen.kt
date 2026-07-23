@@ -126,7 +126,7 @@ fun OnboardingRoute(
         label = "onboardingStep",
     ) { onInfo ->
         if (onInfo) {
-            InfoScreen(
+            OnboardingInfoScreen(
                 uiState = uiState,
                 onBankNameChange = viewModel::onBankNameChange,
                 onAccountPatternChange = viewModel::onAccountPatternChange,
@@ -135,7 +135,7 @@ fun OnboardingRoute(
                 onFinish = viewModel::finish,
             )
         } else {
-            PermissionScreen(
+            OnboardingPermissionScreen(
                 postGranted = postGranted,
                 listenerGranted = permissionGranted,
                 onAllow = requestBothPermissions,
@@ -147,7 +147,7 @@ fun OnboardingRoute(
 // ── 권한 화면 (알림 접근 권한 없을 때) ─────────────────────────
 // 두 권한을 함께 안내하고, 하단 버튼 하나로 순차 요청.
 @Composable
-private fun PermissionScreen(
+fun OnboardingPermissionScreen(
     postGranted: Boolean,
     listenerGranted: Boolean,
     onAllow: () -> Unit,
@@ -217,15 +217,15 @@ private fun PermissionRow(
     }
 }
 
-// ── 정보 화면 (계좌·예산·수급일, 위에서 쌓이는 애니메이션) ──────
+// ── 정보 화면 (월급일·용돈·계좌, 위에서 쌓이는 애니메이션) ──────
 @Composable
-private fun InfoScreen(
+fun OnboardingInfoScreen(
     uiState: OnboardingUiState,
-    onBankNameChange: (String) -> Unit,
-    onAccountPatternChange: (String) -> Unit,
-    onBudgetChange: (String) -> Unit,
-    onPaydayChange: (Int) -> Unit,
-    onFinish: () -> Unit,
+    onBankNameChange: (String) -> Unit = {},
+    onAccountPatternChange: (String) -> Unit = {},
+    onBudgetChange: (String) -> Unit = {},
+    onPaydayChange: (Int) -> Unit = {},
+    onFinish: () -> Unit = {},
 ) {
     // 자동 진행: 월급일 확정 → 용돈 노출 → 용돈 확정 → 계좌(선택) + 시작하기 노출.
     // 새 항목은 위에 추가되고 기존은 아래로 밀림.

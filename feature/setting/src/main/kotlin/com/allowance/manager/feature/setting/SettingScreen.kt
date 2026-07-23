@@ -38,13 +38,35 @@ private const val PAYDAY_EOM = 0
 
 private fun paydayLabel(payday: Int): String = if (payday <= 0) "말일" else "${payday}일"
 
+/** 상태 계층: ViewModel·네비게이션 의존성을 여기서 관리한다. */
 @Composable
-fun SettingScreen(
+fun SettingRoute(
     onBack: () -> Unit,
     onNavigateToAccount: () -> Unit = {},
     viewModel: SettingViewModel = hiltViewModel(),
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+    SettingScreen(
+        uiState = uiState,
+        onBack = onBack,
+        onNavigateToAccount = onNavigateToAccount,
+        onStatusBarEnabledChange = viewModel::setStatusBarEnabled,
+        onBudgetChange = viewModel::setBudget,
+        onPaydayChange = viewModel::setPayday,
+    )
+}
+
+/** 표현 계층: uiState와 콜백만 받는다. (Preview 가능) */
+@Composable
+fun SettingScreen(
+    uiState: SettingUiState,
+    onBack: () -> Unit = {},
+    onNavigateToAccount: () -> Unit = {},
+    onStatusBarEnabledChange: (Boolean) -> Unit = {},
+    onBudgetChange: (Long) -> Unit = {},
+    onPaydayChange: (Int) -> Unit = {},
+) {
+    // 다이얼로그 노출 여부는 순수 UI 상태 → 화면이 직접 보유
     var showBudgetDialog by remember { mutableStateOf(false) }
     var showPaydayDialog by remember { mutableStateOf(false) }
 
@@ -68,7 +90,7 @@ fun SettingScreen(
         }
         Spacer(Modifier.height(AmSpacing.sm))
         AmSettingRow(title = "상태바 알림", subtitle = "이번달 지출을 상태바에 상시 표시") {
-            Switch(checked = uiState.statusBarEnabled, onCheckedChange = viewModel::setStatusBarEnabled)
+            Switch(checked = uiState.statusBarEnabled, onCheckedChange = onStatusBarEnabledChange)
         }
         Spacer(Modifier.height(AmSpacing.sm))
         AmSettingRow(title = "계좌 관리", subtitle = "메인 계좌 등록·수정", onClick = onNavigateToAccount) {
@@ -79,14 +101,14 @@ fun SettingScreen(
     if (showBudgetDialog) {
         BudgetDialog(
             current = uiState.budget,
-            onSave = { viewModel.setBudget(it); showBudgetDialog = false },
+            onSave = { onBudgetChange(it); showBudgetDialog = false },
             onDismiss = { showBudgetDialog = false },
         )
     }
     if (showPaydayDialog) {
         PaydayDialog(
             current = uiState.payday,
-            onSave = { viewModel.setPayday(it); showPaydayDialog = false },
+            onSave = { onPaydayChange(it); showPaydayDialog = false },
             onDismiss = { showPaydayDialog = false },
         )
     }

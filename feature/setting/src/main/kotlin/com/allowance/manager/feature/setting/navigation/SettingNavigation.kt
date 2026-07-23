@@ -2,7 +2,7 @@ package com.allowance.manager.feature.setting.navigation
 
 import androidx.navigation.NavGraphBuilder
 import androidx.navigation.compose.composable
-import com.allowance.manager.feature.setting.SettingScreen
+import com.allowance.manager.feature.setting.SettingRoute
 import kotlinx.serialization.Serializable
 
 @Serializable
@@ -13,6 +13,6 @@ fun NavGraphBuilder.settingScreen(
     onNavigateToAccount: () -> Unit,
 ) {
     composable<SettingRoute> {
-        SettingScreen(onBack = onBack, onNavigateToAccount = onNavigateToAccount)
+        SettingRoute(onBack = onBack, onNavigateToAccount = onNavigateToAccount)
     }
 }

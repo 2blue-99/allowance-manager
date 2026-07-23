@@ -2,7 +2,7 @@ package com.allowance.manager.feature.splash.navigation
 
 import androidx.navigation.NavGraphBuilder
 import androidx.navigation.compose.composable
-import com.allowance.manager.feature.splash.SplashScreen
+``import com.allowance.manager.feature.splash.SplashRoute
 import kotlinx.serialization.Serializable
 
 @Serializable
@@ -14,7 +14,7 @@ fun NavGraphBuilder.splashScreen(
     onNavigateToIntro: () -> Unit,
 ) {
     composable<SplashRoute> {
-        SplashScreen(
+        SplashRoute(
             onNavigateToHome = onNavigateToHome,
             onNavigateToOnboarding = onNavigateToOnboarding,
             onNavigateToIntro = onNavigateToIntro,
