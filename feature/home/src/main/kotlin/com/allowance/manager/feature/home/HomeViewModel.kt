@@ -108,6 +108,6 @@ class HomeViewModel @Inject constructor(
 
     private fun cycleLabel(nextPayday: LocalDate): String {
         val days = ChronoUnit.DAYS.between(LocalDate.now(), nextPayday)
-        return if (days <= 0) "수급일" else "다음 수급일 D-$days"
+        return if (days <= 0) "월급일" else "다음 월급일 D-$days"
     }
 }

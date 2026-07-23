@@ -214,7 +214,7 @@ private fun StatsPills(uiState: HomeUiState) {
         Box(Modifier.width(1.dp).height(56.dp).background(AmColors.HeroPillLine))
         PillItem("${uiState.budget.amountToComma()}원", "월 예산", Modifier.weight(1f))
         Box(Modifier.width(1.dp).height(56.dp).background(AmColors.HeroPillLine))
-        PillItem(uiState.cycleLabel.substringAfter("다음 수급일 ").ifBlank { "-" }, "수급일까지", Modifier.weight(1f), AmColors.Emerald)
+        PillItem(uiState.cycleLabel.substringAfter("다음 월급일 ").ifBlank { "-" }, "월급일까지", Modifier.weight(1f), AmColors.Emerald)
     }
 }
 

@@ -61,7 +61,7 @@ fun SettingScreen(
             AmChevron()
         }
         Spacer(Modifier.height(AmSpacing.sm))
-        AmSettingRow(title = "수급일", onClick = { showPaydayDialog = true }) {
+        AmSettingRow(title = "월급일", onClick = { showPaydayDialog = true }) {
             Text(paydayLabel(uiState.payday), fontSize = 13.sp, fontWeight = FontWeight.Bold, color = AmColors.Emerald)
             Spacer(Modifier.width(AmSpacing.xs))
             AmChevron()
@@ -119,7 +119,7 @@ private fun PaydayDialog(current: Int, onSave: (Int) -> Unit, onDismiss: () -> U
     var payday by remember { mutableIntStateOf(current) }
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text("수급일") },
+        title = { Text("월급일") },
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(AmSpacing.md)) {
                 Row(horizontalArrangement = Arrangement.spacedBy(AmSpacing.sm)) {
