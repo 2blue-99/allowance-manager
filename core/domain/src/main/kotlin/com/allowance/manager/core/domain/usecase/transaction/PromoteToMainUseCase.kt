@@ -1,6 +1,7 @@
 package com.allowance.manager.core.domain.usecase.transaction
 
 import com.allowance.manager.core.domain.model.Account
+import com.allowance.manager.core.domain.model.MaskedAccount
 import com.allowance.manager.core.domain.repository.AccountRepository
 import com.allowance.manager.core.domain.repository.TransactionRepository
 import javax.inject.Inject
@@ -14,15 +15,17 @@ class PromoteToMainUseCase @Inject constructor(
     private val transactionRepository: TransactionRepository,
 ) {
     suspend operator fun invoke(packageName: String, bankName: String, accountPattern: String): Long {
+        // 알림에서 온 값은 "941602-**-***318" 형태 → 구분자를 걷어내고 숫자·마스킹만 저장
+        val pattern = MaskedAccount.normalize(accountPattern)
         val accountId = accountRepository.add(
             Account(
                 packageName = packageName,
                 bankName = bankName,
-                accountPattern = accountPattern,
+                accountPattern = pattern,
                 enabled = true,
             )
         )
-        transactionRepository.promoteToMain(accountPattern, accountId)
+        transactionRepository.promoteToMain(pattern, accountId)
         return accountId
     }
 }

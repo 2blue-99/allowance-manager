@@ -1,5 +1,6 @@
 package com.allowance.manager.core.data.repository
 
+import com.allowance.manager.core.domain.model.MaskedAccount
 import com.allowance.manager.core.domain.model.MonthlyExpense
 import com.allowance.manager.core.domain.model.Transaction
 import com.allowance.manager.core.domain.model.TransactionType
@@ -51,8 +52,13 @@ class TransactionRepositoryImpl @Inject constructor(
         transactionDao.getById(id)?.let { transactionDao.update(it.copy(isIgnored = ignored)) }
     }
 
-    override suspend fun promoteToMain(pattern: String, accountId: Long) =
-        transactionDao.promoteByPattern(pattern, accountId)
+    // 마스킹 계좌 대조는 SQL로 불가 → 미매칭 내역을 불러와 도메인 규칙으로 판정 후 일괄 승격
+    override suspend fun promoteToMain(pattern: String, accountId: Long) {
+        val ids = transactionDao.getUnmatched()
+            .filter { MaskedAccount.matches(it.extractedAccount, pattern) }
+            .map { it.id }
+        if (ids.isNotEmpty()) transactionDao.promoteByIds(ids, accountId)
+    }
 }
 
 private fun Transaction.toEntity() = TransactionEntity(

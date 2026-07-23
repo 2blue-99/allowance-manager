@@ -46,7 +46,7 @@ class AccountViewModel @Inject constructor(
                 Account(
                     packageName = "",
                     bankName = bankName.ifBlank { "내 계좌" },
-                    accountPattern = pattern.trim(),
+                    accountPattern = pattern,
                     enabled = true,
                 )
             )
@@ -71,7 +71,7 @@ class AccountViewModel @Inject constructor(
     fun onSaveEdit() {
         val editing = _uiState.value.editing ?: return
         viewModelScope.launch {
-            updateAccountUseCase(editing.copy(accountPattern = editing.accountPattern.trim()))
+            updateAccountUseCase(editing)
             _uiState.update { it.copy(editing = null) }
         }
     }

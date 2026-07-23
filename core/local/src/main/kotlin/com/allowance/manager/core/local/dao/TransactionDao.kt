@@ -40,9 +40,16 @@ interface TransactionDao {
     )
     fun observeSpentBetween(start: Long, end: Long): Flow<Long>
 
-    /** 비메인 → 메인 승격: 같은 계좌 패턴의 기존 내역에 accountId 소급 적용 */
-    @Query("UPDATE transactions SET account_id = :accountId WHERE extracted_account = :pattern AND account_id IS NULL")
-    suspend fun promoteByPattern(pattern: String, accountId: Long)
+    /**
+     * 아직 메인 계좌에 매칭되지 않은 내역 (승격 소급 적용 후보).
+     * 마스킹 계좌 대조는 SQL로 표현할 수 없어 도메인(MaskedAccount)에서 판정한다.
+     */
+    @Query("SELECT * FROM transactions WHERE account_id IS NULL")
+    suspend fun getUnmatched(): List<TransactionEntity>
+
+    /** 비메인 → 메인 승격: 지정한 내역들에 accountId 소급 적용 */
+    @Query("UPDATE transactions SET account_id = :accountId WHERE id IN (:ids)")
+    suspend fun promoteByIds(ids: List<Long>, accountId: Long)
 
     /** 월별 지출 합계 (메인·무시아님·EXPENSE). ym = "yyyy-MM" (기기 로컬 타임존 기준) */
     @Query(
