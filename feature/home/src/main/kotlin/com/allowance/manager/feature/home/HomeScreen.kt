@@ -44,7 +44,7 @@ import com.allowance.manager.core.domain.model.Transaction
 import com.allowance.manager.core.domain.model.TransactionType
 import com.allowance.manager.core.domain.util.amountToComma
 import com.allowance.manager.core.designsystem.component.AmCard
-import com.allowance.manager.core.designsystem.component.AmTextButton
+import com.allowance.manager.core.designsystem.component.AmToggle
 import com.allowance.manager.core.designsystem.component.AmTextField
 import com.allowance.manager.core.designsystem.theme.AmColors
 import com.allowance.manager.core.designsystem.theme.AmShape
@@ -269,12 +269,19 @@ private fun ListHeader(showMainOnly: Boolean, canFilter: Boolean, onToggleMainOn
     ) {
         Text("이번달 내역", fontSize = 12.sp, fontWeight = FontWeight.ExtraBold, color = AmColors.TextPrimary)
         if (canFilter) {
-            AmTextButton(
-                text = if (showMainOnly) "전체 보기" else "메인만 보기",
-                onClick = onToggleMainOnly,
-                color = AmColors.Emerald,
-                fontSize = 10.sp,
-            )
+            // 라벨은 고정하고 토글 on/off로 상태를 표현
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(6.dp),
+            ) {
+                AmToggle(checked = showMainOnly, onCheckedChange = { onToggleMainOnly() })
+                Text(
+                    text = "메인만 보기",
+                    fontSize = 11.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = if (showMainOnly) AmColors.TextPrimary else AmColors.TextSecondary,
+                )
+            }
         }
     }
 }

@@ -100,3 +100,6 @@ CLAUDE.md
 
 # 생성물: 화면 갤러리 (tools/build-gallery.sh 로 재생성)
 /mockups/
+
+# Kotlin 빌드 세션/에러 로그
+.kotlin/

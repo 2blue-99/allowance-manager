@@ -307,9 +307,9 @@ private fun AccountSection(
     onBankNameChange: (String) -> Unit,
     onAccountPatternChange: (String) -> Unit,
 ) {
-    Section("용돈 계좌를 입력해주세요!") {
+    Section("용돈 계좌 정보를 입력해주세요") {
         Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-            Text("은행과 계좌 번호로 입출금 알림을 자동 감지해요.", fontSize = 14.sp, color = TextSecondary)
+            Text("은행 이름과 계좌 번호로 입출금 알림을 자동 감지해요.", fontSize = 14.sp, color = TextSecondary)
             AmLineTextField(
                 value = bankName,
                 onValueChange = onBankNameChange,
