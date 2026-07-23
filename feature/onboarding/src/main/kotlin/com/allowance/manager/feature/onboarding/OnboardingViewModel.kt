@@ -19,11 +19,15 @@ data class OnboardingUiState(
     val bankName: String = "",
     val accountPattern: String = "",
     val budgetInput: String = "",
-    val payday: Int = 25,          // 0 = 말일
+    val payday: Int? = null,       // null = 미선택, 0 = 말일, 1~31 = 해당 일
     val isFinished: Boolean = false,
 ) {
     val budget: Long get() = budgetInput.filter { it.isDigit() }.toLongOrNull() ?: 0L
-    val canFinish: Boolean get() = budget > 0
+
+    /** 월급일·용돈·계좌(은행명+계좌패턴)가 모두 채워져야 시작 가능 */
+    val canFinish: Boolean
+        get() = payday != null && budget > 0 &&
+            bankName.isNotBlank() && accountPattern.isNotBlank()
 }
 
 @HiltViewModel
@@ -45,19 +49,21 @@ class OnboardingViewModel @Inject constructor(
     fun finish() {
         val state = _uiState.value
         if (!state.canFinish) return
+        val payday = state.payday ?: return
         viewModelScope.launch {
             if (state.accountPattern.isNotBlank()) {
                 addAccountUseCase(
                     Account(
                         packageName = "",
                         bankName = state.bankName.ifBlank { "내 계좌" },
-                        accountPattern = state.accountPattern.trim(),
+                        // 계좌번호 정규화는 AddAccountUseCase에서 일괄 처리
+                        accountPattern = state.accountPattern,
                         enabled = true,
                     )
                 )
             }
             setMonthlyBudgetUseCase(state.budget)
-            setPaydayUseCase(state.payday)
+            setPaydayUseCase(payday)
             setOnboardingDoneUseCase()
             _uiState.update { it.copy(isFinished = true) }
         }

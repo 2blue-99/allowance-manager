@@ -50,6 +50,7 @@ import com.allowance.manager.core.designsystem.component.AmButton
 import com.allowance.manager.core.designsystem.component.AmCard
 import com.allowance.manager.core.designsystem.component.AmChip
 import com.allowance.manager.core.designsystem.component.AmLineTextField
+import com.allowance.manager.core.designsystem.component.AmThousandsTransformation
 import com.allowance.manager.core.designsystem.theme.AmColors
 import com.allowance.manager.core.designsystem.theme.AmSpacing
 import kotlinx.coroutines.delay
@@ -244,7 +245,7 @@ private fun InfoScreen(
             modifier = Modifier.weight(1f).verticalScroll(rememberScrollState()),
             verticalArrangement = Arrangement.spacedBy(40.dp)
         ) {
-            // 세번째 : 계좌 (선택) — 용돈 확정 후 노출
+            // 세번째 : 계좌 — 용돈 확정 후 노출
             AnimatedVisibility(visible = budgetDone, enter = fadeIn() + expandVertically()) {
                 AccountSection(
                     bankName = uiState.bankName,
@@ -259,7 +260,7 @@ private fun InfoScreen(
                     budgetInput = uiState.budgetInput,
                     budget = uiState.budget,
                     onBudgetChange = onBudgetChange,
-                    onCommit = { if (uiState.budget > 0) budgetDone = true },
+                    onCommit = { budgetDone = true },
                 )
             }
             // 첫번째 : 월급일 — 항상 노출
@@ -270,7 +271,7 @@ private fun InfoScreen(
             )
         }
 
-        // 마지막 단계까지 왔을 때만 노출 (계좌는 선택이라 비워도 시작 가능)
+        // 마지막 단계까지 왔을 때 노출. 계좌까지 모두 채워야 활성화(canFinish).
         AnimatedVisibility(visible = budgetDone, enter = fadeIn() + expandVertically()) {
             Column {
                 Spacer(Modifier.height(AmSpacing.md))
@@ -317,7 +318,8 @@ private fun AccountSection(
             )
             AmLineTextField(
                 value = accountPattern,
-                onValueChange = onAccountPatternChange,
+                // 숫자와 구분자(-)만 입력 허용. 저장 시 도메인에서 숫자만 남긴다.
+                onValueChange = { v -> onAccountPatternChange(v.filter { it.isDigit() || it == '-' }) },
                 hint = "ex. 941111-11-111111",
                 keyboardType = KeyboardType.Number,
                 modifier = Modifier.fillMaxWidth(),
@@ -341,11 +343,15 @@ private fun BudgetSection(
                 hint = "ex. 500,000",
                 keyboardType = KeyboardType.Number,
                 imeAction = ImeAction.Done,
-                onImeAction = onCommit,
+                // 값이 있을 때만 다음 단계로 (입력 중 조기 진행 방지)
+                onImeAction = { if (budget > 0) onCommit() },
+                onFocusLost = { if (budget > 0) onCommit() },
+                visualTransformation = remember { AmThousandsTransformation() },
                 modifier = Modifier.fillMaxWidth(),
             )
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 BUDGET_PRESETS.forEach { (amount, label) ->
+                    // 프리셋은 항상 유효 → 바로 다음 단계
                     AmChip(label = label, selected = budget == amount) {
                         onBudgetChange(amount.toString())
                         onCommit()
@@ -358,7 +364,7 @@ private fun BudgetSection(
 
 @Composable
 private fun PaydaySection(
-    payday: Int,
+    payday: Int?,
     onPaydayChange: (Int) -> Unit,
     onCommit: () -> Unit,
 ) {
@@ -366,7 +372,7 @@ private fun PaydaySection(
         Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
 
             AmLineTextField(
-                value = if (payday in 1..31) payday.toString() else "",
+                value = if (payday != null && payday in 1..31) payday.toString() else "",
                 onValueChange = { v ->
                     val day = v.filter { it.isDigit() }.toIntOrNull()?.coerceIn(1, 31)
                     if (day != null) onPaydayChange(day)
@@ -374,10 +380,13 @@ private fun PaydaySection(
                 hint = "직접 입력",
                 keyboardType = KeyboardType.Number,
                 imeAction = ImeAction.Done,
-                onImeAction = onCommit,
+                // 값이 선택된 상태일 때만 다음 단계로
+                onImeAction = { if (payday != null) onCommit() },
+                onFocusLost = { if (payday != null) onCommit() },
                 modifier = Modifier.fillMaxWidth(),
             )
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                // 칩은 항상 유효 → 바로 다음 단계
                 AmChip("15일", payday == 15) { onPaydayChange(15); onCommit() }
                 AmChip("20일", payday == 20) { onPaydayChange(20); onCommit() }
                 AmChip("25일", payday == 25) { onPaydayChange(25); onCommit() }
