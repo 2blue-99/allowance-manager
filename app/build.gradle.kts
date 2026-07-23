@@ -5,6 +5,7 @@ plugins {
     alias(libs.plugins.hilt)
     alias(libs.plugins.ksp)
     alias(libs.plugins.google.services)
+    alias(libs.plugins.compose.screenshot)
 }
 
 android {
@@ -38,6 +39,9 @@ android {
     buildFeatures {
         compose = true
     }
+    // Compose Preview 스크린샷 테스트 (전 화면을 HTML 리포트로 확인)
+    @Suppress("UnstableApiUsage")
+    experimentalProperties["android.experimental.enableScreenshotTest"] = true
 }
 
 dependencies {
@@ -81,6 +85,10 @@ dependencies {
     implementation(libs.timber)
 
     debugImplementation(libs.androidx.compose.ui.tooling)
+
+    // Preview 스크린샷 테스트용 (DesignGallery)
+    screenshotTestImplementation(platform(libs.androidx.compose.bom))
+    screenshotTestImplementation(libs.androidx.compose.ui.tooling)
 
     testImplementation("junit:junit:4.13.2")
 }

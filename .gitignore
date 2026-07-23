@@ -93,3 +93,10 @@ fabric.properties
 
 # Claude context (로컬 관리)
 CLAUDE.md
+
+# Compose Preview 스크린샷 baseline
+# UI가 안정되어 시각적 회귀 검출을 쓸 때 추적으로 전환할 것
+/app/src/debug/screenshotTest/
+
+# 생성물: 화면 갤러리 (tools/build-gallery.sh 로 재생성)
+/mockups/
