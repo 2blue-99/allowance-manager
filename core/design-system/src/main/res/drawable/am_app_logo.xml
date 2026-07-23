@@ -1,0 +1,52 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  앱 로고 (앱 내부 표시용 · 스플래시 등).
+  런처 아이콘과 같은 '월 용돈 달력' 아트워크. 마스크가 없으므로 배경 없이 원본 비율로 그린다.
+-->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+
+    <!-- 달력 상단 고리 -->
+    <path
+        android:pathData="M39,23 V31"
+        android:strokeColor="#0D1B2A"
+        android:strokeWidth="6"
+        android:strokeLineCap="round" />
+    <path
+        android:pathData="M69,23 V31"
+        android:strokeColor="#0D1B2A"
+        android:strokeWidth="6"
+        android:strokeLineCap="round" />
+
+    <!-- 달력 몸통 -->
+    <path
+        android:pathData="M33,28 H75 A9,9 0 0 1 84,37 V73 A9,9 0 0 1 75,82 H33 A9,9 0 0 1 24,73 V37 A9,9 0 0 1 33,28 Z"
+        android:fillColor="#10B981" />
+
+    <!-- 헤더 구분선 -->
+    <path
+        android:pathData="M24,45 H84"
+        android:strokeColor="#FFFFFF"
+        android:strokeWidth="4" />
+
+    <!-- 원화 기호 (상단 고리와 동일한 남색) -->
+    <path
+        android:pathData="M45,56 L49,72 L54,60 L59,72 L63,56"
+        android:strokeColor="#0D1B2A"
+        android:strokeWidth="4.2"
+        android:strokeLineCap="round"
+        android:strokeLineJoin="round" />
+    <path
+        android:pathData="M43,63 H65"
+        android:strokeColor="#0D1B2A"
+        android:strokeWidth="2.6"
+        android:strokeLineCap="round" />
+    <path
+        android:pathData="M43,68 H65"
+        android:strokeColor="#0D1B2A"
+        android:strokeWidth="2.6"
+        android:strokeLineCap="round" />
+</vector>
