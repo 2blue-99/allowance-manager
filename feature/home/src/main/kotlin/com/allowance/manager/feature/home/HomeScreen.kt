@@ -1,6 +1,5 @@
 package com.allowance.manager.feature.home
 
-import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -29,11 +28,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.geometry.Offset
-import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.StrokeCap
-import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.unit.dp
@@ -44,10 +39,12 @@ import com.allowance.manager.core.domain.model.Transaction
 import com.allowance.manager.core.domain.model.TransactionType
 import com.allowance.manager.core.domain.util.amountToComma
 import com.allowance.manager.core.designsystem.component.AmCard
+import com.allowance.manager.core.designsystem.component.AmProgressBar
 import com.allowance.manager.core.designsystem.component.AmToggle
 import com.allowance.manager.core.designsystem.component.AmTextField
 import com.allowance.manager.core.designsystem.theme.AmColors
 import com.allowance.manager.core.designsystem.theme.AmShape
+import com.allowance.manager.core.designsystem.theme.AmSpacing
 import java.time.Instant
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
@@ -114,27 +111,24 @@ private fun Hero(uiState: HomeUiState, onNavigateToSetting: () -> Unit) {
     Column(
         modifier = Modifier
             .fillMaxWidth()
-            .background(AmColors.Navy)
-            .padding(horizontal = 24.dp)
-            .padding(top = 20.dp, bottom = 28.dp),
+            .background(AmColors.ScreenBg)
+            .padding(horizontal = AmSpacing.xl)
+            .padding(top = 12.dp, bottom = 4.dp),
     ) {
+        // 타이틀 행 — 라이트 배경 위 다크 텍스트
         Row(
-            modifier = Modifier.fillMaxWidth().padding(bottom = 18.dp),
+            modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp),
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            Text("가계부", fontSize = 18.sp, fontWeight = FontWeight.ExtraBold, color = Color.White)
+            Text("가계부", fontSize = 22.sp, fontWeight = FontWeight.ExtraBold, color = AmColors.TextPrimary)
             IconBtn(label = "⚙️", onClick = onNavigateToSetting)
         }
 
-        BudgetRing(
-            remaining = uiState.remaining,
-            ratio = uiState.ratio,
-            isOver = uiState.isOver,
-            modifier = Modifier.align(Alignment.CenterHorizontally),
-        )
-
-        StatsPills(uiState = uiState)
+        Spacer(Modifier.height(6.dp))
+        BudgetCard(uiState = uiState)
+        Spacer(Modifier.height(12.dp))
+        StatsRow(uiState = uiState)
     }
 }
 
@@ -142,91 +136,112 @@ private fun Hero(uiState: HomeUiState, onNavigateToSetting: () -> Unit) {
 private fun IconBtn(label: String, onClick: () -> Unit = {}) {
     Box(
         modifier = Modifier
-            .size(30.dp)
-            .clip(RoundedCornerShape(50))
-            .background(AmColors.HeroIconBg)
+            .size(38.dp)
+            .clip(AmShape.pill)
+            .background(AmColors.ChipBg)
             .clickable(onClick = onClick),
         contentAlignment = Alignment.Center,
     ) {
-        Text(text = label, fontSize = 13.sp)
+        Text(text = label, fontSize = 15.sp)
     }
 }
 
+// 이번 달 남은 용돈 — 다크 카드 + 소진율 바 (양 끝: 지출·예산)
 @Composable
-private fun BudgetRing(remaining: Long, ratio: Float, isOver: Boolean, modifier: Modifier = Modifier) {
-    val percent = ratio.coerceIn(0f, 1f)
-    val ringColor = if (isOver) AmColors.Red else AmColors.Emerald
-    val ringSize = 180.dp
-    val strokeWidth = 15.dp
-
-    Box(
-        modifier = modifier.size(ringSize).padding(bottom = 20.dp),
-        contentAlignment = Alignment.Center,
+private fun BudgetCard(uiState: HomeUiState) {
+    val fillColor = if (uiState.isOver) AmColors.Red else AmColors.Emerald
+    AmCard(
+        modifier = Modifier.fillMaxWidth(),
+        color = AmColors.Navy,
+        shape = AmShape.cardLarge,
+        contentPadding = PaddingValues(horizontal = 22.dp, vertical = 28.dp),
     ) {
-        Canvas(modifier = Modifier.fillMaxSize()) {
-            val stroke = Stroke(width = strokeWidth.toPx(), cap = StrokeCap.Round)
-            val inset = strokeWidth.toPx() / 2f
-            val arcSize = Size(size.width - inset * 2, size.height - inset * 2)
-            val topLeft = Offset(inset, inset)
-            drawArc(AmColors.HeroRingTrack, 0f, 360f, false, topLeft, arcSize, style = stroke)
-            drawArc(
-                color = ringColor,
-                startAngle = -90f,
-                sweepAngle = if (isOver) 360f else percent * 360f,
-                useCenter = false,
-                topLeft = topLeft,
-                size = arcSize,
-                style = stroke,
-            )
-        }
-
-        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+        Column(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalAlignment = Alignment.CenterHorizontally,
+        ) {
             Text(
-                "이번달 남은 금액",
-                fontSize = 11.sp,
+                "이번 달 남은 용돈",
+                fontSize = 12.sp,
                 fontWeight = FontWeight.SemiBold,
-                color = Color.White.copy(alpha = 0.4f),
-                letterSpacing = 0.5.sp,
+                color = Color.White.copy(alpha = 0.45f),
+                letterSpacing = 0.3.sp,
             )
+            Spacer(Modifier.height(8.dp))
             Text(
-                text = if (isOver) "-${abs(remaining).amountToComma()}원" else "${remaining.amountToComma()}원",
-                fontSize = 32.sp,
+                text = if (uiState.isOver) "-${abs(uiState.remaining).amountToComma()}원" else "${uiState.remaining.amountToComma()}원",
+                fontSize = 34.sp,
                 fontWeight = FontWeight.ExtraBold,
-                letterSpacing = (-1.5).sp,
-                color = if (isOver) AmColors.Red else Color.White,
+                letterSpacing = (-1.2).sp,
+                color = if (uiState.isOver) AmColors.Red else Color.White,
             )
-            Text(
-                text = if (isOver) "예산 초과" else "${(percent * 100).toInt()}% 남음",
-                fontSize = 11.sp,
-                fontWeight = FontWeight.Bold,
-                color = ringColor,
+            Spacer(Modifier.height(22.dp))
+            // 소진율 바 + "X% 사용"
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(12.dp),
+            ) {
+                AmProgressBar(
+                    ratio = if (uiState.isOver) 1f else uiState.spentRatio,
+                    fillColor = fillColor,
+                    trackColor = AmColors.HeroBarTrack,
+                    height = 8.dp,
+                    modifier = Modifier.weight(1f),
+                )
+                Text(
+                    text = if (uiState.isOver) "초과" else "${(uiState.spentRatio * 100).toInt()}% 사용",
+                    fontSize = 12.sp,
+                    fontWeight = FontWeight.ExtraBold,
+                    color = fillColor,
+                )
+            }
+            Spacer(Modifier.height(9.dp))
+            // 바 양 끝 정보: 지출 / 예산
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+            ) {
+                Text("지출 ${uiState.spent.amountToComma()}원", fontSize = 11.sp, color = Color.White.copy(alpha = 0.4f))
+                Text("예산 ${uiState.budget.amountToComma()}원", fontSize = 11.sp, color = Color.White.copy(alpha = 0.4f))
+            }
+        }
+    }
+}
+
+// 하루 권장 / 하루 평균 / 월급일까지 — 라이트 카드 3칸
+@Composable
+private fun StatsRow(uiState: HomeUiState) {
+    val dday = if (uiState.daysUntilPayday <= 0) "오늘" else "D-${uiState.daysUntilPayday}"
+    AmCard(
+        modifier = Modifier.fillMaxWidth(),
+        contentPadding = PaddingValues(vertical = 4.dp),
+    ) {
+        Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+            StatCell("${uiState.dailyBudget.amountToComma()}원", "하루 권장", Modifier.weight(1f))
+            Box(Modifier.width(1.dp).height(36.dp).background(AmColors.Divider))
+            // 과속(평균>권장)이면 빨강으로 경고
+            StatCell(
+                "${uiState.dailyAverage.amountToComma()}원",
+                "하루 평균",
+                Modifier.weight(1f),
+                if (uiState.overPace) AmColors.Red else AmColors.TextPrimary,
             )
+            Box(Modifier.width(1.dp).height(36.dp).background(AmColors.Divider))
+            StatCell(dday, "월급일까지", Modifier.weight(1f), AmColors.Emerald)
         }
     }
 }
 
 @Composable
-private fun StatsPills(uiState: HomeUiState) {
-    Row(
-        modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(11.dp)).background(AmColors.HeroPillBg),
-    ) {
-        PillItem("${uiState.spent.amountToComma()}원", "이번달 지출", Modifier.weight(1f))
-        Box(Modifier.width(1.dp).height(56.dp).background(AmColors.HeroPillLine))
-        PillItem("${uiState.budget.amountToComma()}원", "월 예산", Modifier.weight(1f))
-        Box(Modifier.width(1.dp).height(56.dp).background(AmColors.HeroPillLine))
-        PillItem(uiState.cycleLabel.substringAfter("다음 월급일 ").ifBlank { "-" }, "월급일까지", Modifier.weight(1f), AmColors.Emerald)
-    }
-}
-
-@Composable
-private fun PillItem(value: String, label: String, modifier: Modifier = Modifier, valueColor: Color = Color.White) {
+private fun StatCell(value: String, label: String, modifier: Modifier = Modifier, valueColor: Color = AmColors.TextPrimary) {
     Column(
-        modifier = modifier.padding(vertical = 14.dp),
+        modifier = modifier.padding(vertical = 12.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
         Text(value, fontSize = 13.sp, fontWeight = FontWeight.ExtraBold, color = valueColor)
-        Spacer(Modifier.height(2.dp))
-        Text(label, fontSize = 10.sp, color = Color.White.copy(alpha = 0.35f))
+        Spacer(Modifier.height(3.dp))
+        Text(label, fontSize = 10.sp, color = AmColors.TextSecondary)
     }
 }
 
@@ -244,7 +259,7 @@ private fun BottomContent(
             .background(AmColors.ScreenBg),
     ) {
         LazyColumn(
-            contentPadding = PaddingValues(12.dp),
+            contentPadding = PaddingValues(horizontal = AmSpacing.xl, vertical = AmSpacing.md),
             verticalArrangement = Arrangement.spacedBy(9.dp),
         ) {
             item { ListHeader(showMainOnly = uiState.showMainOnly, canFilter = uiState.canFilter, onToggleMainOnly = onToggleMainOnly) }

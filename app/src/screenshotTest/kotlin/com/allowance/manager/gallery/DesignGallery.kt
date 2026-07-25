@@ -56,8 +56,12 @@ private val sampleHome = HomeUiState(
     spent = 760_000L,
     remaining = 1_240_000L,
     ratio = 0.62f,
+    spentRatio = 0.38f,
     isOver = false,
-    cycleLabel = "다음 월급일 D-12",
+    dailyBudget = 103_000L,
+    dailyAverage = 42_000L,
+    overPace = false,
+    daysUntilPayday = 12,
     transactions = listOf(
         sampleTransaction(1, "스타벅스", 5_600),
         sampleTransaction(2, "급여 입금", 2_400_000, TransactionType.INCOME),

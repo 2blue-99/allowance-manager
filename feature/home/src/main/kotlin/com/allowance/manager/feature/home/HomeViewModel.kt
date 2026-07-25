@@ -26,9 +26,13 @@ data class HomeUiState(
     val budget: Long = 0L,
     val spent: Long = 0L,
     val remaining: Long = 0L,
-    val ratio: Float = 0f,
+    val ratio: Float = 0f,              // 남은 비율
+    val spentRatio: Float = 0f,         // 소진율 (지출/예산) — 메인 바 채움
     val isOver: Boolean = false,
-    val cycleLabel: String = "",
+    val dailyBudget: Long = 0L,         // 하루 사용 권장액 (남은예산 ÷ 남은일수)
+    val dailyAverage: Long = 0L,        // 하루 평균 지출 (지출 ÷ 경과일수)
+    val overPace: Boolean = false,      // 하루 평균 > 권장 → 과속
+    val daysUntilPayday: Int = 0,       // 다음 월급일까지 D-day
     val transactions: List<Transaction> = emptyList(),
     val showMainOnly: Boolean = true,
     val canFilter: Boolean = false,     // 등록 계좌가 있어야 메인/전체 필터 의미 있음
@@ -63,13 +67,27 @@ class HomeViewModel @Inject constructor(
                 val hasAccounts = accounts.isNotEmpty()
                 val effectiveMainOnly = mainOnly && hasAccounts
                 val visible = if (effectiveMainOnly) transactions.filter { it.isMain } else transactions
+
+                // 하루 권장액·평균·D-day: 사이클 경계와 오늘 기준으로 계산 (0일 나눗셈 방어)
+                val today = LocalDate.now()
+                val daysUntil = ChronoUnit.DAYS.between(today, status.cycle.nextPayday).toInt()
+                val daysLeft = daysUntil.coerceAtLeast(1)
+                val elapsed = (ChronoUnit.DAYS.between(status.cycle.start, today).toInt() + 1).coerceAtLeast(1)
+                val dailyBudget = if (status.remaining > 0) status.remaining / daysLeft else 0L
+                val dailyAverage = status.spent / elapsed
+                val spentRatio = if (status.budget > 0) (status.spent.toFloat() / status.budget).coerceIn(0f, 1f) else 0f
+
                 HomeUiState(
                     budget = status.budget,
                     spent = status.spent,
                     remaining = status.remaining,
                     ratio = status.ratio,
+                    spentRatio = spentRatio,
                     isOver = status.isOver,
-                    cycleLabel = cycleLabel(status.cycle.nextPayday),
+                    dailyBudget = dailyBudget,
+                    dailyAverage = dailyAverage,
+                    overPace = status.budget > 0 && dailyAverage > dailyBudget,
+                    daysUntilPayday = daysUntil,
                     transactions = visible,
                     showMainOnly = effectiveMainOnly,
                     canFilter = hasAccounts,
@@ -104,10 +122,5 @@ class HomeViewModel @Inject constructor(
                 accountPattern = pattern,
             )
         }
-    }
-
-    private fun cycleLabel(nextPayday: LocalDate): String {
-        val days = ChronoUnit.DAYS.between(LocalDate.now(), nextPayday)
-        return if (days <= 0) "월급일" else "다음 월급일 D-$days"
     }
 }
