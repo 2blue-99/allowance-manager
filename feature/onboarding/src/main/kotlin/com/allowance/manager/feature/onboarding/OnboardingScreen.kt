@@ -34,6 +34,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
@@ -233,6 +234,9 @@ fun OnboardingInfoScreen(
     var paydayDone by remember { mutableStateOf(false) }
     var budgetDone by remember { mutableStateOf(false) }
 
+    // 단계가 넘어갈 때 이전 입력칸의 포커스를 풀어 키보드를 내린다.
+    val focusManager = LocalFocusManager.current
+
     Column(
         modifier = Modifier.fillMaxSize().background(ScreenBg).padding(horizontal = 24.dp).padding(top = 30.dp),
     ) {
@@ -260,14 +264,14 @@ fun OnboardingInfoScreen(
                     budgetInput = uiState.budgetInput,
                     budget = uiState.budget,
                     onBudgetChange = onBudgetChange,
-                    onCommit = { budgetDone = true },
+                    onCommit = { focusManager.clearFocus(); budgetDone = true },
                 )
             }
             // 첫번째 : 월급일 — 항상 노출
             PaydaySection(
                 payday = uiState.payday,
                 onPaydayChange = onPaydayChange,
-                onCommit = { paydayDone = true },
+                onCommit = { focusManager.clearFocus(); paydayDone = true },
             )
         }
 
