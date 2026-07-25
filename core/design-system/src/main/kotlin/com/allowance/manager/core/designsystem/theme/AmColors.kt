@@ -8,7 +8,8 @@ import androidx.compose.ui.graphics.Color
  */
 object AmColors {
     // 브랜드
-    val Navy = Color(0xFF0D1B2A)        // 히어로 배경·주요 텍스트
+    val Navy = Color(0xFF0D1B2A)        // 주요 텍스트(TextPrimary)·아이콘
+    val HeroBg = Color(0xFF283C58)      // 홈 예산 카드 배경(밝은 네이비)
     val Emerald = Color(0xFF10B981)     // 액센트
     val EmeraldBg = Color(0xFFECFDF5)   // 액센트 연한 배경
     val Red = Color(0xFFEF4444)         // 지출·경고

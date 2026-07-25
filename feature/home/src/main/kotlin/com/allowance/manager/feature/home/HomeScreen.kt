@@ -152,7 +152,7 @@ private fun BudgetCard(uiState: HomeUiState) {
     val fillColor = if (uiState.isOver) AmColors.Red else AmColors.Emerald
     AmCard(
         modifier = Modifier.fillMaxWidth(),
-        color = AmColors.Navy,
+        color = AmColors.HeroBg,
         shape = AmShape.cardLarge,
         contentPadding = PaddingValues(horizontal = 22.dp, vertical = 28.dp),
     ) {
