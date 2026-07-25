@@ -19,6 +19,9 @@ object AmShape {
     /** 기본 카드 */
     val card = RoundedCornerShape(12.dp)
 
+    /** 강조 카드(홈 예산 요약 등) */
+    val cardLarge = RoundedCornerShape(18.dp)
+
     /** 바텀 시트 상단 */
     val sheetTop = RoundedCornerShape(topStart = 18.dp, topEnd = 18.dp)
 

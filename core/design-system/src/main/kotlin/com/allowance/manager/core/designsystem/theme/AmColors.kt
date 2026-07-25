@@ -31,5 +31,6 @@ object AmColors {
     val HeroPillBg = Color(0x0FFFFFFF)
     val HeroPillLine = Color(0x14FFFFFF)
     val HeroRingTrack = Color(0x12FFFFFF)
+    val HeroBarTrack = Color(0x1FFFFFFF)   // 다크 카드 위 진행바 트랙
     val HeroIconBg = Color(0x14FFFFFF)
 }
