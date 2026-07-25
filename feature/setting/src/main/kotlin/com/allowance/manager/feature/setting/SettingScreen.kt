@@ -9,10 +9,8 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
-import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
@@ -20,6 +18,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.sp
@@ -27,6 +26,7 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.allowance.manager.core.designsystem.component.AmChevron
 import com.allowance.manager.core.designsystem.component.AmChip
+import com.allowance.manager.core.designsystem.component.AmDialog
 import com.allowance.manager.core.designsystem.component.AmScreenHeader
 import com.allowance.manager.core.designsystem.component.AmSettingRow
 import com.allowance.manager.core.designsystem.component.AmTextField
@@ -46,8 +46,15 @@ fun SettingRoute(
     viewModel: SettingViewModel = hiltViewModel(),
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+    val context = LocalContext.current
+    // 설치된 앱의 versionName을 그대로 표시 (모듈 BuildConfig 결합 없이)
+    val versionName = remember {
+        runCatching { context.packageManager.getPackageInfo(context.packageName, 0).versionName }
+            .getOrNull().orEmpty()
+    }
     SettingScreen(
         uiState = uiState,
+        versionName = versionName,
         onBack = onBack,
         onNavigateToAccount = onNavigateToAccount,
         onStatusBarEnabledChange = viewModel::setStatusBarEnabled,
@@ -60,6 +67,7 @@ fun SettingRoute(
 @Composable
 fun SettingScreen(
     uiState: SettingUiState,
+    versionName: String = "",
     onBack: () -> Unit = {},
     onNavigateToAccount: () -> Unit = {},
     onStatusBarEnabledChange: (Boolean) -> Unit = {},
@@ -96,6 +104,10 @@ fun SettingScreen(
         AmSettingRow(title = "계좌 관리", subtitle = "메인 계좌 등록·수정", onClick = onNavigateToAccount) {
             AmChevron()
         }
+        Spacer(Modifier.height(AmSpacing.sm))
+        AmSettingRow(title = "버전") {
+            Text(versionName.ifBlank { "-" }, fontSize = 13.sp, fontWeight = FontWeight.Bold, color = AmColors.TextSecondary)
+        }
     }
 
     if (showBudgetDialog) {
@@ -117,50 +129,49 @@ fun SettingScreen(
 @Composable
 private fun BudgetDialog(current: Long, onSave: (Long) -> Unit, onDismiss: () -> Unit) {
     var input by remember { mutableStateOf(if (current > 0) current.toString() else "") }
-    AlertDialog(
-        onDismissRequest = onDismiss,
-        title = { Text("월 예산") },
-        text = {
-            AmTextField(
-                value = input,
-                onValueChange = { v -> input = v.filter { it.isDigit() } },
-                label = "월 예산 (원)",
-                keyboardType = KeyboardType.Number,
-            )
-        },
-        confirmButton = {
-            val amount = input.toLongOrNull() ?: 0L
-            TextButton(onClick = { onSave(amount) }, enabled = amount > 0) { Text("저장") }
-        },
-        dismissButton = { TextButton(onClick = onDismiss) { Text("취소") } },
-    )
+    val amount = input.toLongOrNull() ?: 0L
+    AmDialog(
+        title = "월 예산",
+        onDismiss = onDismiss,
+        onConfirm = { onSave(amount) },
+        confirmEnabled = amount > 0,
+    ) {
+        AmTextField(
+            value = input,
+            onValueChange = { v -> input = v.filter { it.isDigit() } },
+            label = "월 예산 (원)",
+            keyboardType = KeyboardType.Number,
+        )
+    }
 }
 
 @Composable
 private fun PaydayDialog(current: Int, onSave: (Int) -> Unit, onDismiss: () -> Unit) {
     var payday by remember { mutableIntStateOf(current) }
-    AlertDialog(
-        onDismissRequest = onDismiss,
-        title = { Text("월급일") },
-        text = {
-            Column(verticalArrangement = Arrangement.spacedBy(AmSpacing.md)) {
-                Row(horizontalArrangement = Arrangement.spacedBy(AmSpacing.sm)) {
-                    AmChip("15일", payday == 15) { payday = 15 }
-                    AmChip("25일", payday == 25) { payday = 25 }
-                    AmChip("말일", payday == PAYDAY_EOM) { payday = PAYDAY_EOM }
-                }
-                AmTextField(
-                    value = if (payday in 1..31) payday.toString() else "",
-                    onValueChange = { v ->
-                        val day = v.filter { it.isDigit() }.toIntOrNull()?.coerceIn(1, 31)
-                        if (day != null) payday = day
-                    },
-                    label = "직접 입력 (1~31)",
-                    keyboardType = KeyboardType.Number,
-                )
+    AmDialog(
+        title = "월급일",
+        onDismiss = onDismiss,
+        onConfirm = { onSave(payday) },
+    ) {
+        Column(verticalArrangement = Arrangement.spacedBy(AmSpacing.md)) {
+            // 온보딩과 동일한 칩 구성 (15/20/25/말일)
+            Row(horizontalArrangement = Arrangement.spacedBy(AmSpacing.sm)) {
+                AmChip("15일", payday == 15) { payday = 15 }
+                AmChip("20일", payday == 20) { payday = 20 }
+                AmChip("25일", payday == 25) { payday = 25 }
+                AmChip("말일", payday == PAYDAY_EOM) { payday = PAYDAY_EOM }
             }
-        },
-        confirmButton = { TextButton(onClick = { onSave(payday) }) { Text("저장") } },
-        dismissButton = { TextButton(onClick = onDismiss) { Text("취소") } },
-    )
+            AmTextField(
+                value = if (payday in 1..31) payday.toString() else "",
+                onValueChange = { v ->
+                    val day = v.filter { it.isDigit() }.toIntOrNull()?.coerceIn(1, 31)
+                    if (day != null) payday = day
+                },
+                label = "직접 입력 (1~31)",
+                keyboardType = KeyboardType.Number,
+            )
+            // 선택 요약 — 말일처럼 직접입력칸이 비어도 현재 선택을 분명히 표기
+            Text("매월 ${paydayLabel(payday)}에 받아요", fontSize = 12.sp, color = AmColors.TextSecondary)
+        }
+    }
 }
