@@ -411,12 +411,8 @@ private fun TransactionActionSheet(
                     .verticalScroll(rememberScrollState())
                     .padding(horizontal = 20.dp),
             ) {
-                // 헤더: 소스명·시간 + (삭제는 눈에 덜 띄게 우상단)
-                Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-                    Column(Modifier.weight(1f)) {
-                        Text(tx.sourceName, style = AmType.title, color = AmColors.TextPrimary)
-                        Text(formatTime(tx.createdAt), style = AmType.caption, color = AmColors.TextSecondary)
-                    }
+                // 상단 툴바: 삭제(서브, 우측)
+                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
                     Text(
                         "삭제",
                         style = AmType.bodyStrong,
@@ -426,12 +422,48 @@ private fun TransactionActionSheet(
                                 interactionSource = remember { MutableInteractionSource() },
                                 indication = null,
                             ) { onDelete(tx.id); close() }
-                            .padding(8.dp),
+                            .padding(6.dp),
                     )
                 }
 
-                Spacer(Modifier.height(6.dp))
-                Text(signedAmount(tx), style = AmType.amountLarge, color = amountColor(tx, false))
+                // 식별 헤더: 아이콘 + 금액(주인공) + 은행·시간(보조 한 줄)
+                Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                    Box(
+                        modifier = Modifier.size(46.dp).clip(AmShape.card).background(AmColors.EmeraldBg),
+                        contentAlignment = Alignment.Center,
+                    ) {
+                        val isIncome = tx.type == TransactionType.INCOME || tx.amount < 0
+                        Text(category?.emoji ?: if (isIncome) "💰" else "💳", fontSize = 20.sp)
+                    }
+                    Spacer(Modifier.width(14.dp))
+                    Column(Modifier.weight(1f)) {
+                        Text(signedAmount(tx), style = AmType.amountLarge, color = amountColor(tx, false))
+                        Text("${tx.sourceName} · ${formatTime(tx.createdAt)}", style = AmType.caption, color = AmColors.TextSecondary)
+                    }
+                }
+
+                Spacer(Modifier.height(20.dp))
+                // 상단 관리 토글 묶음 (합계 제외 + 메인 계좌 등록)
+                AmCard(modifier = Modifier.fillMaxWidth(), color = AmColors.ScreenBg) {
+                    Column(modifier = Modifier.fillMaxWidth()) {
+                        SheetToggleRow(
+                            title = "이번 달 합계에서 제외",
+                            subtitle = "예산·통계에서 빠집니다",
+                            checked = ignored,
+                            onCheckedChange = { ignored = it; onSetIgnored(tx.id, it) },
+                        )
+                        if (!tx.isMain && tx.extractedAccount != null) {
+                            Box(Modifier.fillMaxWidth().height(1.dp).background(AmColors.Divider))
+                            SheetToggleRow(
+                                title = "메인 계좌로 등록",
+                                subtitle = "${tx.sourceName} · ${tx.extractedAccount}",
+                                checked = false,
+                                // 켜면 은행·계좌를 DB에 등록(승격) 후 닫힘
+                                onCheckedChange = { if (it) { onPromoteToMain(tx); close() } },
+                            )
+                        }
+                    }
+                }
 
                 Spacer(Modifier.height(24.dp))
                 SheetLabel("분류")
@@ -459,34 +491,6 @@ private fun TransactionActionSheet(
                     modifier = Modifier.fillMaxWidth(),
                 )
 
-                Spacer(Modifier.height(20.dp))
-                // 숨김 = 합계 제외 토글 (가계부 앱 관례: 파괴적 버튼 대신 스위치)
-                Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-                    Column(Modifier.weight(1f)) {
-                        Text("이번 달 합계에서 제외", style = AmType.bodyStrong, color = AmColors.TextPrimary)
-                        Text("예산·통계에서 빠집니다", style = AmType.caption, color = AmColors.TextSecondary)
-                    }
-                    AmToggle(checked = ignored, onCheckedChange = { ignored = it; onSetIgnored(tx.id, it) })
-                }
-
-                // 비메인 → 메인 계좌 등록 (은행·계좌를 DB에 등록)
-                if (!tx.isMain && tx.extractedAccount != null) {
-                    Spacer(Modifier.height(16.dp))
-                    AmCard(
-                        modifier = Modifier.fillMaxWidth(),
-                        color = AmColors.EmeraldBg,
-                        onClick = { onPromoteToMain(tx); close() },
-                    ) {
-                        Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-                            Column(Modifier.weight(1f)) {
-                                Text("메인 계좌로 등록", style = AmType.bodyStrong, color = AmColors.Emerald)
-                                Text("${tx.sourceName} · ${tx.extractedAccount}", style = AmType.caption, color = AmColors.TextSecondary)
-                            }
-                            Text("등록", style = AmType.value, color = AmColors.Emerald)
-                        }
-                    }
-                }
-
                 Spacer(Modifier.height(24.dp))
             }
 
@@ -505,6 +509,25 @@ private fun TransactionActionSheet(
 @Composable
 private fun SheetLabel(text: String) {
     Text(text, style = AmType.label, color = AmColors.TextSecondary)
+}
+
+@Composable
+private fun SheetToggleRow(
+    title: String,
+    subtitle: String,
+    checked: Boolean,
+    onCheckedChange: (Boolean) -> Unit,
+) {
+    Row(
+        modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Column(Modifier.weight(1f)) {
+            Text(title, style = AmType.bodyStrong, color = AmColors.TextPrimary)
+            Text(subtitle, style = AmType.caption, color = AmColors.TextSecondary)
+        }
+        AmToggle(checked = checked, onCheckedChange = onCheckedChange)
+    }
 }
 
 // ── helpers ──────────────────────────────────────────
