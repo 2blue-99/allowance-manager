@@ -10,7 +10,8 @@ import com.allowance.manager.core.domain.usecase.transaction.DeleteTransactionUs
 import com.allowance.manager.core.domain.usecase.transaction.IgnoreTransactionUseCase
 import com.allowance.manager.core.domain.usecase.transaction.ObserveCurrentTransactionsUseCase
 import com.allowance.manager.core.domain.usecase.transaction.PromoteToMainUseCase
-import com.allowance.manager.core.domain.usecase.transaction.UpdateTransactionMemoUseCase
+import com.allowance.manager.core.domain.usecase.transaction.UpdateTransactionUseCase
+import com.allowance.manager.core.domain.model.TransactionCategory
 import com.allowance.manager.core.common.BaseViewModel
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -49,7 +50,7 @@ class HomeViewModel @Inject constructor(
     private val ignoreTransactionUseCase: IgnoreTransactionUseCase,
     private val deleteTransactionUseCase: DeleteTransactionUseCase,
     private val promoteToMainUseCase: PromoteToMainUseCase,
-    private val updateTransactionMemoUseCase: UpdateTransactionMemoUseCase,
+    private val updateTransactionUseCase: UpdateTransactionUseCase,
 ) : BaseViewModel() {
 
     private val _uiState = MutableStateFlow(HomeUiState())
@@ -109,8 +110,9 @@ class HomeViewModel @Inject constructor(
         viewModelScope.launch { deleteTransactionUseCase(id) }
     }
 
-    fun onUpdateMemo(id: Long, memo: String) {
-        viewModelScope.launch { updateTransactionMemoUseCase(id, memo) }
+    /** 바텀시트 '저장' — 수정한 메모·분류를 upsert */
+    fun onSaveTransaction(id: Long, memo: String, category: TransactionCategory?) {
+        viewModelScope.launch { updateTransactionUseCase(id, memo, category) }
     }
 
     fun onPromoteToMain(transaction: Transaction) {

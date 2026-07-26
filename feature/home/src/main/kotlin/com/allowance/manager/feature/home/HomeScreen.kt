@@ -2,12 +2,16 @@ package com.allowance.manager.feature.home
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -16,14 +20,18 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.Text
+import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -35,9 +43,13 @@ import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.allowance.manager.core.domain.model.Transaction
+import com.allowance.manager.core.domain.model.TransactionCategory
 import com.allowance.manager.core.domain.model.TransactionType
 import com.allowance.manager.core.domain.util.amountToComma
+import com.allowance.manager.core.designsystem.component.AmButton
 import com.allowance.manager.core.designsystem.component.AmCard
+import com.allowance.manager.core.designsystem.component.AmChip
+import com.allowance.manager.core.designsystem.component.AmOutlinedButton
 import com.allowance.manager.core.designsystem.component.AmProgressBar
 import com.allowance.manager.core.designsystem.component.AmToggle
 import com.allowance.manager.core.designsystem.component.AmTextField
@@ -45,6 +57,7 @@ import com.allowance.manager.core.designsystem.theme.AmColors
 import com.allowance.manager.core.designsystem.theme.AmShape
 import com.allowance.manager.core.designsystem.theme.AmSpacing
 import com.allowance.manager.core.designsystem.theme.AmType
+import kotlinx.coroutines.launch
 import java.time.Instant
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
@@ -64,7 +77,7 @@ fun HomeRoute(
         onSetIgnored = viewModel::onSetIgnored,
         onDelete = viewModel::onDelete,
         onPromoteToMain = viewModel::onPromoteToMain,
-        onUpdateMemo = viewModel::onUpdateMemo,
+        onSaveTransaction = viewModel::onSaveTransaction,
     )
 }
 
@@ -76,7 +89,7 @@ fun HomeScreen(
     onSetIgnored: (Long, Boolean) -> Unit = { _, _ -> },
     onDelete: (Long) -> Unit = {},
     onPromoteToMain: (Transaction) -> Unit = {},
-    onUpdateMemo: (Long, String) -> Unit = { _, _ -> },
+    onSaveTransaction: (Long, String, TransactionCategory?) -> Unit = { _, _, _ -> },
     modifier: Modifier = Modifier,
 ) {
     var selected by remember { mutableStateOf<Transaction?>(null) }
@@ -99,7 +112,7 @@ fun HomeScreen(
                 onSetIgnored = onSetIgnored,
                 onDelete = onDelete,
                 onPromoteToMain = onPromoteToMain,
-                onUpdateMemo = onUpdateMemo,
+                onSaveTransaction = onSaveTransaction,
             )
         }
     }
@@ -327,7 +340,7 @@ private fun TransactionCard(tx: Transaction, onClick: () -> Unit) {
                 modifier = Modifier.size(34.dp).clip(RoundedCornerShape(8.dp)).background(if (dim) AmColors.Divider else AmColors.EmeraldBg),
                 contentAlignment = Alignment.Center,
             ) {
-                Text(if (isIncome) "💰" else "💳", fontSize = 15.sp)
+                Text(tx.category?.emoji ?: if (isIncome) "💰" else "💳", fontSize = 15.sp)
             }
             Column {
                 Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(5.dp)) {
@@ -361,7 +374,7 @@ private fun TransactionCard(tx: Transaction, onClick: () -> Unit) {
     }
 }
 
-@OptIn(ExperimentalMaterial3Api::class)
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
 @Composable
 private fun TransactionActionSheet(
     tx: Transaction,
@@ -369,51 +382,134 @@ private fun TransactionActionSheet(
     onSetIgnored: (Long, Boolean) -> Unit,
     onDelete: (Long) -> Unit,
     onPromoteToMain: (Transaction) -> Unit,
-    onUpdateMemo: (Long, String) -> Unit,
+    onSaveTransaction: (Long, String, TransactionCategory?) -> Unit,
 ) {
+    // 항상 풀로 올라오게(부분 확장 금지)
+    val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
+    val scope = rememberCoroutineScope()
+
+    // 편집 로컬 상태(취소 시 버려짐, 저장 시 upsert)
     var memo by remember(tx.id) { mutableStateOf(tx.memo.orEmpty()) }
+    var category by remember(tx.id) { mutableStateOf(tx.category) }
+    var ignored by remember(tx.id) { mutableStateOf(tx.isIgnored) }
 
-    ModalBottomSheet(onDismissRequest = onDismiss, containerColor = AmColors.CardBg) {
-        Column(modifier = Modifier.fillMaxWidth().padding(horizontal = 20.dp).padding(bottom = 24.dp)) {
-            Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-                Column(Modifier.weight(1f)) {
-                    Text(tx.sourceName, style = AmType.emphasis, color = AmColors.TextPrimary)
-                    Text(formatTime(tx.createdAt), style = AmType.caption, color = AmColors.TextSecondary)
+    // 슬라이드 아웃 후 닫기
+    fun close() {
+        scope.launch { sheetState.hide() }.invokeOnCompletion { if (!sheetState.isVisible) onDismiss() }
+    }
+
+    ModalBottomSheet(
+        onDismissRequest = onDismiss,
+        sheetState = sheetState,
+        containerColor = AmColors.CardBg,
+    ) {
+        Column(modifier = Modifier.fillMaxHeight(0.94f)) {
+            // ── 스크롤 콘텐츠 (작은 화면 대응) ──
+            Column(
+                modifier = Modifier
+                    .weight(1f)
+                    .verticalScroll(rememberScrollState())
+                    .padding(horizontal = 20.dp),
+            ) {
+                // 헤더: 소스명·시간 + (삭제는 눈에 덜 띄게 우상단)
+                Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                    Column(Modifier.weight(1f)) {
+                        Text(tx.sourceName, style = AmType.title, color = AmColors.TextPrimary)
+                        Text(formatTime(tx.createdAt), style = AmType.caption, color = AmColors.TextSecondary)
+                    }
+                    Text(
+                        "삭제",
+                        style = AmType.bodyStrong,
+                        color = AmColors.Red,
+                        modifier = Modifier
+                            .clickable(
+                                interactionSource = remember { MutableInteractionSource() },
+                                indication = null,
+                            ) { onDelete(tx.id); close() }
+                            .padding(8.dp),
+                    )
                 }
-                Text(signedAmount(tx), style = AmType.emphasis, color = amountColor(tx, false))
+
+                Spacer(Modifier.height(6.dp))
+                Text(signedAmount(tx), style = AmType.amountLarge, color = amountColor(tx, false))
+
+                Spacer(Modifier.height(24.dp))
+                SheetLabel("분류")
+                Spacer(Modifier.height(10.dp))
+                FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    TransactionCategory.entries.forEach { cat ->
+                        AmChip(
+                            label = "${cat.emoji} ${cat.label}",
+                            selected = category == cat,
+                        ) { category = if (category == cat) null else cat }
+                    }
+                }
+
+                Spacer(Modifier.height(24.dp))
+                SheetLabel("메모")
+                Spacer(Modifier.height(10.dp))
+                AmTextField(
+                    value = memo,
+                    // 줄바꿈 허용 + 최대 500자
+                    onValueChange = { if (it.length <= MEMO_MAX) memo = it },
+                    label = "메모를 남겨보세요",
+                    singleLine = false,
+                    minLines = 4,
+                    supportingText = "${memo.length}/$MEMO_MAX",
+                    modifier = Modifier.fillMaxWidth(),
+                )
+
+                Spacer(Modifier.height(20.dp))
+                // 숨김 = 합계 제외 토글 (가계부 앱 관례: 파괴적 버튼 대신 스위치)
+                Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                    Column(Modifier.weight(1f)) {
+                        Text("이번 달 합계에서 제외", style = AmType.bodyStrong, color = AmColors.TextPrimary)
+                        Text("예산·통계에서 빠집니다", style = AmType.caption, color = AmColors.TextSecondary)
+                    }
+                    AmToggle(checked = ignored, onCheckedChange = { ignored = it; onSetIgnored(tx.id, it) })
+                }
+
+                // 비메인 → 메인 계좌 등록 (은행·계좌를 DB에 등록)
+                if (!tx.isMain && tx.extractedAccount != null) {
+                    Spacer(Modifier.height(16.dp))
+                    AmCard(
+                        modifier = Modifier.fillMaxWidth(),
+                        color = AmColors.EmeraldBg,
+                        onClick = { onPromoteToMain(tx); close() },
+                    ) {
+                        Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                            Column(Modifier.weight(1f)) {
+                                Text("메인 계좌로 등록", style = AmType.bodyStrong, color = AmColors.Emerald)
+                                Text("${tx.sourceName} · ${tx.extractedAccount}", style = AmType.caption, color = AmColors.TextSecondary)
+                            }
+                            Text("등록", style = AmType.value, color = AmColors.Emerald)
+                        }
+                    }
+                }
+
+                Spacer(Modifier.height(24.dp))
             }
 
-            Spacer(Modifier.height(16.dp))
-            AmTextField(
-                value = memo,
-                onValueChange = { memo = it },
-                label = "메모",
-                modifier = Modifier.fillMaxWidth(),
-            )
-            SheetAction("메모 저장", AmColors.Emerald) { onUpdateMemo(tx.id, memo); onDismiss() }
-
-            if (!tx.isMain && tx.extractedAccount != null) {
-                SheetAction("메인으로 등록", AmColors.Emerald) { onPromoteToMain(tx); onDismiss() }
+            // ── 하단 고정: 취소 / 저장 ──
+            Row(
+                modifier = Modifier.fillMaxWidth().padding(horizontal = 20.dp).padding(bottom = 12.dp),
+                horizontalArrangement = Arrangement.spacedBy(12.dp),
+            ) {
+                AmOutlinedButton("취소", onClick = { close() }, modifier = Modifier.weight(1f))
+                AmButton("저장", onClick = { onSaveTransaction(tx.id, memo, category); close() }, modifier = Modifier.weight(1f))
             }
-            SheetAction(if (tx.isIgnored) "숨김 해제" else "숨김 처리 (합계 제외)", AmColors.TextPrimary) {
-                onSetIgnored(tx.id, !tx.isIgnored); onDismiss()
-            }
-            SheetAction("삭제", AmColors.Red) { onDelete(tx.id); onDismiss() }
         }
     }
 }
 
 @Composable
-private fun SheetAction(label: String, color: Color, onClick: () -> Unit) {
-    Text(
-        text = label,
-        style = AmType.bodyStrong,
-        color = color,
-        modifier = Modifier.fillMaxWidth().clickable(onClick = onClick).padding(vertical = 14.dp),
-    )
+private fun SheetLabel(text: String) {
+    Text(text, style = AmType.label, color = AmColors.TextSecondary)
 }
 
 // ── helpers ──────────────────────────────────────────
+private const val MEMO_MAX = 500
+
 private fun signedAmount(tx: Transaction): String {
     val magnitude = abs(tx.amount).amountToComma()
     return when {
