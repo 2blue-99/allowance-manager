@@ -411,22 +411,7 @@ private fun TransactionActionSheet(
                     .verticalScroll(rememberScrollState())
                     .padding(horizontal = 20.dp),
             ) {
-                // 상단 툴바: 삭제(서브, 우측)
-                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
-                    Text(
-                        "삭제",
-                        style = AmType.bodyStrong,
-                        color = AmColors.Red,
-                        modifier = Modifier
-                            .clickable(
-                                interactionSource = remember { MutableInteractionSource() },
-                                indication = null,
-                            ) { onDelete(tx.id); close() }
-                            .padding(6.dp),
-                    )
-                }
-
-                // 식별 헤더: 아이콘 + 금액(주인공) + 은행·시간(보조 한 줄)
+                // 식별 헤더: 아이콘 + 금액(주인공) + 은행·시간 + 삭제(휴지통, 금액 행 우측 정렬)
                 Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
                     Box(
                         modifier = Modifier.size(46.dp).clip(AmShape.card).background(AmColors.EmeraldBg),
@@ -440,6 +425,16 @@ private fun TransactionActionSheet(
                         Text(signedAmount(tx), style = AmType.amountLarge, color = amountColor(tx, false))
                         Text("${tx.sourceName} · ${formatTime(tx.createdAt)}", style = AmType.caption, color = AmColors.TextSecondary)
                     }
+                    Text(
+                        "🗑️",
+                        fontSize = 20.sp,
+                        modifier = Modifier
+                            .clickable(
+                                interactionSource = remember { MutableInteractionSource() },
+                                indication = null,
+                            ) { onDelete(tx.id); close() }
+                            .padding(8.dp),
+                    )
                 }
 
                 Spacer(Modifier.height(20.dp))
