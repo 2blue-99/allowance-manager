@@ -26,6 +26,7 @@ data class TransactionEntity(
     val extractedAccount: String?,          // 알림에서 파싱한 계좌 식별자 (매칭·승격용)
     @ColumnInfo(name = "account_id")
     val accountId: Long?,                   // null = 비메인
+    val category: String?,                  // TransactionCategory.name, null = 미분류
     val memo: String?,
     @ColumnInfo(name = "is_ignored")
     val isIgnored: Boolean = false,

@@ -17,6 +17,7 @@ data class Transaction(
     val sourceName: String,
     val extractedAccount: String? = null,
     val accountId: Long? = null,
+    val category: TransactionCategory? = null,
     val memo: String? = null,
     val isIgnored: Boolean = false,
     val createdAt: Long,            // epoch ms

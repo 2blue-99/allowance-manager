@@ -3,6 +3,7 @@ package com.allowance.manager.core.data.repository
 import com.allowance.manager.core.domain.model.MaskedAccount
 import com.allowance.manager.core.domain.model.MonthlyExpense
 import com.allowance.manager.core.domain.model.Transaction
+import com.allowance.manager.core.domain.model.TransactionCategory
 import com.allowance.manager.core.domain.model.TransactionType
 import com.allowance.manager.core.domain.repository.TransactionRepository
 import com.allowance.manager.core.local.dao.TransactionDao
@@ -70,6 +71,7 @@ private fun Transaction.toEntity() = TransactionEntity(
     sourceName = sourceName,
     extractedAccount = extractedAccount,
     accountId = accountId,
+    category = category?.name,
     memo = memo,
     isIgnored = isIgnored,
     createdAt = createdAt,
@@ -84,6 +86,7 @@ private fun TransactionEntity.toDomain() = Transaction(
     sourceName = sourceName,
     extractedAccount = extractedAccount,
     accountId = accountId,
+    category = category?.let { runCatching { TransactionCategory.valueOf(it) }.getOrNull() },
     memo = memo,
     isIgnored = isIgnored,
     createdAt = createdAt,
