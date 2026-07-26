@@ -14,6 +14,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.window.Dialog
 import com.allowance.manager.core.designsystem.theme.AmColors
 import com.allowance.manager.core.designsystem.theme.AmShape
@@ -35,6 +36,7 @@ fun AmDialog(
     confirmText: String = "저장",
     dismissText: String = "취소",
     confirmEnabled: Boolean = true,
+    confirmColor: Color = AmColors.Emerald,
     content: @Composable ColumnScope.() -> Unit,
 ) {
     Dialog(onDismissRequest = onDismiss) {
@@ -58,7 +60,7 @@ fun AmDialog(
                 AmTextButton(
                     text = confirmText,
                     onClick = { if (confirmEnabled) onConfirm() },
-                    color = if (confirmEnabled) AmColors.Emerald else AmColors.TextTertiary,
+                    color = if (confirmEnabled) confirmColor else AmColors.TextTertiary,
                 )
             }
         }

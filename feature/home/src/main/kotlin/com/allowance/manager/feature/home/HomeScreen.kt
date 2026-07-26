@@ -49,6 +49,7 @@ import com.allowance.manager.core.domain.util.amountToComma
 import com.allowance.manager.core.designsystem.component.AmButton
 import com.allowance.manager.core.designsystem.component.AmCard
 import com.allowance.manager.core.designsystem.component.AmChip
+import com.allowance.manager.core.designsystem.component.AmDialog
 import com.allowance.manager.core.designsystem.component.AmOutlinedButton
 import com.allowance.manager.core.designsystem.component.AmProgressBar
 import com.allowance.manager.core.designsystem.component.AmToggle
@@ -392,6 +393,7 @@ private fun TransactionActionSheet(
     var memo by remember(tx.id) { mutableStateOf(tx.memo.orEmpty()) }
     var category by remember(tx.id) { mutableStateOf(tx.category) }
     var ignored by remember(tx.id) { mutableStateOf(tx.isIgnored) }
+    var showDeleteConfirm by remember(tx.id) { mutableStateOf(false) }
 
     // 슬라이드 아웃 후 닫기
     fun close() {
@@ -432,7 +434,7 @@ private fun TransactionActionSheet(
                             .clickable(
                                 interactionSource = remember { MutableInteractionSource() },
                                 indication = null,
-                            ) { onDelete(tx.id); close() }
+                            ) { showDeleteConfirm = true }
                             .padding(8.dp),
                     )
                 }
@@ -500,6 +502,19 @@ private fun TransactionActionSheet(
                 AmOutlinedButton("취소", onClick = { close() }, modifier = Modifier.weight(1f))
                 AmButton("저장", onClick = { onSaveTransaction(tx.id, memo, category); close() }, modifier = Modifier.weight(1f))
             }
+        }
+    }
+
+    // 삭제 확인 (되돌릴 수 없는 동작 → 확인 후 삭제)
+    if (showDeleteConfirm) {
+        AmDialog(
+            title = "내역을 삭제할까요?",
+            onDismiss = { showDeleteConfirm = false },
+            onConfirm = { showDeleteConfirm = false; onDelete(tx.id); close() },
+            confirmText = "삭제",
+            confirmColor = AmColors.Red,
+        ) {
+            Text("삭제하면 되돌릴 수 없어요.", style = AmType.body, color = AmColors.TextSecondary)
         }
     }
 }
