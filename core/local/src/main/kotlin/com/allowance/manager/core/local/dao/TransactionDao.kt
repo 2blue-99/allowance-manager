@@ -33,7 +33,7 @@ interface TransactionDao {
         """
         SELECT COALESCE(SUM(amount), 0) FROM transactions
         WHERE type = 'EXPENSE'
-          AND account_id IS NOT NULL
+          AND (account_id IS NOT NULL OR is_manual = 1)
           AND is_ignored = 0
           AND created_at BETWEEN :start AND :end
         """
@@ -58,7 +58,7 @@ interface TransactionDao {
                COALESCE(SUM(amount), 0) AS total
         FROM transactions
         WHERE type = 'EXPENSE'
-          AND account_id IS NOT NULL
+          AND (account_id IS NOT NULL OR is_manual = 1)
           AND is_ignored = 0
         GROUP BY ym
         """

@@ -12,7 +12,7 @@ import com.allowance.manager.core.local.entity.TransactionEntity
         AccountEntity::class,
         TransactionEntity::class,
     ],
-    version = 4,
+    version = 5,
     exportSchema = true,
 )
 abstract class AppDatabase : RoomDatabase() {

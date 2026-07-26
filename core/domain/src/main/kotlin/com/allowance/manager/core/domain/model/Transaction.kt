@@ -20,9 +20,13 @@ data class Transaction(
     val category: TransactionCategory? = null,
     val memo: String? = null,
     val isIgnored: Boolean = false,
+    val isManual: Boolean = false,  // 사용자가 직접 추가한 내역
     val createdAt: Long,            // epoch ms
 ) {
     val isMain: Boolean get() = accountId != null
+
+    /** 예산·통계 집계 대상 여부(메인 계좌 매칭 또는 수동 입력). 무시 여부는 별도. */
+    val isCounted: Boolean get() = accountId != null || isManual
 }
 
 /**

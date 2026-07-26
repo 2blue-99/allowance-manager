@@ -30,6 +30,8 @@ data class TransactionEntity(
     val memo: String?,
     @ColumnInfo(name = "is_ignored")
     val isIgnored: Boolean = false,
+    @ColumnInfo(name = "is_manual")
+    val isManual: Boolean = false,
     @ColumnInfo(name = "created_at")
     val createdAt: Long,
 )

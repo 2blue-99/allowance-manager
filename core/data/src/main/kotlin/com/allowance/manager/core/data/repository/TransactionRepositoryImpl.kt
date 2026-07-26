@@ -74,6 +74,7 @@ private fun Transaction.toEntity() = TransactionEntity(
     category = category?.name,
     memo = memo,
     isIgnored = isIgnored,
+    isManual = isManual,
     createdAt = createdAt,
 )
 
@@ -89,5 +90,6 @@ private fun TransactionEntity.toDomain() = Transaction(
     category = category?.let { runCatching { TransactionCategory.valueOf(it) }.getOrNull() },
     memo = memo,
     isIgnored = isIgnored,
+    isManual = isManual,
     createdAt = createdAt,
 )
