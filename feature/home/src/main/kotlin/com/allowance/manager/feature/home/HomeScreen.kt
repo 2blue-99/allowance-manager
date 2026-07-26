@@ -439,7 +439,11 @@ private fun TransactionActionSheet(
 
                 Spacer(Modifier.height(20.dp))
                 // 상단 관리 토글 묶음 (합계 제외 + 메인 계좌 등록)
-                AmCard(modifier = Modifier.fillMaxWidth(), color = AmColors.ScreenBg) {
+                AmCard(
+                    modifier = Modifier.fillMaxWidth(),
+                    color = AmColors.ScreenBg,
+                    contentPadding = PaddingValues(horizontal = AmSpacing.lg, vertical = AmSpacing.xs),
+                ) {
                     Column(modifier = Modifier.fillMaxWidth()) {
                         SheetToggleRow(
                             title = "이번 달 합계에서 제외",
@@ -514,7 +518,7 @@ private fun SheetToggleRow(
     onCheckedChange: (Boolean) -> Unit,
 ) {
     Row(
-        modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp),
+        modifier = Modifier.fillMaxWidth().padding(vertical = 6.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Column(Modifier.weight(1f)) {
