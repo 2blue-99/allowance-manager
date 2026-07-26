@@ -451,7 +451,7 @@ private fun TransactionActionSheet(
                             Box(Modifier.fillMaxWidth().height(1.dp).background(AmColors.Divider))
                             SheetToggleRow(
                                 title = "메인 계좌로 등록",
-                                subtitle = "${tx.sourceName} · ${tx.extractedAccount}",
+                                subtitle = tx.extractedAccount.orEmpty(),
                                 checked = false,
                                 // 켜면 은행·계좌를 DB에 등록(승격) 후 닫힘
                                 onCheckedChange = { if (it) { onPromoteToMain(tx); close() } },
