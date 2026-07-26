@@ -9,9 +9,11 @@ import com.allowance.manager.core.domain.usecase.setting.SetShowMainOnlyUseCase
 import com.allowance.manager.core.domain.usecase.transaction.DeleteTransactionUseCase
 import com.allowance.manager.core.domain.usecase.transaction.IgnoreTransactionUseCase
 import com.allowance.manager.core.domain.usecase.transaction.ObserveCurrentTransactionsUseCase
+import com.allowance.manager.core.domain.usecase.transaction.AddManualTransactionUseCase
 import com.allowance.manager.core.domain.usecase.transaction.PromoteToMainUseCase
 import com.allowance.manager.core.domain.usecase.transaction.UpdateTransactionUseCase
 import com.allowance.manager.core.domain.model.TransactionCategory
+import com.allowance.manager.core.domain.model.TransactionType
 import com.allowance.manager.core.common.BaseViewModel
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -51,6 +53,7 @@ class HomeViewModel @Inject constructor(
     private val deleteTransactionUseCase: DeleteTransactionUseCase,
     private val promoteToMainUseCase: PromoteToMainUseCase,
     private val updateTransactionUseCase: UpdateTransactionUseCase,
+    private val addManualTransactionUseCase: AddManualTransactionUseCase,
 ) : BaseViewModel() {
 
     private val _uiState = MutableStateFlow(HomeUiState())
@@ -66,8 +69,9 @@ class HomeViewModel @Inject constructor(
             ) { status, transactions, accounts, mainOnly ->
                 // 등록 계좌가 없으면 감지된 전체를 보여줌(첫 사용 시 감지 확인 + 메인 등록 유도)
                 val hasAccounts = accounts.isNotEmpty()
-                val effectiveMainOnly = mainOnly && hasAccounts
-                val visible = if (effectiveMainOnly) transactions.filter { it.isMain } else transactions
+                // 토글은 항상 노출·동작 (메인 계좌 유무와 무관)
+                val effectiveMainOnly = mainOnly
+                val visible = if (effectiveMainOnly) transactions.filter { it.isMain || it.isManual } else transactions
 
                 // 하루 권장액·평균·D-day: 사이클 경계와 오늘 기준으로 계산 (0일 나눗셈 방어)
                 val today = LocalDate.now()
@@ -113,6 +117,17 @@ class HomeViewModel @Inject constructor(
     /** 바텀시트 '저장' — 수정한 메모·분류를 upsert */
     fun onSaveTransaction(id: Long, memo: String, category: TransactionCategory?) {
         viewModelScope.launch { updateTransactionUseCase(id, memo, category) }
+    }
+
+    /** FAB — 수동 내역 추가 */
+    fun onAddTransaction(
+        type: TransactionType,
+        amount: Long,
+        sourceName: String,
+        category: TransactionCategory?,
+        memo: String,
+    ) {
+        viewModelScope.launch { addManualTransactionUseCase(type, amount, sourceName, category, memo) }
     }
 
     fun onPromoteToMain(transaction: Transaction) {
