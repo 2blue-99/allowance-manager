@@ -29,7 +29,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -45,6 +44,7 @@ import com.allowance.manager.core.designsystem.component.AmTextField
 import com.allowance.manager.core.designsystem.theme.AmColors
 import com.allowance.manager.core.designsystem.theme.AmShape
 import com.allowance.manager.core.designsystem.theme.AmSpacing
+import com.allowance.manager.core.designsystem.theme.AmType
 import java.time.Instant
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
@@ -121,7 +121,7 @@ private fun Hero(uiState: HomeUiState, onNavigateToSetting: () -> Unit) {
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            Text("가계부", fontSize = 22.sp, fontWeight = FontWeight.ExtraBold, color = AmColors.TextPrimary)
+            Text("가계부", style = AmType.title, color = AmColors.TextPrimary)
             IconBtn(label = "⚙️", onClick = onNavigateToSetting)
         }
 
@@ -162,17 +162,13 @@ private fun BudgetCard(uiState: HomeUiState) {
         ) {
             Text(
                 "이번 달 남은 용돈",
-                fontSize = 12.sp,
-                fontWeight = FontWeight.SemiBold,
+                style = AmType.labelSoft,
                 color = Color.White.copy(alpha = 0.45f),
-                letterSpacing = 0.3.sp,
             )
             Spacer(Modifier.height(8.dp))
             Text(
                 text = if (uiState.isOver) "-${abs(uiState.remaining).amountToComma()}원" else "${uiState.remaining.amountToComma()}원",
-                fontSize = 34.sp,
-                fontWeight = FontWeight.ExtraBold,
-                letterSpacing = (-1.2).sp,
+                style = AmType.amountHero,
                 color = if (uiState.isOver) AmColors.Red else Color.White,
             )
             Spacer(Modifier.height(22.dp))
@@ -191,8 +187,7 @@ private fun BudgetCard(uiState: HomeUiState) {
                 )
                 Text(
                     text = if (uiState.isOver) "초과" else "${(uiState.spentRatio * 100).toInt()}% 사용",
-                    fontSize = 12.sp,
-                    fontWeight = FontWeight.ExtraBold,
+                    style = AmType.labelStrong,
                     color = fillColor,
                 )
             }
@@ -202,8 +197,8 @@ private fun BudgetCard(uiState: HomeUiState) {
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
             ) {
-                Text("지출 ${uiState.spent.amountToComma()}원", fontSize = 11.sp, color = Color.White.copy(alpha = 0.4f))
-                Text("예산 ${uiState.budget.amountToComma()}원", fontSize = 11.sp, color = Color.White.copy(alpha = 0.4f))
+                Text("지출 ${uiState.spent.amountToComma()}원", style = AmType.caption, color = Color.White.copy(alpha = 0.4f))
+                Text("예산 ${uiState.budget.amountToComma()}원", style = AmType.caption, color = Color.White.copy(alpha = 0.4f))
             }
         }
     }
@@ -239,9 +234,9 @@ private fun StatCell(value: String, label: String, modifier: Modifier = Modifier
         modifier = modifier.padding(vertical = 12.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
-        Text(value, fontSize = 13.sp, fontWeight = FontWeight.ExtraBold, color = valueColor)
+        Text(value, style = AmType.valueStrong, color = valueColor)
         Spacer(Modifier.height(3.dp))
-        Text(label, fontSize = 10.sp, color = AmColors.TextSecondary)
+        Text(label, style = AmType.micro, color = AmColors.TextSecondary)
     }
 }
 
@@ -282,7 +277,7 @@ private fun ListHeader(showMainOnly: Boolean, canFilter: Boolean, onToggleMainOn
         horizontalArrangement = Arrangement.SpaceBetween,
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        Text("이번달 내역", fontSize = 12.sp, fontWeight = FontWeight.ExtraBold, color = AmColors.TextPrimary)
+        Text("이번달 내역", style = AmType.labelStrong, color = AmColors.TextPrimary)
         if (canFilter) {
             // 라벨은 고정하고 토글 on/off로 상태를 표현
             Row(
@@ -292,8 +287,7 @@ private fun ListHeader(showMainOnly: Boolean, canFilter: Boolean, onToggleMainOn
                 AmToggle(checked = showMainOnly, onCheckedChange = { onToggleMainOnly() })
                 Text(
                     text = "메인만 보기",
-                    fontSize = 11.sp,
-                    fontWeight = FontWeight.Bold,
+                    style = AmType.captionStrong,
                     color = if (showMainOnly) AmColors.TextPrimary else AmColors.TextSecondary,
                 )
             }
@@ -305,7 +299,7 @@ private fun ListHeader(showMainOnly: Boolean, canFilter: Boolean, onToggleMainOn
 private fun EmptyState() {
     AmCard(modifier = Modifier.fillMaxWidth(), contentPadding = PaddingValues(vertical = 28.dp)) {
         Box(modifier = Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
-            Text("이번달 내역이 없어요", fontSize = 11.sp, color = AmColors.TextSecondary)
+            Text("이번달 내역이 없어요", style = AmType.caption, color = AmColors.TextSecondary)
         }
     }
 }
@@ -339,29 +333,27 @@ private fun TransactionCard(tx: Transaction, onClick: () -> Unit) {
                 Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(5.dp)) {
                     Text(
                         tx.sourceName,
-                        fontSize = 12.sp,
-                        fontWeight = FontWeight.Bold,
+                        style = AmType.label,
                         color = if (dim) AmColors.TextSecondary else AmColors.TextPrimary,
                         textDecoration = if (ignored) TextDecoration.LineThrough else TextDecoration.None,
                     )
                     if (ignored) {
                         Box(Modifier.clip(RoundedCornerShape(5.dp)).background(AmColors.CardBg).padding(horizontal = 5.dp, vertical = 1.dp)) {
-                            Text("숨김", fontSize = 8.sp, fontWeight = FontWeight.Bold, color = AmColors.TextSecondary)
+                            Text("숨김", style = AmType.tag, color = AmColors.TextSecondary)
                         }
                     } else if (!tx.isMain) {
                         Box(Modifier.clip(RoundedCornerShape(5.dp)).background(AmColors.Divider).padding(horizontal = 5.dp, vertical = 1.dp)) {
-                            Text("미등록", fontSize = 8.sp, color = AmColors.TextSecondary)
+                            Text("미등록", style = AmType.tag, color = AmColors.TextSecondary)
                         }
                     }
                 }
                 val subtitle = tx.memo?.takeIf { it.isNotBlank() } ?: formatTime(tx.createdAt)
-                Text(subtitle, fontSize = 9.sp, color = AmColors.TextTertiary)
+                Text(subtitle, style = AmType.tiny, color = AmColors.TextTertiary)
             }
         }
         Text(
             text = signedAmount(tx),
-            fontSize = 12.sp,
-            fontWeight = FontWeight.ExtraBold,
+            style = AmType.labelStrong,
             color = amountColor(tx, dim),
             textDecoration = if (ignored) TextDecoration.LineThrough else TextDecoration.None,
         )
@@ -385,10 +377,10 @@ private fun TransactionActionSheet(
         Column(modifier = Modifier.fillMaxWidth().padding(horizontal = 20.dp).padding(bottom = 24.dp)) {
             Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
                 Column(Modifier.weight(1f)) {
-                    Text(tx.sourceName, fontSize = 15.sp, fontWeight = FontWeight.ExtraBold, color = AmColors.TextPrimary)
-                    Text(formatTime(tx.createdAt), fontSize = 11.sp, color = AmColors.TextSecondary)
+                    Text(tx.sourceName, style = AmType.emphasis, color = AmColors.TextPrimary)
+                    Text(formatTime(tx.createdAt), style = AmType.caption, color = AmColors.TextSecondary)
                 }
-                Text(signedAmount(tx), fontSize = 15.sp, fontWeight = FontWeight.ExtraBold, color = amountColor(tx, false))
+                Text(signedAmount(tx), style = AmType.emphasis, color = amountColor(tx, false))
             }
 
             Spacer(Modifier.height(16.dp))
@@ -415,8 +407,7 @@ private fun TransactionActionSheet(
 private fun SheetAction(label: String, color: Color, onClick: () -> Unit) {
     Text(
         text = label,
-        fontSize = 14.sp,
-        fontWeight = FontWeight.Bold,
+        style = AmType.bodyStrong,
         color = color,
         modifier = Modifier.fillMaxWidth().clickable(onClick = onClick).padding(vertical = 14.dp),
     )
