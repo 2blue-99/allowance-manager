@@ -28,7 +28,12 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.outlined.Delete
+import androidx.compose.material.icons.outlined.Visibility
+import androidx.compose.material.icons.outlined.VisibilityOff
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.Icon
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.Text
 import androidx.compose.material3.rememberModalBottomSheetState
@@ -42,6 +47,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.unit.Dp
@@ -338,14 +344,14 @@ private fun SwipeRevealRow(
         // 배경: 오른쪽에 무시·삭제
         Row(modifier = Modifier.matchParentSize(), horizontalArrangement = Arrangement.End) {
             SwipeAction(
-                emoji = if (ignored) "🔁" else "🙈",
+                icon = if (ignored) Icons.Outlined.Visibility else Icons.Outlined.VisibilityOff,
                 label = if (ignored) "복원" else "무시",
                 background = AmColors.ChipBg,
                 foreground = AmColors.TextSecondary,
                 width = actionWidth,
             ) { scope.launch { offsetX.animateTo(0f) }; onIgnore() }
             SwipeAction(
-                emoji = "🗑️",
+                icon = Icons.Outlined.Delete,
                 label = "삭제",
                 background = AmColors.Red,
                 foreground = Color.White,
@@ -372,7 +378,7 @@ private fun SwipeRevealRow(
 
 @Composable
 private fun SwipeAction(
-    emoji: String,
+    icon: ImageVector,
     label: String,
     background: Color,
     foreground: Color,
@@ -392,8 +398,8 @@ private fun SwipeAction(
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center,
     ) {
-        Text(emoji, fontSize = 16.sp)
-        Spacer(Modifier.height(2.dp))
+        Icon(icon, contentDescription = label, tint = foreground, modifier = Modifier.size(20.dp))
+        Spacer(Modifier.height(4.dp))
         Text(label, style = AmType.tiny, color = foreground)
     }
 }
@@ -541,15 +547,17 @@ private fun TransactionActionSheet(
                         Text(signedAmount(tx), style = AmType.amountLarge, color = amountColor(tx, false))
                         Text("${tx.sourceName} · ${formatTime(tx.createdAt)}", style = AmType.caption, color = AmColors.TextSecondary)
                     }
-                    Text(
-                        "🗑️",
-                        fontSize = 20.sp,
+                    Icon(
+                        Icons.Outlined.Delete,
+                        contentDescription = "삭제",
+                        tint = AmColors.TextSecondary,
                         modifier = Modifier
                             .clickable(
                                 interactionSource = remember { MutableInteractionSource() },
                                 indication = null,
                             ) { showDeleteConfirm = true }
-                            .padding(8.dp),
+                            .padding(6.dp)
+                            .size(22.dp),
                     )
                 }
 
