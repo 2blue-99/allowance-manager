@@ -14,12 +14,11 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import com.allowance.manager.core.designsystem.theme.AmColors
 import com.allowance.manager.core.designsystem.theme.AmShape
 import com.allowance.manager.core.designsystem.theme.AmSpacing
+import com.allowance.manager.core.designsystem.theme.AmType
 
 /**
  * 앱 공통 다이얼로그. 제목 + 자유 [content] 슬롯 + 확인/취소 버튼을 표준화.
@@ -46,7 +45,7 @@ fun AmDialog(
                 .background(AmColors.CardBg)
                 .padding(AmSpacing.xl),
         ) {
-            Text(title, fontSize = 17.sp, fontWeight = FontWeight.ExtraBold, color = AmColors.TextPrimary)
+            Text(title, style = AmType.dialogTitle, color = AmColors.TextPrimary)
             Spacer(Modifier.height(AmSpacing.lg))
             content()
             Spacer(Modifier.height(AmSpacing.xl))

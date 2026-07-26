@@ -11,12 +11,11 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import com.allowance.manager.core.designsystem.theme.AmColors
 import com.allowance.manager.core.designsystem.theme.AmShape
 import com.allowance.manager.core.designsystem.theme.AmSpacing
+import com.allowance.manager.core.designsystem.theme.AmType
 
 /**
  * 선택형 칩. 선택 시 포인트 컬러(에메랄드) 배경.
@@ -43,8 +42,7 @@ fun AmChip(
         Text(
             text = label,
             color = if (selected) Color.White else AmColors.TextPrimary,
-            fontWeight = FontWeight.Bold,
-            fontSize = 13.sp,
+            style = AmType.value,
         )
     }
 }

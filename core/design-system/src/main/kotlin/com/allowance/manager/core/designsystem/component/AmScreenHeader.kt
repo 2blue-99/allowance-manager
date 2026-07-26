@@ -10,10 +10,10 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.sp
 import com.allowance.manager.core.designsystem.theme.AmColors
 import com.allowance.manager.core.designsystem.theme.AmSpacing
+import com.allowance.manager.core.designsystem.theme.AmType
 
 /**
  * 화면 상단 헤더. 뒤로가기(←, 선택) + 제목.
@@ -39,6 +39,6 @@ fun AmScreenHeader(
             )
             Spacer(Modifier.width(AmSpacing.md))
         }
-        Text(title, fontSize = 18.sp, fontWeight = FontWeight.ExtraBold, color = AmColors.TextPrimary)
+        Text(title, style = AmType.header, color = AmColors.TextPrimary)
     }
 }

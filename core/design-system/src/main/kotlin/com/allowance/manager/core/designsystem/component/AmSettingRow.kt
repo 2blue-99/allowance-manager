@@ -8,10 +8,10 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.sp
 import com.allowance.manager.core.designsystem.theme.AmColors
 import com.allowance.manager.core.designsystem.theme.AmShape
+import com.allowance.manager.core.designsystem.theme.AmType
 
 /**
  * 설정/목록 행. 흰 카드 안에 [title](+선택 [subtitle]) + 우측 [trailing] 슬롯.
@@ -32,9 +32,9 @@ fun AmSettingRow(
     ) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             Column(modifier = Modifier.weight(1f)) {
-                Text(title, fontSize = 14.sp, fontWeight = FontWeight.Bold, color = AmColors.TextPrimary)
+                Text(title, style = AmType.bodyStrong, color = AmColors.TextPrimary)
                 if (subtitle != null) {
-                    Text(subtitle, fontSize = 11.sp, color = AmColors.TextSecondary)
+                    Text(subtitle, style = AmType.caption, color = AmColors.TextSecondary)
                 }
             }
             trailing?.invoke(this)
