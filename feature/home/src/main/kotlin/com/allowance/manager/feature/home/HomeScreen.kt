@@ -447,7 +447,6 @@ private fun TransactionActionSheet(
                     Column(modifier = Modifier.fillMaxWidth()) {
                         SheetToggleRow(
                             title = "이번 달 합계에서 제외",
-                            subtitle = "예산·통계에서 빠집니다",
                             checked = ignored,
                             onCheckedChange = { ignored = it; onSetIgnored(tx.id, it) },
                         )
@@ -513,9 +512,9 @@ private fun SheetLabel(text: String) {
 @Composable
 private fun SheetToggleRow(
     title: String,
-    subtitle: String,
     checked: Boolean,
     onCheckedChange: (Boolean) -> Unit,
+    subtitle: String? = null,
 ) {
     Row(
         modifier = Modifier.fillMaxWidth().padding(vertical = 6.dp),
@@ -523,7 +522,9 @@ private fun SheetToggleRow(
     ) {
         Column(Modifier.weight(1f)) {
             Text(title, style = AmType.bodyStrong, color = AmColors.TextPrimary)
-            Text(subtitle, style = AmType.caption, color = AmColors.TextSecondary)
+            if (!subtitle.isNullOrBlank()) {
+                Text(subtitle, style = AmType.caption, color = AmColors.TextSecondary)
+            }
         }
         AmToggle(checked = checked, onCheckedChange = onCheckedChange)
     }
