@@ -78,8 +78,9 @@ class HomeViewModel @Inject constructor(
                 val daysUntil = ChronoUnit.DAYS.between(today, status.cycle.nextPayday).toInt()
                 val daysLeft = daysUntil.coerceAtLeast(1)
                 val elapsed = (ChronoUnit.DAYS.between(status.cycle.start, today).toInt() + 1).coerceAtLeast(1)
-                val dailyBudget = if (status.remaining > 0) status.remaining / daysLeft else 0L
-                val dailyAverage = status.spent / elapsed
+                // 하루 권장·평균은 100원 단위로 내림 표시 (예: 13,163 → 13,100)
+                val dailyBudget = if (status.remaining > 0) status.remaining / daysLeft / 100 * 100 else 0L
+                val dailyAverage = status.spent / elapsed / 100 * 100
                 val spentRatio = if (status.budget > 0) (status.spent.toFloat() / status.budget).coerceIn(0f, 1f) else 0f
 
                 HomeUiState(

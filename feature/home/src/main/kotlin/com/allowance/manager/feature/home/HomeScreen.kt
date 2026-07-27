@@ -302,12 +302,12 @@ private fun StatsRow(uiState: HomeUiState) {
         contentPadding = PaddingValues(vertical = 4.dp),
     ) {
         Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-            StatCell("${uiState.dailyBudget.amountToComma()}원", "하루 권장", Modifier.weight(1f))
+            StatCell("${uiState.dailyBudget.amountToComma()}원", "하루 지출 권장", Modifier.weight(1f))
             Box(Modifier.width(1.dp).height(36.dp).background(AmColors.Divider))
             // 과속(평균>권장)이면 빨강으로 경고
             StatCell(
                 "${uiState.dailyAverage.amountToComma()}원",
-                "하루 평균",
+                "하루 실지출",
                 Modifier.weight(1f),
                 if (uiState.overPace) AmColors.Red else AmColors.TextPrimary,
             )
