@@ -127,8 +127,7 @@ fun HomeScreen(
     LaunchedEffect(selected, showAdd) {
         val msg = pendingToast
         if (selected == null && !showAdd && msg != null) {
-            delay(300)
-            withTimeoutOrNull(2000) { snackbarHostState.showSnackbar(msg) }
+            withTimeoutOrNull(1500) { snackbarHostState.showSnackbar(msg) }
             pendingToast = null
         }
     }
@@ -153,7 +152,8 @@ fun HomeScreen(
                 onSetIgnored = onSetIgnored,
                 onDelete = onDelete,
                 onPromoteToMain = onPromoteToMain,
-                onSaveTransaction = { id, m, c -> onSaveTransaction(id, m, c); pendingToast = "저장이 완료되었습니다." },
+                onSaveTransaction = onSaveTransaction,
+                onSaved = { pendingToast = "저장이 완료되었습니다." },
             )
         }
 
@@ -547,6 +547,7 @@ private fun TransactionActionSheet(
     onDelete: (Long) -> Unit,
     onPromoteToMain: (Transaction) -> Unit,
     onSaveTransaction: (Long, String, TransactionCategory?) -> Unit,
+    onSaved: () -> Unit = {},
 ) {
     // 항상 풀로 올라오게(부분 확장 금지)
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
@@ -674,10 +675,15 @@ private fun TransactionActionSheet(
                 AmButton(
                     "저장",
                     onClick = {
-                        // 저장 시 일괄 반영: 메모·분류 upsert + 합계 제외 + (ON이면) 메인 등록
-                        onSaveTransaction(tx.id, memo, category)
-                        if (ignored != tx.isIgnored) onSetIgnored(tx.id, ignored)
-                        if (promote && !tx.isMain && tx.extractedAccount != null) onPromoteToMain(tx)
+                        // 실제로 바뀐 항목만 반영하고, 변경이 있을 때만 저장 알림
+                        val memoChanged = memo.trim().ifBlank { null } != tx.memo
+                        val categoryChanged = category != tx.category
+                        val ignoredChanged = ignored != tx.isIgnored
+                        val promoteNow = promote && !tx.isMain && tx.extractedAccount != null
+                        if (memoChanged || categoryChanged) onSaveTransaction(tx.id, memo, category)
+                        if (ignoredChanged) onSetIgnored(tx.id, ignored)
+                        if (promoteNow) onPromoteToMain(tx)
+                        if (memoChanged || categoryChanged || ignoredChanged || promoteNow) onSaved()
                         close()
                     },
                     modifier = Modifier.weight(1f).height(52.dp),
