@@ -109,6 +109,9 @@ fun IntroScreen(onFinish: () -> Unit = {}) {
     }
 }
 
+// 모든 슬라이드에서 이미지 높이를 동일하게 고정한다. (텍스트 줄 수와 무관)
+private val IntroImageHeight = 260.dp
+
 @Composable
 private fun IntroSlide(page: IntroPage) {
     Column(
@@ -119,19 +122,19 @@ private fun IntroSlide(page: IntroPage) {
         Box(
             modifier = Modifier
                 .fillMaxWidth()
-                .weight(1f)
-                .padding(vertical = 12.dp)
+                .height(IntroImageHeight)
                 .clip(RoundedCornerShape(16.dp))
                 .background(PlaceholderBg),
             contentAlignment = Alignment.Center,
         ) {
             Text("이미지", color = TextSecondary, fontSize = 14.sp)
         }
-        Spacer(Modifier.height(20.dp))
+        Spacer(Modifier.height(28.dp))
         Text(page.title, fontSize = 24.sp, fontWeight = FontWeight.ExtraBold, color = TextPrimary, textAlign = TextAlign.Center)
         Spacer(Modifier.height(12.dp))
         Text(page.description, fontSize = 14.sp, color = TextSecondary, textAlign = TextAlign.Center)
-        Spacer(Modifier.height(12.dp))
+        // 남는 공간은 아래로 흘려보내 이미지·텍스트를 상단에 고정
+        Spacer(Modifier.weight(1f))
     }
 }
 
