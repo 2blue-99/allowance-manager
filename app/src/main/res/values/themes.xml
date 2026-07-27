@@ -4,4 +4,11 @@
         <!-- 라이트 모드 전용: 시스템 강제 다크 비활성화 -->
         <item name="android:forceDarkAllowed">false</item>
     </style>
+
+    <!-- 콜드스타트 시스템 스플래시 (SplashScreen API). 앱 아이콘 + 흰 배경. -->
+    <style name="Theme.App.Starting" parent="Theme.SplashScreen">
+        <item name="windowSplashScreenBackground">@color/ic_launcher_background</item>
+        <item name="windowSplashScreenAnimatedIcon">@drawable/ic_launcher_foreground</item>
+        <item name="postSplashScreenTheme">@style/Theme.AllowanceManager</item>
+    </style>
 </resources>

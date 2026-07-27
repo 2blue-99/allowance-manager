@@ -1,7 +1,13 @@
 package com.allowance.manager.navigation
 
+import android.app.Activity
+import android.widget.Toast
+import androidx.activity.compose.BackHandler
+import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.tween
+import androidx.compose.animation.slideInVertically
+import androidx.compose.animation.slideOutVertically
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
@@ -27,10 +33,13 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -50,10 +59,9 @@ import com.allowance.manager.feature.intro.navigation.IntroRoute
 import com.allowance.manager.feature.intro.navigation.introScreen
 import com.allowance.manager.feature.onboarding.navigation.OnboardingRoute
 import com.allowance.manager.feature.onboarding.navigation.onboardingScreen
+import com.allowance.manager.StartDestination
 import com.allowance.manager.feature.setting.navigation.SettingRoute
 import com.allowance.manager.feature.setting.navigation.settingScreen
-import com.allowance.manager.feature.splash.navigation.SplashRoute
-import com.allowance.manager.feature.splash.navigation.splashScreen
 import com.allowance.manager.feature.stats.navigation.StatsRoute
 import com.allowance.manager.feature.stats.navigation.statsScreen
 import kotlin.reflect.KClass
@@ -71,14 +79,37 @@ private val bottomTabs = listOf(
 )
 
 @Composable
-fun AppNavHost(navController: NavHostController) {
+fun AppNavHost(navController: NavHostController, startDestination: StartDestination) {
     val backStackEntry by navController.currentBackStackEntryAsState()
     val currentDestination = backStackEntry?.destination
     val showBottomBar = bottomTabs.any { currentDestination.isOn(it.kClass) }
+    val startRoute: Any = when (startDestination) {
+        StartDestination.INTRO -> IntroRoute
+        StartDestination.ONBOARDING -> OnboardingRoute
+        StartDestination.HOME -> HomeRoute
+    }
+
+    // 홈에서 뒤로가기: 한 번은 안내, 2초 내 두 번이면 종료
+    val context = LocalContext.current
+    var lastBackAt by remember { mutableStateOf(0L) }
+    BackHandler(enabled = currentDestination.isOn(HomeRoute::class)) {
+        val now = System.currentTimeMillis()
+        if (now - lastBackAt < 2000L) {
+            (context as? Activity)?.finish()
+        } else {
+            lastBackAt = now
+            Toast.makeText(context, "한 번 더 누르면 종료됩니다", Toast.LENGTH_SHORT).show()
+        }
+    }
 
     Scaffold(
         bottomBar = {
-            if (showBottomBar) {
+            // 팝인 대신 슬라이드로 부드럽게 등장/퇴장
+            AnimatedVisibility(
+                visible = showBottomBar,
+                enter = slideInVertically { it },
+                exit = slideOutVertically { it },
+            ) {
                 // 커스텀 바텀바: NavigationBarItem의 고정된 인디케이터 여백을 피하려고 직접 구성.
                 // Column이 흰 배경 + 시스템 내비바 여백을 직접 처리.
                 Column(modifier = Modifier.background(AmColors.CardBg)) {
@@ -110,30 +141,13 @@ fun AppNavHost(navController: NavHostController) {
     ) { innerPadding ->
         NavHost(
             navController = navController,
-            startDestination = SplashRoute,
+            startDestination = startRoute,
             modifier = Modifier.padding(innerPadding),
             enterTransition = { AmMotion.fadeEnter() },
             exitTransition = { AmMotion.fadeExit() },
             popEnterTransition = { AmMotion.fadeEnter() },
             popExitTransition = { AmMotion.fadeExit() },
         ) {
-            splashScreen(
-                onNavigateToHome = {
-                    navController.navigate(HomeRoute) {
-                        popUpTo(SplashRoute) { inclusive = true }
-                    }
-                },
-                onNavigateToOnboarding = {
-                    navController.navigate(OnboardingRoute) {
-                        popUpTo(SplashRoute) { inclusive = true }
-                    }
-                },
-                onNavigateToIntro = {
-                    navController.navigate(IntroRoute) {
-                        popUpTo(SplashRoute) { inclusive = true }
-                    }
-                },
-            )
             introScreen(
                 onFinish = {
                     navController.navigate(OnboardingRoute) {
