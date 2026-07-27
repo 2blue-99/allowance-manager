@@ -1,14 +1,17 @@
 package com.allowance.manager.core.designsystem.component
 
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.allowance.manager.core.designsystem.theme.AmColors
 import com.allowance.manager.core.designsystem.theme.AmShape
@@ -39,7 +42,15 @@ fun AmOutlinedButton(
     modifier: Modifier = Modifier,
     enabled: Boolean = true,
 ) {
-    OutlinedButton(onClick = onClick, enabled = enabled, shape = AmShape.card, modifier = modifier) {
+    OutlinedButton(
+        onClick = onClick,
+        enabled = enabled,
+        shape = AmShape.card,
+        // 기본 outline(테마)이 검게 보여 명시적 회색 테두리 + 중립 텍스트로 지정
+        border = BorderStroke(1.dp, AmColors.BarTrack),
+        colors = ButtonDefaults.outlinedButtonColors(contentColor = AmColors.TextSecondary),
+        modifier = modifier,
+    ) {
         Text(text)
     }
 }

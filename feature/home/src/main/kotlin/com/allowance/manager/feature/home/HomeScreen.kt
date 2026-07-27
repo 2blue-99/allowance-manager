@@ -594,8 +594,9 @@ private fun TransactionActionSheet(
                     Column(modifier = Modifier.fillMaxWidth()) {
                         SheetToggleRow(
                             title = "이번 달 합계에서 제외",
+                            // 로컬 토글만 바꾸고 실제 반영은 저장 시
                             checked = ignored,
-                            onCheckedChange = { ignored = it; onSetIgnored(tx.id, it) },
+                            onCheckedChange = { ignored = it },
                         )
                         Box(
                             modifier = Modifier
@@ -648,16 +649,17 @@ private fun TransactionActionSheet(
                 modifier = Modifier.fillMaxWidth().padding(horizontal = 20.dp).padding(bottom = 12.dp),
                 horizontalArrangement = Arrangement.spacedBy(12.dp),
             ) {
-                AmOutlinedButton("취소", onClick = { close() }, modifier = Modifier.weight(1f))
+                AmOutlinedButton("취소", onClick = { close() }, modifier = Modifier.weight(1f).height(52.dp))
                 AmButton(
                     "저장",
                     onClick = {
-                        // 메모·분류 upsert + (토글 ON이고 아직 메인 아니면) 메인 계좌 등록
+                        // 저장 시 일괄 반영: 메모·분류 upsert + 합계 제외 + (ON이면) 메인 등록
                         onSaveTransaction(tx.id, memo, category)
+                        if (ignored != tx.isIgnored) onSetIgnored(tx.id, ignored)
                         if (promote && !tx.isMain && tx.extractedAccount != null) onPromoteToMain(tx)
                         close()
                     },
-                    modifier = Modifier.weight(1f),
+                    modifier = Modifier.weight(1f).height(52.dp),
                 )
             }
         }
@@ -790,11 +792,11 @@ private fun AddTransactionSheet(
                 modifier = Modifier.fillMaxWidth().padding(horizontal = 20.dp).padding(bottom = 12.dp),
                 horizontalArrangement = Arrangement.spacedBy(12.dp),
             ) {
-                AmOutlinedButton("취소", onClick = { close() }, modifier = Modifier.weight(1f))
+                AmOutlinedButton("취소", onClick = { close() }, modifier = Modifier.weight(1f).height(52.dp))
                 AmButton(
                     "추가",
                     onClick = { onAdd(type, amount, source, category, memo); close() },
-                    modifier = Modifier.weight(1f),
+                    modifier = Modifier.weight(1f).height(52.dp),
                     enabled = canAdd,
                 )
             }
