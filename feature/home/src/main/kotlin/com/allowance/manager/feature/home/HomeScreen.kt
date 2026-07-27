@@ -157,7 +157,7 @@ fun HomeScreen(
         // 좌하단 추가 FAB
         FloatingActionButton(
             onClick = { showAdd = true },
-            modifier = Modifier.align(Alignment.BottomStart).padding(20.dp),
+            modifier = Modifier.align(Alignment.BottomEnd).padding(20.dp),
             containerColor = AmColors.Emerald,
             contentColor = Color.White,
         ) {
@@ -535,6 +535,7 @@ private fun TransactionActionSheet(
     var memo by remember(tx.id) { mutableStateOf(tx.memo.orEmpty()) }
     var category by remember(tx.id) { mutableStateOf(tx.category) }
     var ignored by remember(tx.id) { mutableStateOf(tx.isIgnored) }
+    var promote by remember(tx.id) { mutableStateOf(tx.isMain) }
     var showDeleteConfirm by remember(tx.id) { mutableStateOf(false) }
 
     // 슬라이드 아웃 후 닫기
@@ -596,13 +597,19 @@ private fun TransactionActionSheet(
                             checked = ignored,
                             onCheckedChange = { ignored = it; onSetIgnored(tx.id, it) },
                         )
-                        Box(Modifier.fillMaxWidth().height(1.dp).background(AmColors.Divider))
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(vertical = 5.dp)
+                                .height(1.5.dp)
+                                .background(AmColors.BarTrack),
+                        )
                         SheetToggleRow(
                             title = "메인 계좌로 등록",
                             subtitle = tx.extractedAccount.orEmpty(),
-                            checked = tx.isMain,
-                            // 계좌가 있고 아직 메인이 아닐 때만 켜서 승격
-                            onCheckedChange = { if (it && !tx.isMain && tx.extractedAccount != null) { onPromoteToMain(tx); close() } },
+                            // 로컬 토글만 바꾸고(취소 가능) 실제 승격은 저장 시 반영
+                            checked = promote,
+                            onCheckedChange = { promote = it },
                         )
                     }
                 }
@@ -642,7 +649,16 @@ private fun TransactionActionSheet(
                 horizontalArrangement = Arrangement.spacedBy(12.dp),
             ) {
                 AmOutlinedButton("취소", onClick = { close() }, modifier = Modifier.weight(1f))
-                AmButton("저장", onClick = { onSaveTransaction(tx.id, memo, category); close() }, modifier = Modifier.weight(1f))
+                AmButton(
+                    "저장",
+                    onClick = {
+                        // 메모·분류 upsert + (토글 ON이고 아직 메인 아니면) 메인 계좌 등록
+                        onSaveTransaction(tx.id, memo, category)
+                        if (promote && !tx.isMain && tx.extractedAccount != null) onPromoteToMain(tx)
+                        close()
+                    },
+                    modifier = Modifier.weight(1f),
+                )
             }
         }
     }
