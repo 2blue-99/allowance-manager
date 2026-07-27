@@ -37,6 +37,8 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.ModalBottomSheet
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
@@ -76,6 +78,7 @@ import com.allowance.manager.core.designsystem.theme.AmShape
 import com.allowance.manager.core.designsystem.theme.AmSpacing
 import com.allowance.manager.core.designsystem.theme.AmType
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withTimeoutOrNull
 import java.time.Instant
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
@@ -116,6 +119,12 @@ fun HomeScreen(
     var selected by remember { mutableStateOf<Transaction?>(null) }
     var pendingDelete by remember { mutableStateOf<Transaction?>(null) }
     var showAdd by remember { mutableStateOf(false) }
+    val snackbarHostState = remember { SnackbarHostState() }
+    val snackScope = rememberCoroutineScope()
+    // 스낵바를 약 2초만 유지 (표시 후 타임아웃으로 자동 해제)
+    fun toast(message: String) {
+        snackScope.launch { withTimeoutOrNull(2000) { snackbarHostState.showSnackbar(message) } }
+    }
 
     Box(modifier = modifier.fillMaxSize()) {
         Column(modifier = Modifier.fillMaxSize().background(AmColors.ScreenBg)) {
@@ -137,7 +146,7 @@ fun HomeScreen(
                 onSetIgnored = onSetIgnored,
                 onDelete = onDelete,
                 onPromoteToMain = onPromoteToMain,
-                onSaveTransaction = onSaveTransaction,
+                onSaveTransaction = { id, m, c -> onSaveTransaction(id, m, c); toast("저장이 완료되었습니다.") },
             )
         }
 
@@ -167,9 +176,14 @@ fun HomeScreen(
         if (showAdd) {
             AddTransactionSheet(
                 onDismiss = { showAdd = false },
-                onAdd = onAddTransaction,
+                onAdd = { t, a, s, c, m -> onAddTransaction(t, a, s, c, m); toast("내역이 추가되었습니다.") },
             )
         }
+
+        SnackbarHost(
+            hostState = snackbarHostState,
+            modifier = Modifier.align(Alignment.BottomCenter).padding(bottom = 16.dp),
+        )
     }
 }
 
