@@ -42,6 +42,7 @@ import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -77,6 +78,7 @@ import com.allowance.manager.core.designsystem.theme.AmColors
 import com.allowance.manager.core.designsystem.theme.AmShape
 import com.allowance.manager.core.designsystem.theme.AmSpacing
 import com.allowance.manager.core.designsystem.theme.AmType
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withTimeoutOrNull
 import java.time.Instant
@@ -120,10 +122,15 @@ fun HomeScreen(
     var pendingDelete by remember { mutableStateOf<Transaction?>(null) }
     var showAdd by remember { mutableStateOf(false) }
     val snackbarHostState = remember { SnackbarHostState() }
-    val snackScope = rememberCoroutineScope()
-    // 스낵바를 약 2초만 유지 (표시 후 타임아웃으로 자동 해제)
-    fun toast(message: String) {
-        snackScope.launch { withTimeoutOrNull(2000) { snackbarHostState.showSnackbar(message) } }
+    var pendingToast by remember { mutableStateOf<String?>(null) }
+    // 시트가 완전히 내려간(=selected/showAdd 해제) 뒤 0.3초 있다가 스낵바 표시 (약 2초 유지)
+    LaunchedEffect(selected, showAdd) {
+        val msg = pendingToast
+        if (selected == null && !showAdd && msg != null) {
+            delay(300)
+            withTimeoutOrNull(2000) { snackbarHostState.showSnackbar(msg) }
+            pendingToast = null
+        }
     }
 
     Box(modifier = modifier.fillMaxSize()) {
@@ -146,7 +153,7 @@ fun HomeScreen(
                 onSetIgnored = onSetIgnored,
                 onDelete = onDelete,
                 onPromoteToMain = onPromoteToMain,
-                onSaveTransaction = { id, m, c -> onSaveTransaction(id, m, c); toast("저장이 완료되었습니다.") },
+                onSaveTransaction = { id, m, c -> onSaveTransaction(id, m, c); pendingToast = "저장이 완료되었습니다." },
             )
         }
 
@@ -176,7 +183,7 @@ fun HomeScreen(
         if (showAdd) {
             AddTransactionSheet(
                 onDismiss = { showAdd = false },
-                onAdd = { t, a, s, c, m -> onAddTransaction(t, a, s, c, m); toast("내역이 추가되었습니다.") },
+                onAdd = { t, a, s, c, m -> onAddTransaction(t, a, s, c, m); pendingToast = "내역이 추가되었습니다." },
             )
         }
 
