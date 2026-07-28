@@ -8,6 +8,8 @@ import com.allowance.manager.core.domain.model.Transaction
 import com.allowance.manager.core.domain.model.TransactionType
 import com.allowance.manager.feature.account.AccountSettingScreen
 import com.allowance.manager.feature.account.AccountUiState
+import com.allowance.manager.feature.calendar.CalendarScreen
+import com.allowance.manager.feature.calendar.CalendarUiState
 import com.allowance.manager.feature.home.HomeScreen
 import com.allowance.manager.feature.home.HomeUiState
 import com.allowance.manager.feature.intro.IntroScreen
@@ -20,6 +22,7 @@ import com.allowance.manager.feature.splash.SplashScreen
 import com.allowance.manager.feature.stats.MonthBar
 import com.allowance.manager.feature.stats.StatsScreen
 import com.allowance.manager.feature.stats.StatsUiState
+import java.time.YearMonth
 
 /**
  * 전체 화면을 한눈에 보기 위한 Preview 갤러리 (debug 전용, 앱에 포함되지 않음).
@@ -87,6 +90,20 @@ private val sampleStats = StatsUiState(
     isLoading = false,
 )
 
+private val sampleCalendar = CalendarUiState(
+    month = YearMonth.now(),
+    transactions = listOf(
+        sampleTransaction(1, "스타벅스", 5_600),
+        sampleTransaction(2, "급여 입금", 2_400_000, TransactionType.INCOME),
+        sampleTransaction(3, "네이버페이 충전", 10_000, ignored = true),
+        sampleTransaction(4, "GS25 편의점", 8_200),
+    ),
+    expense = 13_800L,       // 노출 리스트 기준 (무시 제외)
+    income = 2_400_000L,
+    minMonth = YearMonth.now().minusMonths(6),
+    isLoading = false,
+)
+
 private val sampleAccounts = AccountUiState(
     accounts = listOf(
         Account(id = 1, packageName = "", bankName = "국민은행", accountPattern = "94160277777318", enabled = true),
@@ -119,17 +136,21 @@ private fun OnboardingInfoPreview() = AllowanceManagerTheme {
 @Composable
 private fun HomePreview() = AllowanceManagerTheme { HomeScreen(uiState = sampleHome) }
 
-@Preview(name = "6. 통계", group = GROUP, showBackground = true, widthDp = 360, heightDp = 740)
+@Preview(name = "6. 월별", group = GROUP, showBackground = true, widthDp = 360, heightDp = 740)
+@Composable
+private fun CalendarPreview() = AllowanceManagerTheme { CalendarScreen(uiState = sampleCalendar) }
+
+@Preview(name = "7. 통계", group = GROUP, showBackground = true, widthDp = 360, heightDp = 740)
 @Composable
 private fun StatsPreview() = AllowanceManagerTheme { StatsScreen(uiState = sampleStats) }
 
-@Preview(name = "7. 설정", group = GROUP, showBackground = true, widthDp = 360, heightDp = 740)
+@Preview(name = "8. 설정", group = GROUP, showBackground = true, widthDp = 360, heightDp = 740)
 @Composable
 private fun SettingPreview() = AllowanceManagerTheme {
     SettingScreen(uiState = SettingUiState(budget = 2_000_000L, payday = 25, statusBarEnabled = true), versionName = "1.0.0")
 }
 
-@Preview(name = "8. 계좌 관리", group = GROUP, showBackground = true, widthDp = 360, heightDp = 740)
+@Preview(name = "9. 계좌 관리", group = GROUP, showBackground = true, widthDp = 360, heightDp = 740)
 @Composable
 private fun AccountPreview() = AllowanceManagerTheme { AccountSettingScreen(uiState = sampleAccounts) }
 
@@ -150,4 +171,16 @@ private fun HomeEmptyPreview() = AllowanceManagerTheme {
 @Composable
 private fun AccountEmptyPreview() = AllowanceManagerTheme {
     AccountSettingScreen(uiState = AccountUiState(accounts = emptyList()))
+}
+
+@Preview(name = "월별 · 검색·필터", group = "상태별", showBackground = true, widthDp = 360, heightDp = 740)
+@Composable
+private fun CalendarSearchPreview() = AllowanceManagerTheme {
+    CalendarScreen(uiState = sampleCalendar.copy(searchActive = true, query = "스타"))
+}
+
+@Preview(name = "월별 · 빈 내역", group = "상태별", showBackground = true, widthDp = 360, heightDp = 740)
+@Composable
+private fun CalendarEmptyPreview() = AllowanceManagerTheme {
+    CalendarScreen(uiState = sampleCalendar.copy(transactions = emptyList(), expense = 0L, income = 0L))
 }

@@ -72,12 +72,16 @@ import com.allowance.manager.core.designsystem.component.AmChip
 import com.allowance.manager.core.designsystem.component.AmDialog
 import com.allowance.manager.core.designsystem.component.AmOutlinedButton
 import com.allowance.manager.core.designsystem.component.AmProgressBar
+import com.allowance.manager.core.designsystem.component.AmThousandsTransformation
 import com.allowance.manager.core.designsystem.component.AmToggle
 import com.allowance.manager.core.designsystem.component.AmTextField
 import com.allowance.manager.core.designsystem.theme.AmColors
 import com.allowance.manager.core.designsystem.theme.AmShape
 import com.allowance.manager.core.designsystem.theme.AmSpacing
 import com.allowance.manager.core.designsystem.theme.AmType
+import com.allowance.manager.core.ui.transaction.SwipeRevealRow
+import com.allowance.manager.core.ui.transaction.TransactionDetailSheet
+import com.allowance.manager.core.ui.transaction.TransactionRow
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withTimeoutOrNull
@@ -146,7 +150,7 @@ fun HomeScreen(
         }
 
         selected?.let { tx ->
-            TransactionActionSheet(
+            TransactionDetailSheet(
                 tx = tx,
                 onDismiss = { selected = null },
                 onSetIgnored = onSetIgnored,
@@ -361,90 +365,11 @@ private fun BottomContent(
                         onDelete = { onRequestDelete(tx) },
                         modifier = Modifier.animateItem(),
                     ) {
-                        TransactionCard(tx = tx, onClick = { onSelect(tx) })
+                        TransactionRow(tx = tx, onClick = { onSelect(tx) })
                     }
                 }
             }
         }
-    }
-}
-
-// 왼쪽 스와이프로 무시·삭제 액션을 드러내는 행 (draggable + Animatable, 안정 API)
-@Composable
-private fun SwipeRevealRow(
-    ignored: Boolean,
-    onIgnore: () -> Unit,
-    onDelete: () -> Unit,
-    modifier: Modifier = Modifier,
-    content: @Composable () -> Unit,
-) {
-    val density = LocalDensity.current
-    val actionWidth = 68.dp
-    val maxReveal = with(density) { (actionWidth * 2).toPx() }
-    val offsetX = remember { Animatable(0f) }
-    val scope = rememberCoroutineScope()
-
-    Box(modifier = modifier.clip(AmShape.card)) {
-        // 배경: 오른쪽에 무시·삭제
-        Row(modifier = Modifier.matchParentSize(), horizontalArrangement = Arrangement.End) {
-            SwipeAction(
-                icon = if (ignored) Icons.Outlined.Visibility else Icons.Outlined.VisibilityOff,
-                label = if (ignored) "복원" else "무시",
-                background = AmColors.ChipBg,
-                foreground = AmColors.TextSecondary,
-                width = actionWidth,
-            ) { scope.launch { offsetX.animateTo(0f) }; onIgnore() }
-            SwipeAction(
-                icon = Icons.Outlined.Delete,
-                label = "삭제",
-                background = AmColors.Red,
-                foreground = Color.White,
-                width = actionWidth,
-            ) { scope.launch { offsetX.animateTo(0f) }; onDelete() }
-        }
-        // 전경: 실제 카드 (드래그로 좌측 이동)
-        Box(
-            modifier = Modifier
-                .offset { IntOffset(offsetX.value.roundToInt(), 0) }
-                .draggable(
-                    orientation = Orientation.Horizontal,
-                    state = rememberDraggableState { delta ->
-                        scope.launch { offsetX.snapTo((offsetX.value + delta).coerceIn(-maxReveal, 0f)) }
-                    },
-                    onDragStopped = {
-                        val target = if (offsetX.value < -maxReveal / 2f) -maxReveal else 0f
-                        offsetX.animateTo(target)
-                    },
-                ),
-        ) { content() }
-    }
-}
-
-@Composable
-private fun SwipeAction(
-    icon: ImageVector,
-    label: String,
-    background: Color,
-    foreground: Color,
-    width: Dp,
-    onClick: () -> Unit,
-) {
-    Column(
-        modifier = Modifier
-            .width(width)
-            .fillMaxHeight()
-            .background(background)
-            .clickable(
-                interactionSource = remember { MutableInteractionSource() },
-                indication = null,
-                onClick = onClick,
-            ),
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.Center,
-    ) {
-        Icon(icon, contentDescription = label, tint = foreground, modifier = Modifier.size(20.dp))
-        Spacer(Modifier.height(4.dp))
-        Text(label, style = AmType.tiny, color = foreground)
     }
 }
 
@@ -481,255 +406,8 @@ private fun EmptyState() {
 }
 
 @Composable
-private fun TransactionCard(tx: Transaction, onClick: () -> Unit) {
-    val ignored = tx.isIgnored
-    // 수동 입력은 계좌가 없어도 정식 내역 → 미등록/흐림 대상 아님
-    val dim = ignored || (!tx.isMain && !tx.isManual)
-    val isIncome = tx.type == TransactionType.INCOME || tx.amount < 0
-
-    AmCard(
-        modifier = Modifier.fillMaxWidth(),
-        // 무시 항목은 카드 자체를 회색으로 → 합계에서 빠졌음을 확실히 표현
-        color = if (ignored) AmColors.IgnoredBg else AmColors.CardBg,
-        contentPadding = PaddingValues(14.dp),
-        onClick = onClick,
-    ) {
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-        Row(horizontalArrangement = Arrangement.spacedBy(9.dp), verticalAlignment = Alignment.CenterVertically) {
-            Box(
-                modifier = Modifier.size(34.dp).clip(RoundedCornerShape(8.dp)).background(if (dim) AmColors.Divider else AmColors.EmeraldBg),
-                contentAlignment = Alignment.Center,
-            ) {
-                Text(tx.category?.emoji ?: if (isIncome) "💰" else "💳", fontSize = 15.sp)
-            }
-            Column {
-                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(5.dp)) {
-                    Text(
-                        tx.sourceName,
-                        style = AmType.label,
-                        color = if (dim) AmColors.TextSecondary else AmColors.TextPrimary,
-                        textDecoration = if (ignored) TextDecoration.LineThrough else TextDecoration.None,
-                    )
-                    if (ignored) {
-                        Box(Modifier.clip(RoundedCornerShape(5.dp)).background(AmColors.CardBg).padding(horizontal = 5.dp, vertical = 1.dp)) {
-                            Text("숨김", style = AmType.tag, color = AmColors.TextSecondary)
-                        }
-                    } else if (!tx.isMain && !tx.isManual) {
-                        Box(Modifier.clip(RoundedCornerShape(5.dp)).background(AmColors.Divider).padding(horizontal = 5.dp, vertical = 1.dp)) {
-                            Text("미등록", style = AmType.tag, color = AmColors.TextSecondary)
-                        }
-                    }
-                }
-                val subtitle = tx.memo?.takeIf { it.isNotBlank() } ?: formatTime(tx.createdAt)
-                Text(subtitle, style = AmType.tiny, color = AmColors.TextTertiary)
-            }
-        }
-        Text(
-            text = signedAmount(tx),
-            style = AmType.labelStrong,
-            color = amountColor(tx, dim),
-            textDecoration = if (ignored) TextDecoration.LineThrough else TextDecoration.None,
-        )
-        }
-    }
-}
-
-@OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
-@Composable
-private fun TransactionActionSheet(
-    tx: Transaction,
-    onDismiss: () -> Unit,
-    onSetIgnored: (Long, Boolean) -> Unit,
-    onDelete: (Long) -> Unit,
-    onPromoteToMain: (Transaction) -> Unit,
-    onSaveTransaction: (Long, String, TransactionCategory?) -> Unit,
-    onSaved: () -> Unit = {},
-) {
-    // 항상 풀로 올라오게(부분 확장 금지)
-    val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
-    val scope = rememberCoroutineScope()
-
-    // 편집 로컬 상태(취소 시 버려짐, 저장 시 upsert)
-    var memo by remember(tx.id) { mutableStateOf(tx.memo.orEmpty()) }
-    var category by remember(tx.id) { mutableStateOf(tx.category) }
-    var ignored by remember(tx.id) { mutableStateOf(tx.isIgnored) }
-    var promote by remember(tx.id) { mutableStateOf(tx.isMain) }
-    var showDeleteConfirm by remember(tx.id) { mutableStateOf(false) }
-
-    // 슬라이드 아웃 후 닫기
-    fun close() {
-        scope.launch { sheetState.hide() }.invokeOnCompletion { if (!sheetState.isVisible) onDismiss() }
-    }
-
-    ModalBottomSheet(
-        onDismissRequest = onDismiss,
-        sheetState = sheetState,
-        containerColor = AmColors.CardBg,
-    ) {
-        Column(modifier = Modifier.fillMaxHeight(0.94f)) {
-            // ── 스크롤 콘텐츠 (작은 화면 대응) ──
-            Column(
-                modifier = Modifier
-                    .weight(1f)
-                    .verticalScroll(rememberScrollState())
-                    .padding(horizontal = 20.dp),
-            ) {
-                // 식별 헤더: 아이콘 + 금액(주인공) + 은행·시간 + 삭제(휴지통, 금액 행 우측 정렬)
-                Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-                    Box(
-                        modifier = Modifier.size(46.dp).clip(AmShape.card).background(AmColors.EmeraldBg),
-                        contentAlignment = Alignment.Center,
-                    ) {
-                        val isIncome = tx.type == TransactionType.INCOME || tx.amount < 0
-                        Text(category?.emoji ?: if (isIncome) "💰" else "💳", fontSize = 20.sp)
-                    }
-                    Spacer(Modifier.width(14.dp))
-                    Column(Modifier.weight(1f)) {
-                        Text(signedAmount(tx), style = AmType.amountLarge, color = amountColor(tx, false))
-                        Text("${tx.sourceName} · ${formatTime(tx.createdAt)}", style = AmType.caption, color = AmColors.TextSecondary)
-                    }
-                    Icon(
-                        Icons.Outlined.Delete,
-                        contentDescription = "삭제",
-                        tint = AmColors.TextSecondary,
-                        modifier = Modifier
-                            .clickable(
-                                interactionSource = remember { MutableInteractionSource() },
-                                indication = null,
-                            ) { showDeleteConfirm = true }
-                            .padding(6.dp)
-                            .size(22.dp),
-                    )
-                }
-
-                Spacer(Modifier.height(20.dp))
-                // 상단 관리 토글 묶음 (합계 제외 + 메인 계좌 등록)
-                AmCard(
-                    modifier = Modifier.fillMaxWidth(),
-                    color = AmColors.ScreenBg,
-                    contentPadding = PaddingValues(horizontal = AmSpacing.lg, vertical = AmSpacing.xs),
-                ) {
-                    Column(modifier = Modifier.fillMaxWidth()) {
-                        SheetToggleRow(
-                            title = "이번 달 합계에서 제외",
-                            // 로컬 토글만 바꾸고 실제 반영은 저장 시
-                            checked = ignored,
-                            onCheckedChange = { ignored = it },
-                        )
-                        Box(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(vertical = 5.dp)
-                                .height(1.5.dp)
-                                .background(AmColors.BarTrack),
-                        )
-                        SheetToggleRow(
-                            title = "메인 계좌로 등록",
-                            subtitle = tx.extractedAccount.orEmpty(),
-                            // 로컬 토글만 바꾸고(취소 가능) 실제 승격은 저장 시 반영
-                            checked = promote,
-                            onCheckedChange = { promote = it },
-                        )
-                    }
-                }
-
-                Spacer(Modifier.height(24.dp))
-                SheetLabel("분류")
-                Spacer(Modifier.height(10.dp))
-                FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    TransactionCategory.entries.forEach { cat ->
-                        AmChip(
-                            label = "${cat.emoji} ${cat.label}",
-                            selected = category == cat,
-                        ) { category = if (category == cat) null else cat }
-                    }
-                }
-
-                Spacer(Modifier.height(24.dp))
-                SheetLabel("메모")
-                Spacer(Modifier.height(10.dp))
-                AmTextField(
-                    value = memo,
-                    // 줄바꿈 허용 + 최대 500자
-                    onValueChange = { if (it.length <= MEMO_MAX) memo = it },
-                    label = "메모를 남겨보세요",
-                    singleLine = false,
-                    minLines = 4,
-                    supportingText = "${memo.length}/$MEMO_MAX",
-                    modifier = Modifier.fillMaxWidth(),
-                )
-
-                Spacer(Modifier.height(24.dp))
-            }
-
-            // ── 하단 고정: 취소 / 저장 ──
-            Row(
-                modifier = Modifier.fillMaxWidth().padding(horizontal = 20.dp).padding(bottom = 12.dp),
-                horizontalArrangement = Arrangement.spacedBy(12.dp),
-            ) {
-                AmOutlinedButton("취소", onClick = { close() }, modifier = Modifier.weight(1f).height(52.dp))
-                AmButton(
-                    "저장",
-                    onClick = {
-                        // 실제로 바뀐 항목만 반영하고, 변경이 있을 때만 저장 알림
-                        val memoChanged = memo.trim().ifBlank { null } != tx.memo
-                        val categoryChanged = category != tx.category
-                        val ignoredChanged = ignored != tx.isIgnored
-                        val promoteNow = promote && !tx.isMain && tx.extractedAccount != null
-                        if (memoChanged || categoryChanged) onSaveTransaction(tx.id, memo, category)
-                        if (ignoredChanged) onSetIgnored(tx.id, ignored)
-                        if (promoteNow) onPromoteToMain(tx)
-                        if (memoChanged || categoryChanged || ignoredChanged || promoteNow) onSaved()
-                        close()
-                    },
-                    modifier = Modifier.weight(1f).height(52.dp),
-                )
-            }
-        }
-    }
-
-    // 삭제 확인 (되돌릴 수 없는 동작 → 확인 후 삭제)
-    if (showDeleteConfirm) {
-        AmDialog(
-            title = "내역을 삭제할까요?",
-            onDismiss = { showDeleteConfirm = false },
-            onConfirm = { showDeleteConfirm = false; onDelete(tx.id); close() },
-            confirmText = "삭제",
-            confirmColor = AmColors.Red,
-        ) {
-            Text("삭제하면 되돌릴 수 없어요.", style = AmType.body, color = AmColors.TextSecondary)
-        }
-    }
-}
-
-@Composable
 private fun SheetLabel(text: String) {
     Text(text, style = AmType.label, color = AmColors.TextSecondary)
-}
-
-@Composable
-private fun SheetToggleRow(
-    title: String,
-    checked: Boolean,
-    onCheckedChange: (Boolean) -> Unit,
-    subtitle: String? = null,
-) {
-    Row(
-        modifier = Modifier.fillMaxWidth().padding(vertical = 6.dp),
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        Column(Modifier.weight(1f)) {
-            Text(title, style = AmType.bodyStrong, color = AmColors.TextPrimary)
-            if (!subtitle.isNullOrBlank()) {
-                Text(subtitle, style = AmType.caption, color = AmColors.TextSecondary)
-            }
-        }
-        AmToggle(checked = checked, onCheckedChange = onCheckedChange)
-    }
 }
 
 // 수동 내역 추가 시트 (좌하단 FAB에서 풀 모달로 오픈)
@@ -777,6 +455,8 @@ private fun AddTransactionSheet(
                     onValueChange = { v -> amountText = v.filter { it.isDigit() } },
                     label = "금액 (원)",
                     keyboardType = KeyboardType.Number,
+                    // 저장값은 숫자만, 화면에는 천 단위 콤마로 표시
+                    visualTransformation = AmThousandsTransformation(),
                     modifier = Modifier.fillMaxWidth(),
                 )
 
@@ -808,7 +488,7 @@ private fun AddTransactionSheet(
                     label = "메모를 남겨보세요",
                     singleLine = false,
                     minLines = 3,
-                    supportingText = "${memo.length}/$MEMO_MAX",
+                    // supportingText = "${memo.length}/$MEMO_MAX",  // 글자수 표시는 생략
                     modifier = Modifier.fillMaxWidth(),
                 )
 
@@ -816,7 +496,7 @@ private fun AddTransactionSheet(
             }
 
             Row(
-                modifier = Modifier.fillMaxWidth().padding(horizontal = 20.dp).padding(bottom = 12.dp),
+                modifier = Modifier.fillMaxWidth().padding(horizontal = 20.dp).padding(vertical = 10.dp),
                 horizontalArrangement = Arrangement.spacedBy(12.dp),
             ) {
                 AmOutlinedButton("취소", onClick = { close() }, modifier = Modifier.weight(1f).height(52.dp))
@@ -833,23 +513,3 @@ private fun AddTransactionSheet(
 
 // ── helpers ──────────────────────────────────────────
 private const val MEMO_MAX = 500
-
-private fun signedAmount(tx: Transaction): String {
-    val magnitude = abs(tx.amount).amountToComma()
-    return when {
-        tx.type == TransactionType.INCOME -> "+${magnitude}원"
-        tx.amount < 0 -> "+${magnitude}원"   // 취소·환불
-        else -> "-${magnitude}원"
-    }
-}
-
-private fun amountColor(tx: Transaction, dim: Boolean): Color = when {
-    dim -> AmColors.TextSecondary
-    tx.type == TransactionType.INCOME || tx.amount < 0 -> AmColors.Emerald
-    else -> AmColors.Red
-}
-
-private val timeFormatter: DateTimeFormatter = DateTimeFormatter.ofPattern("a h:mm", Locale.KOREAN)
-
-private fun formatTime(epochMs: Long): String =
-    Instant.ofEpochMilli(epochMs).atZone(ZoneId.systemDefault()).toLocalDateTime().format(timeFormatter)

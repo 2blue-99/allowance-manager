@@ -26,6 +26,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.windowInsetsBottomHeight
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.BarChart
+import androidx.compose.material.icons.filled.CalendarMonth
 import androidx.compose.material.icons.filled.Home
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
@@ -53,6 +54,8 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.currentBackStackEntryAsState
 import com.allowance.manager.feature.account.navigation.AccountSettingRoute
 import com.allowance.manager.feature.account.navigation.accountSettingScreen
+import com.allowance.manager.feature.calendar.navigation.CalendarRoute
+import com.allowance.manager.feature.calendar.navigation.calendarScreen
 import com.allowance.manager.feature.home.navigation.HomeRoute
 import com.allowance.manager.feature.home.navigation.homeScreen
 import com.allowance.manager.feature.intro.navigation.IntroRoute
@@ -75,6 +78,7 @@ private data class BottomTab(
 
 private val bottomTabs = listOf(
     BottomTab(HomeRoute, HomeRoute::class, "홈", Icons.Filled.Home),
+    BottomTab(CalendarRoute, CalendarRoute::class, "월별", Icons.Filled.CalendarMonth),
     BottomTab(StatsRoute, StatsRoute::class, "통계", Icons.Filled.BarChart),
 )
 
@@ -165,6 +169,7 @@ fun AppNavHost(navController: NavHostController, startDestination: StartDestinat
             homeScreen(
                 onNavigateToSetting = { navController.navigate(SettingRoute) },
             )
+            calendarScreen()
             statsScreen()
             settingScreen(
                 onBack = { navController.popBackStack() },

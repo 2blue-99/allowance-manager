@@ -2,12 +2,13 @@ plugins {
     alias(libs.plugins.android.library)
     alias(libs.plugins.kotlin.android)
     alias(libs.plugins.kotlin.compose)
+    alias(libs.plugins.kotlin.serialization)
     alias(libs.plugins.hilt)
     alias(libs.plugins.ksp)
 }
 
 android {
-    namespace = "com.allowance.manager.core.ui"
+    namespace = "com.allowance.manager.feature.calendar"
     compileSdk = 35
 
     defaultConfig {
@@ -26,23 +27,22 @@ android {
 }
 
 dependencies {
-    // 디자인 시스템(토큰·기초 컴포넌트)을 api로 재노출 → core:ui를 쓰는 모듈이 토큰에 바로 접근
-    api(project(":core:design-system"))
-    // presentation 공통 인프라(BaseViewModel 등)도 재노출
-    api(project(":core:common"))
-    // 도메인 모델(Transaction 등)을 다루는 공용 컴포넌트를 위해 재노출
-    api(project(":core:domain"))
+    implementation(project(":core:domain"))
+    implementation(project(":core:ui"))
 
     implementation(platform(libs.androidx.compose.bom))
     implementation(libs.androidx.compose.ui)
     implementation(libs.androidx.compose.ui.tooling.preview)
     implementation(libs.androidx.compose.material3)
     implementation(libs.androidx.compose.material.icons.extended)
+    implementation(libs.androidx.navigation.compose)
     implementation(libs.androidx.lifecycle.viewmodel.compose)
-    implementation(libs.kotlinx.coroutines.android)
+    implementation(libs.androidx.lifecycle.runtime.ktx)
 
     implementation(libs.hilt.android)
     ksp(libs.hilt.android.compiler)
+    implementation(libs.hilt.navigation.compose)
+    implementation(libs.kotlinx.serialization.json)
 
     implementation(libs.timber)
 

@@ -32,6 +32,9 @@ class TransactionRepositoryImpl @Inject constructor(
     override suspend fun getById(id: Long): Transaction? =
         transactionDao.getById(id)?.toDomain()
 
+    override suspend fun getFirstTransactionTime(): Long? =
+        transactionDao.getFirstTransactionTime()
+
     override fun observeAll(): Flow<List<Transaction>> =
         transactionDao.observeAll().map { list -> list.map { it.toDomain() } }
 

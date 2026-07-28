@@ -22,6 +22,10 @@ interface TransactionDao {
     @Query("SELECT * FROM transactions WHERE id = :id")
     suspend fun getById(id: Long): TransactionEntity?
 
+    /** 가장 오래된 내역 시각 (월별 화면의 이전-달 이동 하한). 내역이 없으면 null */
+    @Query("SELECT MIN(created_at) FROM transactions")
+    suspend fun getFirstTransactionTime(): Long?
+
     @Query("SELECT * FROM transactions ORDER BY created_at DESC")
     fun observeAll(): Flow<List<TransactionEntity>>
 

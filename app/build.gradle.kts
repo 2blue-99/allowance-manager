@@ -49,6 +49,7 @@ dependencies {
     implementation(project(":feature:intro"))
     implementation(project(":feature:onboarding"))
     implementation(project(":feature:home"))
+    implementation(project(":feature:calendar"))
     implementation(project(":feature:stats"))
     implementation(project(":feature:setting"))
     implementation(project(":feature:account"))

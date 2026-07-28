@@ -10,6 +10,9 @@ interface TransactionRepository {
     suspend fun delete(id: Long)
     suspend fun getById(id: Long): Transaction?
 
+    /** 가장 오래된 내역 시각(epoch ms). 월별 화면의 이전-달 이동 하한. 내역 없으면 null */
+    suspend fun getFirstTransactionTime(): Long?
+
     fun observeAll(): Flow<List<Transaction>>
     fun observeBetween(start: Long, end: Long): Flow<List<Transaction>>
 

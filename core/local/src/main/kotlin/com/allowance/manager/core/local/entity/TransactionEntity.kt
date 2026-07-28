@@ -2,6 +2,7 @@ package com.allowance.manager.core.local.entity
 
 import androidx.room.ColumnInfo
 import androidx.room.Entity
+import androidx.room.Index
 import androidx.room.PrimaryKey
 
 /**
@@ -11,7 +12,11 @@ import androidx.room.PrimaryKey
  * - accountId: 매칭된 등록계좌 id. null 이면 비메인(예산 미반영)
  * - 이번달 지출 합계 = SUM(amount) WHERE type='EXPENSE' AND account_id NOT NULL AND is_ignored=0
  */
-@Entity(tableName = "transactions")
+@Entity(
+    tableName = "transactions",
+    // 월별·사이클 조회가 created_at 범위 필터에 크게 의존 → 인덱스로 스캔 비용 절감
+    indices = [Index(value = ["created_at"])],
+)
 data class TransactionEntity(
     @PrimaryKey(autoGenerate = true)
     val id: Long = 0,
