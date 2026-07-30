@@ -2,11 +2,13 @@ package com.allowance.manager.core.data.di
 
 import com.allowance.manager.core.data.repository.AccountRepositoryImpl
 import com.allowance.manager.core.data.repository.AppVersionRepositoryImpl
+import com.allowance.manager.core.data.repository.BudgetRepositoryImpl
 import com.allowance.manager.core.data.repository.DataStoreRepositoryImpl
 import com.allowance.manager.core.data.repository.RemoteConfigRepositoryImpl
 import com.allowance.manager.core.data.repository.TransactionRepositoryImpl
 import com.allowance.manager.core.domain.repository.AccountRepository
 import com.allowance.manager.core.domain.repository.AppVersionRepository
+import com.allowance.manager.core.domain.repository.BudgetRepository
 import com.allowance.manager.core.domain.repository.DataStoreRepository
 import com.allowance.manager.core.domain.repository.RemoteConfigRepository
 import com.allowance.manager.core.domain.repository.TransactionRepository
@@ -49,4 +51,10 @@ abstract class DataModule {
     abstract fun bindAccountRepository(
         impl: AccountRepositoryImpl,
     ): AccountRepository
+
+    @Binds
+    @Singleton
+    abstract fun bindBudgetRepository(
+        impl: BudgetRepositoryImpl,
+    ): BudgetRepository
 }

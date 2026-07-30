@@ -12,6 +12,9 @@ import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.expandVertically
 import androidx.compose.animation.fadeIn
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.gestures.detectTapGestures
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
@@ -33,6 +36,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.text.font.FontWeight
@@ -53,7 +57,11 @@ import com.allowance.manager.core.designsystem.component.AmChip
 import com.allowance.manager.core.designsystem.component.AmLineTextField
 import com.allowance.manager.core.designsystem.component.AmThousandsTransformation
 import com.allowance.manager.core.designsystem.theme.AmColors
+import com.allowance.manager.core.designsystem.theme.AmShape
 import com.allowance.manager.core.designsystem.theme.AmSpacing
+import com.allowance.manager.core.domain.model.UserType
+import androidx.compose.foundation.border
+import androidx.compose.ui.draw.clip
 import kotlinx.coroutines.delay
 
 private val Accent = AmColors.Emerald
@@ -79,8 +87,8 @@ fun OnboardingRoute(
     val initiallyGranted = remember { isListenerGranted(context) }
     var permissionGranted by remember { mutableStateOf(initiallyGranted) }
     var postGranted by remember { mutableStateOf(isPostNotificationGranted(context)) }
-    // 권한 허용 직후 바로 넘어가지 않고, ✓ 상태를 잠깐 보여준 뒤 전환.
-    var showInfo by remember { mutableStateOf(initiallyGranted) }
+    // 온보딩 내부 스텝: 유형 선택(개인화) → 권한 → 정보 입력.
+    var step by remember { mutableStateOf(OnboardingStep.PERSONAL) }
 
     val openListenerSettings = {
         context.startActivity(
@@ -112,22 +120,36 @@ fun OnboardingRoute(
         postGranted = isPostNotificationGranted(context)
     }
 
-    // 알림 접근이 허용되면 0.5초 뒤에 정보 화면으로 전환 (✓ 상태를 잠깐 노출).
-    LaunchedEffect(permissionGranted) {
-        if (permissionGranted && !showInfo) {
+    // 권한 화면에서 알림 접근이 허용되면 0.5초 뒤에 정보 화면으로 전환 (✓ 상태를 잠깐 노출).
+    LaunchedEffect(permissionGranted, step) {
+        if (permissionGranted && step == OnboardingStep.PERMISSION) {
             delay(300)
-            showInfo = true
+            step = OnboardingStep.INFO
         }
     }
 
     // 온보딩 화면 이동은 공통 가로 슬라이드 전환 사용.
     AnimatedContent(
-        targetState = showInfo,
+        targetState = step,
         transitionSpec = { AmMotion.slideForward() },
         label = "onboardingStep",
-    ) { onInfo ->
-        if (onInfo) {
-            OnboardingInfoScreen(
+    ) { current ->
+        when (current) {
+            OnboardingStep.PERSONAL -> PersonalOnboardingScreen(
+                selected = uiState.userType,
+                onSelect = viewModel::onUserTypeChange,
+                onNext = {
+                    // 유형 확정 → 저장 후 다음 스텝 (권한 이미 있으면 정보로 바로)
+                    viewModel.confirmUserType()
+                    step = if (permissionGranted) OnboardingStep.INFO else OnboardingStep.PERMISSION
+                },
+            )
+            OnboardingStep.PERMISSION -> OnboardingPermissionScreen(
+                postGranted = postGranted,
+                listenerGranted = permissionGranted,
+                onAllow = requestBothPermissions,
+            )
+            OnboardingStep.INFO -> OnboardingInfoScreen(
                 uiState = uiState,
                 onBankNameChange = viewModel::onBankNameChange,
                 onAccountPatternChange = viewModel::onAccountPatternChange,
@@ -135,13 +157,63 @@ fun OnboardingRoute(
                 onPaydayChange = viewModel::onPaydayChange,
                 onFinish = viewModel::finish,
             )
-        } else {
-            OnboardingPermissionScreen(
-                postGranted = postGranted,
-                listenerGranted = permissionGranted,
-                onAllow = requestBothPermissions,
-            )
         }
+    }
+}
+
+private enum class OnboardingStep { PERSONAL, PERMISSION, INFO }
+
+// ── 유형 선택 (온보딩 첫 단계) ─────────────────────────
+// 뱃지(용돈/생활비/예산) + 아래 설명. 선택 후 '다음'에서 유형이 저장·고정된다.
+@Composable
+private fun PersonalOnboardingScreen(
+    selected: UserType,
+    onSelect: (UserType) -> Unit,
+    onNext: () -> Unit,
+) {
+    Column(
+        modifier = Modifier.fillMaxSize().background(ScreenBg).padding(horizontal = 24.dp).padding(top = 30.dp, bottom = 24.dp),
+    ) {
+        Text("어떤 단어가 좋으신가요?", fontSize = 30.sp, fontWeight = FontWeight.ExtraBold, color = TextPrimary)
+        Spacer(Modifier.height(8.dp))
+        Text("이 앱은 용돈·생활비 관리에 특화돼 있어요.\n편한 호칭을 골라주세요.", fontSize = 16.sp, color = TextSecondary)
+        Spacer(Modifier.height(36.dp))
+
+        Column(verticalArrangement = Arrangement.spacedBy(AmSpacing.md)) {
+            UserType.entries.forEach { type ->
+                UserTypeOption(type = type, selected = selected == type, onClick = { onSelect(type) })
+            }
+        }
+
+        Spacer(Modifier.weight(1f))
+        AmButton(text = "다음", onClick = onNext, modifier = Modifier.fillMaxWidth())
+    }
+}
+
+@Composable
+private fun UserTypeOption(type: UserType, selected: Boolean, onClick: () -> Unit) {
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(AmShape.card)
+            .border(1.5.dp, if (selected) Accent else AmColors.BarTrack, AmShape.card)
+            .background(if (selected) AmColors.EmeraldBg else AmColors.CardBg)
+            .clickable(
+                interactionSource = remember { MutableInteractionSource() },
+                indication = null,
+                onClick = onClick,
+            )
+            .padding(horizontal = 16.dp, vertical = 14.dp),
+    ) {
+        // 뱃지 (호칭)
+        Text(
+            text = type.label,
+            fontSize = 14.sp,
+            fontWeight = FontWeight.ExtraBold,
+            color = if (selected) Accent else TextPrimary,
+        )
+        Spacer(Modifier.height(4.dp))
+        Text(type.hint, fontSize = 13.sp, color = TextSecondary)
     }
 }
 
@@ -238,7 +310,15 @@ fun OnboardingInfoScreen(
     val focusManager = LocalFocusManager.current
 
     Column(
-        modifier = Modifier.fillMaxSize().background(ScreenBg).padding(horizontal = 24.dp).padding(top = 30.dp),
+        modifier = Modifier
+            .fillMaxSize()
+            .background(ScreenBg)
+            // 빈 곳(입력칸·칩·버튼 외)을 탭하면 포커스 해제 → 키보드 내림
+            .pointerInput(Unit) {
+                detectTapGestures(onTap = { focusManager.clearFocus() })
+            }
+            .padding(horizontal = 24.dp)
+            .padding(top = 30.dp),
     ) {
         Text("기본 정보를 입력해요", fontSize = 30.sp, fontWeight = FontWeight.ExtraBold, color = TextPrimary)
         Spacer(Modifier.height(6.dp))
@@ -254,6 +334,7 @@ fun OnboardingInfoScreen(
                 AccountSection(
                     bankName = uiState.bankName,
                     accountPattern = uiState.accountPattern,
+                    label = uiState.userType.label,
                     onBankNameChange = onBankNameChange,
                     onAccountPatternChange = onAccountPatternChange,
                 )
@@ -263,6 +344,8 @@ fun OnboardingInfoScreen(
                 BudgetSection(
                     budgetInput = uiState.budgetInput,
                     budget = uiState.budget,
+                    label = uiState.userType.label,
+                    topic = uiState.userType.topic,
                     onBudgetChange = onBudgetChange,
                     onCommit = { focusManager.clearFocus(); budgetDone = true },
                 )
@@ -308,24 +391,27 @@ private fun Section(title: String, content: @Composable () -> Unit) {
 private fun AccountSection(
     bankName: String,
     accountPattern: String,
+    label: String,
     onBankNameChange: (String) -> Unit,
     onAccountPatternChange: (String) -> Unit,
 ) {
-    Section("용돈 계좌 정보를 입력해주세요") {
+    Section("$label 계좌 정보를 입력해주세요") {
         Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
             Text("은행 이름과 계좌 번호로 입출금 알림을 자동 감지해요.", fontSize = 14.sp, color = TextSecondary)
             AmLineTextField(
                 value = bankName,
                 onValueChange = onBankNameChange,
                 hint = "ex. 국민은행",
+                imeAction = ImeAction.Done,
                 modifier = Modifier.fillMaxWidth(),
             )
             AmLineTextField(
                 value = accountPattern,
                 // 숫자와 구분자(-)만 입력 허용. 저장 시 도메인에서 숫자만 남긴다.
                 onValueChange = { v -> onAccountPatternChange(v.filter { it.isDigit() || it == '-' }) },
-                hint = "ex. 941111-11-111111",
+                hint = "ex. 941111-11-111111 (\"-\" 제외)",
                 keyboardType = KeyboardType.Number,
+                imeAction = ImeAction.Done,
                 modifier = Modifier.fillMaxWidth(),
             )
         }
@@ -336,10 +422,12 @@ private fun AccountSection(
 private fun BudgetSection(
     budgetInput: String,
     budget: Long,
+    label: String,
+    topic: String,
     onBudgetChange: (String) -> Unit,
     onCommit: () -> Unit,
 ) {
-    Section("월 용돈이 얼마인가요?") {
+    Section("월 $label$topic 얼마인가요?") {
         Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
             AmLineTextField(
                 value = budgetInput,

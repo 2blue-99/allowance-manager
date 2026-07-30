@@ -221,6 +221,8 @@ private fun Hero(uiState: HomeUiState, onNavigateToSetting: () -> Unit) {
         Spacer(Modifier.height(6.dp))
         BudgetCard(uiState = uiState)
         Spacer(Modifier.height(12.dp))
+        ExpenseIncomeCard(uiState = uiState)
+        Spacer(Modifier.height(12.dp))
         StatsRow(uiState = uiState)
     }
 }
@@ -239,7 +241,7 @@ private fun IconBtn(label: String, onClick: () -> Unit = {}) {
     }
 }
 
-// 이번 달 남은 용돈 — 다크 카드 + 소진율 바 (양 끝: 지출·예산)
+// 이번 달 남은 용돈 — 다크 카드 + 소진율 바 (바 아래 양 끝: 소진율·예산)
 @Composable
 private fun BudgetCard(uiState: HomeUiState) {
     val fillColor = if (uiState.isOver) AmColors.Red else AmColors.Emerald
@@ -254,7 +256,7 @@ private fun BudgetCard(uiState: HomeUiState) {
             horizontalAlignment = Alignment.CenterHorizontally,
         ) {
             Text(
-                "이번 달 남은 용돈",
+                "이번 달 남은 ${uiState.userType.label}",
                 style = AmType.labelSoft,
                 color = Color.White.copy(alpha = 0.45f),
             )
@@ -265,35 +267,57 @@ private fun BudgetCard(uiState: HomeUiState) {
                 color = if (uiState.isOver) AmColors.Red else Color.White,
             )
             Spacer(Modifier.height(22.dp))
-            // 소진율 바 + "X% 사용"
+            // 소진율 바 (풀 너비)
+            AmProgressBar(
+                ratio = if (uiState.isOver) 1f else uiState.spentRatio,
+                fillColor = fillColor,
+                trackColor = AmColors.HeroBarTrack,
+                height = 8.dp,
+                modifier = Modifier.fillMaxWidth(),
+            )
+            Spacer(Modifier.height(9.dp))
+            // 바 아래 양 끝: 좌 소진율 / 우 예산 (바를 두 값이 감싸도록)
             Row(
                 modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(12.dp),
             ) {
-                AmProgressBar(
-                    ratio = if (uiState.isOver) 1f else uiState.spentRatio,
-                    fillColor = fillColor,
-                    trackColor = AmColors.HeroBarTrack,
-                    height = 8.dp,
-                    modifier = Modifier.weight(1f),
-                )
                 Text(
                     text = if (uiState.isOver) "초과" else "${(uiState.spentRatio * 100).toInt()}% 사용",
                     style = AmType.labelStrong,
                     color = fillColor,
                 )
-            }
-            Spacer(Modifier.height(9.dp))
-            // 바 양 끝 정보: 지출 / 예산
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-            ) {
-                Text("지출 ${uiState.spent.amountToComma()}원", style = AmType.caption, color = Color.White.copy(alpha = 0.4f))
-                Text("예산 ${uiState.budget.amountToComma()}원", style = AmType.caption, color = Color.White.copy(alpha = 0.4f))
+                Text(
+                    "예산 ${uiState.budget.amountToComma()}원",
+                    style = AmType.caption,
+                    color = Color.White.copy(alpha = 0.4f),
+                )
             }
         }
+    }
+}
+
+// 이번 달 지출 / 수입 — 라이트 카드 2칸 (가계부 실적)
+@Composable
+private fun ExpenseIncomeCard(uiState: HomeUiState) {
+    AmCard(
+        modifier = Modifier.fillMaxWidth(),
+        contentPadding = PaddingValues(vertical = 16.dp),
+    ) {
+        Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+            SummaryCell("이번 달 지출", "${uiState.spent.amountToComma()}원", AmColors.Red, Modifier.weight(1f))
+            Box(Modifier.width(1.dp).height(36.dp).background(AmColors.Divider))
+            SummaryCell("이번 달 수입", "${uiState.income.amountToComma()}원", AmColors.Emerald, Modifier.weight(1f))
+        }
+    }
+}
+
+@Composable
+private fun SummaryCell(label: String, value: String, valueColor: Color, modifier: Modifier = Modifier) {
+    Column(modifier = modifier, horizontalAlignment = Alignment.CenterHorizontally) {
+        Text(label, style = AmType.micro, color = AmColors.TextSecondary)
+        Spacer(Modifier.height(5.dp))
+        Text(value, style = AmType.valueStrong, color = valueColor)
     }
 }
 
@@ -499,11 +523,11 @@ private fun AddTransactionSheet(
                 modifier = Modifier.fillMaxWidth().padding(horizontal = 20.dp).padding(vertical = 10.dp),
                 horizontalArrangement = Arrangement.spacedBy(12.dp),
             ) {
-                AmOutlinedButton("취소", onClick = { close() }, modifier = Modifier.weight(1f).height(52.dp))
+                AmOutlinedButton("취소", onClick = { close() }, modifier = Modifier.weight(1f))
                 AmButton(
                     "추가",
                     onClick = { onAdd(type, amount, source, category, memo); close() },
-                    modifier = Modifier.weight(1f).height(52.dp),
+                    modifier = Modifier.weight(1f),
                     enabled = canAdd,
                 )
             }

@@ -9,9 +9,11 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.wrapContentHeight
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.shape.CircleShape
@@ -71,17 +73,17 @@ fun IntroScreen(onFinish: () -> Unit = {}) {
     // 좌우 패딩은 Column이 아니라 각 요소/페이저 contentPadding으로 처리해야
     // 페이저가 full-width로 동작하며 페이지가 잘리지 않고 부드럽게 넘어감.
     Column(
-        modifier = Modifier.fillMaxSize().background(Color.White).padding(vertical = 24.dp),
+        modifier = Modifier.fillMaxSize().background(Color.White),
     ) {
         Row(
-            modifier = Modifier.fillMaxWidth().padding(horizontal = 24.dp),
+            modifier = Modifier.fillMaxWidth().height(50.dp).padding(horizontal = 24.dp),
             horizontalArrangement = Arrangement.End,
+            verticalAlignment = Alignment.CenterVertically
         ) {
-            if (!isLast) {
-                AmTextButton("건너뛰기", onClick = onFinish, color = TextSecondary, fontWeight = FontWeight.Normal)
-            } else {
-                Spacer(Modifier.height(18.dp))
-            }
+            // 굳이 필요없어보임
+//            if (!isLast) {
+//                AmTextButton("건너뛰기", onClick = onFinish, color = TextSecondary, fontWeight = FontWeight.Normal)
+//            }
         }
 
         // 좌우 스와이프로 슬라이드 전환 (버튼으로도 이동 가능).
@@ -121,8 +123,9 @@ private fun IntroSlide(page: IntroPage) {
         // TODO: 나중에 실제 이미지로 교체
         Box(
             modifier = Modifier
+                .weight(1f)
                 .fillMaxWidth()
-                .height(IntroImageHeight)
+
                 .clip(RoundedCornerShape(16.dp))
                 .background(PlaceholderBg),
             contentAlignment = Alignment.Center,
@@ -134,7 +137,7 @@ private fun IntroSlide(page: IntroPage) {
         Spacer(Modifier.height(12.dp))
         Text(page.description, fontSize = 14.sp, color = TextSecondary, textAlign = TextAlign.Center)
         // 남는 공간은 아래로 흘려보내 이미지·텍스트를 상단에 고정
-        Spacer(Modifier.weight(1f))
+        Spacer(Modifier.height(28.dp))
     }
 }
 

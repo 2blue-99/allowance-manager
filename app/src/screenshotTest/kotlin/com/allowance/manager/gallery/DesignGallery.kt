@@ -19,7 +19,10 @@ import com.allowance.manager.feature.onboarding.OnboardingUiState
 import com.allowance.manager.feature.setting.SettingScreen
 import com.allowance.manager.feature.setting.SettingUiState
 import com.allowance.manager.feature.splash.SplashScreen
+import com.allowance.manager.core.domain.model.TransactionCategory
+import com.allowance.manager.feature.stats.CategorySlice
 import com.allowance.manager.feature.stats.MonthBar
+import com.allowance.manager.feature.stats.MonthSummary
 import com.allowance.manager.feature.stats.StatsScreen
 import com.allowance.manager.feature.stats.StatsUiState
 import java.time.YearMonth
@@ -57,6 +60,7 @@ private fun sampleTransaction(
 private val sampleHome = HomeUiState(
     budget = 2_000_000L,
     spent = 760_000L,
+    income = 2_400_000L,
     remaining = 1_240_000L,
     ratio = 0.62f,
     spentRatio = 0.38f,
@@ -76,17 +80,40 @@ private val sampleHome = HomeUiState(
     isLoading = false,
 )
 
+private val sampleStatsNow = YearMonth.now()
+private fun sampleBar(back: Long, expense: Long, budget: Long, selected: Boolean = false): MonthBar {
+    val ym = sampleStatsNow.minusMonths(back)
+    return MonthBar(
+        yearMonth = ym,
+        label = "${ym.monthValue}월",
+        expense = expense,
+        budget = budget,
+        isOver = budget > 0 && expense > budget,
+        isSelected = selected,
+    )
+}
+
 private val sampleStats = StatsUiState(
-    currentMonthTotal = 760_000L,
-    prevMonthDiff = 40_000L,
-    bars = listOf(
-        MonthBar("2월", 720_000, false),
-        MonthBar("3월", 560_000, false),
-        MonthBar("4월", 880_000, false),
-        MonthBar("5월", 500_000, false),
-        MonthBar("6월", 1_040_000, false),
-        MonthBar("7월", 760_000, true),
+    window = listOf(
+        sampleBar(5, 720_000, 900_000),
+        sampleBar(4, 950_000, 900_000),
+        sampleBar(3, 880_000, 900_000),
+        sampleBar(2, 840_000, 800_000),
+        sampleBar(1, 1_040_000, 800_000),
+        sampleBar(0, 760_000, 800_000, selected = true),
     ),
+    selected = sampleStatsNow,
+    summary = MonthSummary(budget = 800_000, expense = 760_000, income = 2_400_000),
+    categories = listOf(
+        CategorySlice(TransactionCategory.FOOD, 289_000, 0.38f),
+        CategorySlice(TransactionCategory.CAFE, 137_000, 0.18f),
+        CategorySlice(TransactionCategory.TRANSPORT, 91_000, 0.12f),
+        CategorySlice(TransactionCategory.SHOPPING, 76_000, 0.10f),
+        CategorySlice(TransactionCategory.LIVING, 61_000, 0.08f),
+        CategorySlice(null, 106_000, 0.14f),
+    ),
+    canOlder = true,
+    canNewer = false,
     isLoading = false,
 )
 

@@ -6,6 +6,7 @@ import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.intPreferencesKey
 import androidx.datastore.preferences.core.longPreferencesKey
+import androidx.datastore.preferences.core.stringPreferencesKey
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
 import javax.inject.Inject
@@ -16,21 +17,23 @@ class PreferencesDataSource @Inject constructor(
     private val dataStore: DataStore<Preferences>,
 ) {
     companion object {
-        val MONTHLY_BUDGET = longPreferencesKey("monthly_budget")   // 월 예산 (0 = 미설정)
+        // 월 예산(용돈)은 budget_history 테이블로 이관 (월별 이력)
         val PAYDAY = intPreferencesKey("payday")                    // 수급일. 1~31, 0 = 말일
         val INTRO_SHOWN = booleanPreferencesKey("intro_shown")
         val ONBOARDING_DONE = booleanPreferencesKey("onboarding_done")
         val STATUS_BAR_ENABLED = booleanPreferencesKey("status_bar_enabled")
         val SHOW_MAIN_ONLY = booleanPreferencesKey("show_main_only")
+        val USER_TYPE = stringPreferencesKey("user_type")           // 사용자 유형 (student/youth/common)
 
         private const val DEFAULT_PAYDAY = 25
+        private const val DEFAULT_USER_TYPE = "common"              // UserType.Default.key
     }
-
-    fun getMonthlyBudget(): Flow<Long> = get(MONTHLY_BUDGET, 0L)
-    suspend fun setMonthlyBudget(amount: Long) = set(MONTHLY_BUDGET, amount)
 
     fun getPayday(): Flow<Int> = get(PAYDAY, DEFAULT_PAYDAY)
     suspend fun setPayday(day: Int) = set(PAYDAY, day)
+
+    fun getUserType(): Flow<String> = get(USER_TYPE, DEFAULT_USER_TYPE)
+    suspend fun setUserType(key: String) = set(USER_TYPE, key)
 
     fun getIntroShown(): Flow<Boolean> = get(INTRO_SHOWN, false)
     suspend fun setIntroShown(shown: Boolean) = set(INTRO_SHOWN, shown)

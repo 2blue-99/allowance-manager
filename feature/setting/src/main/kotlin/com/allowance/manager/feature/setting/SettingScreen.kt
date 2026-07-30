@@ -32,6 +32,7 @@ import com.allowance.manager.core.designsystem.component.AmSettingRow
 import com.allowance.manager.core.designsystem.component.AmTextField
 import com.allowance.manager.core.designsystem.theme.AmColors
 import com.allowance.manager.core.designsystem.theme.AmSpacing
+import com.allowance.manager.core.domain.model.UserType
 import com.allowance.manager.core.domain.util.amountToComma
 
 private const val PAYDAY_EOM = 0
@@ -43,6 +44,8 @@ private fun paydayLabel(payday: Int): String = if (payday <= 0) "말일" else "$
 fun SettingRoute(
     onBack: () -> Unit,
     onNavigateToAccount: () -> Unit = {},
+    // debug 빌드에서만 non-null → 디버그 진입 노출
+    onNavigateToDebug: (() -> Unit)? = null,
     viewModel: SettingViewModel = hiltViewModel(),
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
@@ -57,9 +60,11 @@ fun SettingRoute(
         versionName = versionName,
         onBack = onBack,
         onNavigateToAccount = onNavigateToAccount,
+        onNavigateToDebug = onNavigateToDebug,
         onStatusBarEnabledChange = viewModel::setStatusBarEnabled,
         onBudgetChange = viewModel::setBudget,
         onPaydayChange = viewModel::setPayday,
+        onUserTypeChange = viewModel::setUserType,
     )
 }
 
@@ -70,13 +75,16 @@ fun SettingScreen(
     versionName: String = "",
     onBack: () -> Unit = {},
     onNavigateToAccount: () -> Unit = {},
+    onNavigateToDebug: (() -> Unit)? = null,
     onStatusBarEnabledChange: (Boolean) -> Unit = {},
     onBudgetChange: (Long) -> Unit = {},
     onPaydayChange: (Int) -> Unit = {},
+    onUserTypeChange: (UserType) -> Unit = {},
 ) {
     // 다이얼로그 노출 여부는 순수 UI 상태 → 화면이 직접 보유
     var showBudgetDialog by remember { mutableStateOf(false) }
     var showPaydayDialog by remember { mutableStateOf(false) }
+    var showTypeDialog by remember { mutableStateOf(false) }
 
     Column(
         modifier = Modifier.fillMaxSize().background(AmColors.ScreenBg).padding(AmSpacing.xl),
@@ -85,7 +93,13 @@ fun SettingScreen(
 
         Spacer(Modifier.height(AmSpacing.xl))
 
-        AmSettingRow(title = "월 예산", onClick = { showBudgetDialog = true }) {
+        AmSettingRow(title = "유형", subtitle = "이 금액을 부르는 호칭 (용돈/생활비/예산)", onClick = { showTypeDialog = true }) {
+            Text(uiState.userType.label, fontSize = 13.sp, fontWeight = FontWeight.Bold, color = AmColors.Emerald)
+            Spacer(Modifier.width(AmSpacing.xs))
+            AmChevron()
+        }
+        Spacer(Modifier.height(AmSpacing.sm))
+        AmSettingRow(title = "월 ${uiState.userType.label}", onClick = { showBudgetDialog = true }) {
             Text("${uiState.budget.amountToComma()}원", fontSize = 13.sp, fontWeight = FontWeight.Bold, color = AmColors.Emerald)
             Spacer(Modifier.width(AmSpacing.xs))
             AmChevron()
@@ -108,8 +122,23 @@ fun SettingScreen(
         AmSettingRow(title = "버전") {
             Text(versionName.ifBlank { "-" }, fontSize = 13.sp, fontWeight = FontWeight.Bold, color = AmColors.TextSecondary)
         }
+
+        // debug 빌드에서만: 맨 아래 디버그 진입
+        onNavigateToDebug?.let { nav ->
+            Spacer(Modifier.weight(1f))
+            AmSettingRow(title = "🛠 디버그", subtitle = "개발용 · debug 빌드 전용", onClick = nav) {
+                AmChevron()
+            }
+        }
     }
 
+    if (showTypeDialog) {
+        UserTypeDialog(
+            current = uiState.userType,
+            onSave = { onUserTypeChange(it); showTypeDialog = false },
+            onDismiss = { showTypeDialog = false },
+        )
+    }
     if (showBudgetDialog) {
         BudgetDialog(
             current = uiState.budget,
@@ -123,6 +152,26 @@ fun SettingScreen(
             onSave = { onPaydayChange(it); showPaydayDialog = false },
             onDismiss = { showPaydayDialog = false },
         )
+    }
+}
+
+@Composable
+private fun UserTypeDialog(current: UserType, onSave: (UserType) -> Unit, onDismiss: () -> Unit) {
+    var selected by remember { mutableStateOf(current) }
+    AmDialog(
+        title = "유형 선택",
+        onDismiss = onDismiss,
+        onConfirm = { onSave(selected) },
+    ) {
+        Column(verticalArrangement = Arrangement.spacedBy(AmSpacing.md)) {
+            UserType.entries.forEach { type ->
+                Column {
+                    AmChip(label = type.label, selected = selected == type) { selected = type }
+                    Spacer(Modifier.height(AmSpacing.xs))
+                    Text(type.hint, fontSize = 12.sp, color = AmColors.TextSecondary)
+                }
+            }
+        }
     }
 }
 

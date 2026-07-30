@@ -34,4 +34,19 @@ object AmColors {
     val HeroRingTrack = Color(0x12FFFFFF)
     val HeroBarTrack = Color(0x1FFFFFFF)   // 다크 카드 위 진행바 트랙
     val HeroIconBg = Color(0x14FFFFFF)
+
+    // ── 카테고리 색 (통계 도넛·랭킹, 향후 뱃지 공용) ──
+    val CatFood = Color(0xFFFF8A5B)       // 식비
+    val CatCafe = Color(0xFFFFC24B)       // 카페·간식
+    val CatTransport = Color(0xFF4DA3FF)  // 교통
+    val CatShopping = Color(0xFFFF6FB5)   // 쇼핑
+    val CatLiving = Color(0xFF5AD1C0)     // 생활
+    val CatHealth = Color(0xFFFF6B6B)     // 의료·건강
+    val CatCulture = Color(0xFF9B8CFF)    // 문화·여가
+    val CatEducation = Color(0xFF4EC38A)  // 교육
+    val CatHousing = Color(0xFF7C93B4)    // 주거·통신
+    val CatIncome = Color(0xFF34D399)     // 수입
+    val CatTransfer = Color(0xFFA9B4C4)   // 이체
+    val CatEtc = Color(0xFFC7CDD6)        // 기타
+    val CatNone = Color(0xFFD5DAE2)       // 미분류
 }

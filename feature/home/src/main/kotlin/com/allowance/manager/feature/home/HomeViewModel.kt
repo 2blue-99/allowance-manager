@@ -3,7 +3,9 @@ package com.allowance.manager.feature.home
 import androidx.lifecycle.viewModelScope
 import com.allowance.manager.core.domain.model.Transaction
 import com.allowance.manager.core.domain.usecase.account.ObserveAccountsUseCase
+import com.allowance.manager.core.domain.usecase.budget.GetUserTypeUseCase
 import com.allowance.manager.core.domain.usecase.budget.ObserveBudgetStatusUseCase
+import com.allowance.manager.core.domain.model.UserType
 import com.allowance.manager.core.domain.usecase.setting.GetShowMainOnlyUseCase
 import com.allowance.manager.core.domain.usecase.setting.SetShowMainOnlyUseCase
 import com.allowance.manager.core.domain.usecase.transaction.DeleteTransactionUseCase
@@ -28,6 +30,7 @@ import javax.inject.Inject
 data class HomeUiState(
     val budget: Long = 0L,
     val spent: Long = 0L,
+    val income: Long = 0L,              // 이번 달(사이클) 수입 합계
     val remaining: Long = 0L,
     val ratio: Float = 0f,              // 남은 비율
     val spentRatio: Float = 0f,         // 소진율 (지출/예산) — 메인 바 채움
@@ -39,6 +42,7 @@ data class HomeUiState(
     val transactions: List<Transaction> = emptyList(),
     val showMainOnly: Boolean = true,
     val canFilter: Boolean = false,     // 등록 계좌가 있어야 메인/전체 필터 의미 있음
+    val userType: UserType = UserType.Default,   // 사용자 유형 → 예산 호칭(용돈/생활비/예산)
     val isLoading: Boolean = true,
 )
 
@@ -48,6 +52,7 @@ class HomeViewModel @Inject constructor(
     observeCurrentTransactionsUseCase: ObserveCurrentTransactionsUseCase,
     observeAccountsUseCase: ObserveAccountsUseCase,
     getShowMainOnlyUseCase: GetShowMainOnlyUseCase,
+    getUserTypeUseCase: GetUserTypeUseCase,
     private val setShowMainOnlyUseCase: SetShowMainOnlyUseCase,
     private val ignoreTransactionUseCase: IgnoreTransactionUseCase,
     private val deleteTransactionUseCase: DeleteTransactionUseCase,
@@ -66,7 +71,8 @@ class HomeViewModel @Inject constructor(
                 observeCurrentTransactionsUseCase(),
                 observeAccountsUseCase(),
                 getShowMainOnlyUseCase(),
-            ) { status, transactions, accounts, mainOnly ->
+                getUserTypeUseCase(),
+            ) { status, transactions, accounts, mainOnly, userType ->
                 // 등록 계좌가 없으면 감지된 전체를 보여줌(첫 사용 시 감지 확인 + 메인 등록 유도)
                 val hasAccounts = accounts.isNotEmpty()
                 // 토글은 항상 노출·동작 (메인 계좌 유무와 무관)
@@ -82,10 +88,15 @@ class HomeViewModel @Inject constructor(
                 val dailyBudget = if (status.remaining > 0) status.remaining / daysLeft / 100 * 100 else 0L
                 val dailyAverage = status.spent / elapsed / 100 * 100
                 val spentRatio = if (status.budget > 0) (status.spent.toFloat() / status.budget).coerceIn(0f, 1f) else 0f
+                // 이번 달 수입 = 사이클 내 집계대상(메인·수동) · 무시 아님 · INCOME
+                val income = transactions
+                    .filter { it.isCounted && !it.isIgnored && it.type == TransactionType.INCOME }
+                    .sumOf { it.amount }
 
                 HomeUiState(
                     budget = status.budget,
                     spent = status.spent,
+                    income = income,
                     remaining = status.remaining,
                     ratio = status.ratio,
                     spentRatio = spentRatio,
@@ -97,6 +108,7 @@ class HomeViewModel @Inject constructor(
                     transactions = visible,
                     showMainOnly = effectiveMainOnly,
                     canFilter = hasAccounts,
+                    userType = userType,
                     isLoading = false,
                 )
             }.collect { _uiState.value = it }

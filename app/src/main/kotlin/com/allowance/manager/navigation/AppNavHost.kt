@@ -63,6 +63,9 @@ import com.allowance.manager.feature.intro.navigation.introScreen
 import com.allowance.manager.feature.onboarding.navigation.OnboardingRoute
 import com.allowance.manager.feature.onboarding.navigation.onboardingScreen
 import com.allowance.manager.StartDestination
+import com.allowance.manager.BuildConfig
+import com.allowance.manager.feature.setting.navigation.DebugRoute
+import com.allowance.manager.feature.setting.navigation.debugScreen
 import com.allowance.manager.feature.setting.navigation.SettingRoute
 import com.allowance.manager.feature.setting.navigation.settingScreen
 import com.allowance.manager.feature.stats.navigation.StatsRoute
@@ -78,7 +81,7 @@ private data class BottomTab(
 
 private val bottomTabs = listOf(
     BottomTab(HomeRoute, HomeRoute::class, "홈", Icons.Filled.Home),
-    BottomTab(CalendarRoute, CalendarRoute::class, "월별", Icons.Filled.CalendarMonth),
+    BottomTab(CalendarRoute(), CalendarRoute::class, "월별", Icons.Filled.CalendarMonth),
     BottomTab(StatsRoute, StatsRoute::class, "통계", Icons.Filled.BarChart),
 )
 
@@ -147,8 +150,21 @@ fun AppNavHost(navController: NavHostController, startDestination: StartDestinat
             navController = navController,
             startDestination = startRoute,
             modifier = Modifier.padding(innerPadding),
-            enterTransition = { AmMotion.fadeEnter() },
-            exitTransition = { AmMotion.fadeExit() },
+            // 온보딩 완료 → 홈은 가로 슬라이드(공유축)로 "앞으로 진행" 느낌, 그 외는 페이드
+            enterTransition = {
+                if (initialState.destination.isOn(OnboardingRoute::class) && targetState.destination.isOn(HomeRoute::class)) {
+                    AmMotion.slideForwardEnter(durationMs = 350)
+                } else {
+                    AmMotion.fadeEnter()
+                }
+            },
+            exitTransition = {
+                if (initialState.destination.isOn(OnboardingRoute::class) && targetState.destination.isOn(HomeRoute::class)) {
+                    AmMotion.slideForwardExit(durationMs = 350)
+                } else {
+                    AmMotion.fadeExit()
+                }
+            },
             popEnterTransition = { AmMotion.fadeEnter() },
             popExitTransition = { AmMotion.fadeExit() },
         ) {
@@ -170,13 +186,31 @@ fun AppNavHost(navController: NavHostController, startDestination: StartDestinat
                 onNavigateToSetting = { navController.navigate(SettingRoute) },
             )
             calendarScreen()
-            statsScreen()
+            statsScreen(
+                onOpenMonth = { ym ->
+                    navController.navigate(CalendarRoute(month = ym.toString())) {
+                        popUpTo(HomeRoute) { saveState = true }
+                        launchSingleTop = true
+                    }
+                },
+            )
             settingScreen(
                 onBack = { navController.popBackStack() },
                 onNavigateToAccount = { navController.navigate(AccountSettingRoute) },
+                // debug 빌드에서만 디버그 진입 노출
+                onNavigateToDebug = if (BuildConfig.DEBUG) {
+                    { navController.navigate(DebugRoute) }
+                } else {
+                    null
+                },
             )
             accountSettingScreen(
                 onBack = { navController.popBackStack() },
+            )
+            debugScreen(
+                onBack = { navController.popBackStack() },
+                onNavigateToIntro = { navController.navigate(IntroRoute) },
+                onNavigateToOnboarding = { navController.navigate(OnboardingRoute) },
             )
         }
     }

@@ -13,6 +13,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
@@ -37,10 +38,11 @@ fun AmLineTextField(
     /** 입력 후 포커스가 빠질 때 호출 (값 유효성 검사는 호출부 책임) */
     onFocusLost: () -> Unit = {},
     visualTransformation: VisualTransformation = VisualTransformation.None,
-    fontSize: androidx.compose.ui.unit.TextUnit = 18.sp,
+    fontSize: androidx.compose.ui.unit.TextUnit = 16.sp,
 ) {
     // 한 번 포커스를 받았다가 빠지는 경우만 onFocusLost 호출
     var hadFocus by remember { mutableStateOf(false) }
+    val focusManager = LocalFocusManager.current
 
     TextField(
         value = value,
@@ -50,11 +52,12 @@ fun AmLineTextField(
         visualTransformation = visualTransformation,
         textStyle = TextStyle(fontSize = fontSize, fontWeight = FontWeight.Medium, color = AmColors.TextPrimary),
         keyboardOptions = KeyboardOptions(keyboardType = keyboardType, imeAction = imeAction),
+        // '완료/확인' 계열은 항상 포커스를 풀어 키보드를 내린다(값 유효성과 무관).
         keyboardActions = KeyboardActions(
             onNext = { onImeAction() },
-            onDone = { onImeAction() },
-            onGo = { onImeAction() },
-            onSend = { onImeAction() },
+            onDone = { onImeAction(); focusManager.clearFocus() },
+            onGo = { onImeAction(); focusManager.clearFocus() },
+            onSend = { onImeAction(); focusManager.clearFocus() },
         ),
         colors = TextFieldDefaults.colors(
             focusedContainerColor = Color.Transparent,

@@ -2,7 +2,9 @@ package com.allowance.manager.feature.onboarding
 
 import androidx.lifecycle.viewModelScope
 import com.allowance.manager.core.domain.model.Account
+import com.allowance.manager.core.domain.model.UserType
 import com.allowance.manager.core.domain.usecase.account.AddAccountUseCase
+import com.allowance.manager.core.domain.usecase.budget.SetUserTypeUseCase
 import com.allowance.manager.core.domain.usecase.budget.SetMonthlyBudgetUseCase
 import com.allowance.manager.core.domain.usecase.budget.SetPaydayUseCase
 import com.allowance.manager.core.domain.usecase.onboarding.SetOnboardingDoneUseCase
@@ -19,6 +21,7 @@ data class OnboardingUiState(
     val bankName: String = "",
     val accountPattern: String = "",
     val budgetInput: String = "",
+    val userType: UserType = UserType.Default,   // 사용자 유형(용돈/생활비/예산)
     val payday: Int? = null,       // null = 미선택, 0 = 말일, 1~31 = 해당 일
     val isFinished: Boolean = false,
 ) {
@@ -35,6 +38,7 @@ class OnboardingViewModel @Inject constructor(
     private val setMonthlyBudgetUseCase: SetMonthlyBudgetUseCase,
     private val setPaydayUseCase: SetPaydayUseCase,
     private val addAccountUseCase: AddAccountUseCase,
+    private val setUserTypeUseCase: SetUserTypeUseCase,
     private val setOnboardingDoneUseCase: SetOnboardingDoneUseCase,
 ) : BaseViewModel() {
 
@@ -45,6 +49,12 @@ class OnboardingViewModel @Inject constructor(
     fun onAccountPatternChange(value: String) = _uiState.update { it.copy(accountPattern = value) }
     fun onBudgetChange(value: String) = _uiState.update { it.copy(budgetInput = value) }
     fun onPaydayChange(day: Int) = _uiState.update { it.copy(payday = day) }
+    fun onUserTypeChange(type: UserType) = _uiState.update { it.copy(userType = type) }
+
+    /** 유형 확정(첫 단계 '다음') → DataStore 저장 후 이후 화면 문구가 이 값을 따름 */
+    fun confirmUserType() {
+        viewModelScope.launch { setUserTypeUseCase(_uiState.value.userType) }
+    }
 
     fun finish() {
         val state = _uiState.value

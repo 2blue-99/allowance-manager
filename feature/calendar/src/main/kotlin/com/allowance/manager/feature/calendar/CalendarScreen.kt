@@ -29,6 +29,7 @@ import androidx.compose.material.icons.outlined.Search
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -59,8 +60,13 @@ import java.time.YearMonth
 
 @Composable
 fun CalendarRoute(
+    initialMonth: YearMonth?,
     viewModel: CalendarViewModel = hiltViewModel(),
 ) {
+    // 통계에서 딥링크로 특정 달을 열면 그 달로 이동 (최초 1회)
+    LaunchedEffect(Unit) {
+        if (initialMonth != null) viewModel.onSelectMonth(initialMonth)
+    }
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     CalendarScreen(
         uiState = uiState,

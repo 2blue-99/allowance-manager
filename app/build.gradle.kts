@@ -38,6 +38,7 @@ android {
     }
     buildFeatures {
         compose = true
+        buildConfig = true   // BuildConfig.DEBUG (디버그 메뉴 노출 판별)
     }
     // Compose Preview 스크린샷 테스트 (전 화면을 HTML 리포트로 확인)
     @Suppress("UnstableApiUsage")

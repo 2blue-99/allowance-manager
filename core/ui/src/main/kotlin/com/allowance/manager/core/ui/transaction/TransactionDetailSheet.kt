@@ -193,7 +193,7 @@ fun TransactionDetailSheet(
                 modifier = Modifier.fillMaxWidth().padding(horizontal = 20.dp).padding(vertical = 10.dp),
                 horizontalArrangement = Arrangement.spacedBy(12.dp),
             ) {
-                AmOutlinedButton("취소", onClick = { close() }, modifier = Modifier.weight(1f).height(52.dp))
+                AmOutlinedButton("취소", onClick = { close() }, modifier = Modifier.weight(1f))
                 AmButton(
                     "저장",
                     onClick = {
@@ -208,7 +208,7 @@ fun TransactionDetailSheet(
                         if (memoChanged || categoryChanged || ignoredChanged || promoteNow) onSaved()
                         close()
                     },
-                    modifier = Modifier.weight(1f).height(52.dp),
+                    modifier = Modifier.weight(1f),
                 )
             }
         }

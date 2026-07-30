@@ -2,6 +2,7 @@ package com.allowance.manager.core.domain.usecase.budget
 
 import com.allowance.manager.core.domain.model.BudgetCycle
 import com.allowance.manager.core.domain.model.BudgetStatus
+import com.allowance.manager.core.domain.repository.BudgetRepository
 import com.allowance.manager.core.domain.repository.DataStoreRepository
 import com.allowance.manager.core.domain.repository.TransactionRepository
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -9,20 +10,22 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.map
+import java.time.YearMonth
 import javax.inject.Inject
 
 /**
  * 이번달 예산 현황(예산·지출·남은/초과)을 관찰.
- * 수급일로 현재 사이클을 계산해 그 범위의 지출 합계를 구독.
+ * 용돈은 이번 달 이력값, 지출은 수급일 사이클 범위의 합계를 구독.
  */
 class ObserveBudgetStatusUseCase @Inject constructor(
+    private val budgetRepository: BudgetRepository,
     private val dataStoreRepository: DataStoreRepository,
     private val transactionRepository: TransactionRepository,
 ) {
     @OptIn(ExperimentalCoroutinesApi::class)
     operator fun invoke(): Flow<BudgetStatus> =
         combine(
-            dataStoreRepository.getMonthlyBudget(),
+            budgetRepository.observeBudgetForMonth(YearMonth.now()),
             dataStoreRepository.getPayday(),
         ) { budget, payday -> budget to payday }
             .flatMapLatest { (budget, payday) ->

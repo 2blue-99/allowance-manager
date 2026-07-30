@@ -3,6 +3,7 @@ package com.allowance.manager.core.local.di
 import android.content.Context
 import androidx.room.Room
 import com.allowance.manager.core.local.dao.AccountDao
+import com.allowance.manager.core.local.dao.BudgetDao
 import com.allowance.manager.core.local.dao.TransactionDao
 import com.allowance.manager.core.local.database.AppDatabase
 import dagger.Module
@@ -33,4 +34,8 @@ object DatabaseModule {
     @Provides
     fun provideTransactionDao(database: AppDatabase): TransactionDao =
         database.transactionDao()
+
+    @Provides
+    fun provideBudgetDao(database: AppDatabase): BudgetDao =
+        database.budgetDao()
 }
