@@ -46,10 +46,11 @@ private val TextSecondary = AmColors.TextSecondary
 private data class IntroPage(val title: String, val description: String)
 
 private val introPages = listOf(
-    IntroPage("매번 가계부 입력,\n귀찮았죠?", "이제 직접 안 적어도 돼요."),
-    IntroPage("결제 알림을\n자동으로 감지해요", "카드·은행 알림만 있으면\n가계부가 저절로 채워져요."),
-    IntroPage("이번달 예산과\n비교해요", "얼마 남았는지 위젯·상태바로\n한눈에 확인해요."),
-    IntroPage("이제 시작해볼까요?", "알림 권한만 있으면 준비 끝!"),
+    IntroPage("어느새 텅장…\n가계부는 또 안 썼네", "매번 적기 귀찮고,\n돈은 어디 갔는지 모르겠고"),
+    IntroPage("그럴 때 필요한 건\n내돈지켜!!", "결제 알림을 자동으로 감지해\n불편함을 확 줄였다구~"),
+    IntroPage("위젯으로\n자산을 카운팅!", "불필요한 소비를 막아줘~~"),
+    IntroPage("가계부 기능도 튼튼하고", "통계도 제공한다구~~"),
+    IntroPage("텅장 대신 통장으로!\n지금 시작해봐요!", ""),
 )
 
 @Composable
@@ -134,8 +135,11 @@ private fun IntroSlide(page: IntroPage) {
         }
         Spacer(Modifier.height(28.dp))
         Text(page.title, fontSize = 24.sp, fontWeight = FontWeight.ExtraBold, color = TextPrimary, textAlign = TextAlign.Center)
-        Spacer(Modifier.height(12.dp))
-        Text(page.description, fontSize = 14.sp, color = TextSecondary, textAlign = TextAlign.Center)
+        // 서브 문구가 있는 슬라이드만 표시 (마지막 CTA는 타이틀만)
+        if (page.description.isNotBlank()) {
+            Spacer(Modifier.height(12.dp))
+            Text(page.description, fontSize = 14.sp, color = TextSecondary, textAlign = TextAlign.Center)
+        }
         // 남는 공간은 아래로 흘려보내 이미지·텍스트를 상단에 고정
         Spacer(Modifier.height(28.dp))
     }

@@ -1,5 +1,6 @@
 package com.allowance.manager.core.domain.repository
 
+import com.allowance.manager.core.domain.model.HomeFilter
 import com.allowance.manager.core.domain.model.UserType
 import kotlinx.coroutines.flow.Flow
 
@@ -22,6 +23,11 @@ interface DataStoreRepository {
     fun getStatusBarEnabled(): Flow<Boolean>
     suspend fun setStatusBarEnabled(enabled: Boolean)
 
-    fun getShowMainOnly(): Flow<Boolean>
-    suspend fun setShowMainOnly(mainOnly: Boolean)
+    /** 홈 내역 필터 (메인/전체/숨김) */
+    fun getHomeFilter(): Flow<HomeFilter>
+    suspend fun setHomeFilter(filter: HomeFilter)
+
+    /** 홈 최초 진입 가이드(스포트라이트) 노출 완료 여부 */
+    fun getHomeGuideShown(): Flow<Boolean>
+    suspend fun setHomeGuideShown(shown: Boolean)
 }

@@ -5,9 +5,16 @@ import com.allowance.manager.core.domain.model.Transaction
 import com.allowance.manager.core.domain.usecase.account.ObserveAccountsUseCase
 import com.allowance.manager.core.domain.usecase.budget.GetUserTypeUseCase
 import com.allowance.manager.core.domain.usecase.budget.ObserveBudgetStatusUseCase
+import com.allowance.manager.core.domain.model.HomeFilter
+import com.allowance.manager.core.domain.model.HomeFilterChip
 import com.allowance.manager.core.domain.model.UserType
-import com.allowance.manager.core.domain.usecase.setting.GetShowMainOnlyUseCase
-import com.allowance.manager.core.domain.usecase.setting.SetShowMainOnlyUseCase
+import com.allowance.manager.core.domain.usecase.setting.GetHomeFilterUseCase
+import com.allowance.manager.core.domain.usecase.setting.GetHomeGuideShownUseCase
+import com.allowance.manager.core.domain.usecase.setting.SetHomeFilterUseCase
+import com.allowance.manager.core.domain.usecase.setting.SetHomeGuideShownUseCase
+import kotlinx.coroutines.flow.SharingStarted
+import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.stateIn
 import com.allowance.manager.core.domain.usecase.transaction.DeleteTransactionUseCase
 import com.allowance.manager.core.domain.usecase.transaction.IgnoreTransactionUseCase
 import com.allowance.manager.core.domain.usecase.transaction.ObserveCurrentTransactionsUseCase
@@ -40,8 +47,7 @@ data class HomeUiState(
     val overPace: Boolean = false,      // 하루 평균 > 권장 → 과속
     val daysUntilPayday: Int = 0,       // 다음 월급일까지 D-day
     val transactions: List<Transaction> = emptyList(),
-    val showMainOnly: Boolean = true,
-    val canFilter: Boolean = false,     // 등록 계좌가 있어야 메인/전체 필터 의미 있음
+    val filter: HomeFilter = HomeFilter.Default,  // 내역 세그먼트 필터 (메인/전체/숨김)
     val userType: UserType = UserType.Default,   // 사용자 유형 → 예산 호칭(용돈/생활비/예산)
     val isLoading: Boolean = true,
 )
@@ -51,18 +57,29 @@ class HomeViewModel @Inject constructor(
     observeBudgetStatusUseCase: ObserveBudgetStatusUseCase,
     observeCurrentTransactionsUseCase: ObserveCurrentTransactionsUseCase,
     observeAccountsUseCase: ObserveAccountsUseCase,
-    getShowMainOnlyUseCase: GetShowMainOnlyUseCase,
+    getHomeFilterUseCase: GetHomeFilterUseCase,
     getUserTypeUseCase: GetUserTypeUseCase,
-    private val setShowMainOnlyUseCase: SetShowMainOnlyUseCase,
+    private val setHomeFilterUseCase: SetHomeFilterUseCase,
     private val ignoreTransactionUseCase: IgnoreTransactionUseCase,
     private val deleteTransactionUseCase: DeleteTransactionUseCase,
     private val promoteToMainUseCase: PromoteToMainUseCase,
     private val updateTransactionUseCase: UpdateTransactionUseCase,
     private val addManualTransactionUseCase: AddManualTransactionUseCase,
+    getHomeGuideShownUseCase: GetHomeGuideShownUseCase,
+    private val setHomeGuideShownUseCase: SetHomeGuideShownUseCase,
 ) : BaseViewModel() {
 
     private val _uiState = MutableStateFlow(HomeUiState())
     val uiState: StateFlow<HomeUiState> = _uiState.asStateFlow()
+
+    // 최초 진입 가이드 노출 여부 (아직 안 봤으면 true)
+    val showGuide: StateFlow<Boolean> = getHomeGuideShownUseCase()
+        .map { !it }
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), false)
+
+    fun onGuideFinished() {
+        viewModelScope.launch { setHomeGuideShownUseCase(true) }
+    }
 
     init {
         viewModelScope.launch {
@@ -70,14 +87,17 @@ class HomeViewModel @Inject constructor(
                 observeBudgetStatusUseCase(),
                 observeCurrentTransactionsUseCase(),
                 observeAccountsUseCase(),
-                getShowMainOnlyUseCase(),
+                getHomeFilterUseCase(),
                 getUserTypeUseCase(),
-            ) { status, transactions, accounts, mainOnly, userType ->
-                // 등록 계좌가 없으면 감지된 전체를 보여줌(첫 사용 시 감지 확인 + 메인 등록 유도)
-                val hasAccounts = accounts.isNotEmpty()
-                // 토글은 항상 노출·동작 (메인 계좌 유무와 무관)
-                val effectiveMainOnly = mainOnly
-                val visible = if (effectiveMainOnly) transactions.filter { it.isMain || it.isManual } else transactions
+            ) { status, transactions, _, filter, userType ->
+                // 멀티 토글 필터: 전체(둘 다 꺼짐) / 메인 / 숨김 / 메인+숨김
+                val visible = when {
+                    filter.isAll -> transactions
+                    filter.showMain && filter.showHidden ->
+                        transactions.filter { it.isMain || it.isManual || it.isIgnored }
+                    filter.showMain -> transactions.filter { (it.isMain || it.isManual) && !it.isIgnored }
+                    else -> transactions.filter { it.isIgnored }   // 숨김만
+                }
 
                 // 하루 권장액·평균·D-day: 사이클 경계와 오늘 기준으로 계산 (0일 나눗셈 방어)
                 val today = LocalDate.now()
@@ -106,8 +126,7 @@ class HomeViewModel @Inject constructor(
                     overPace = status.budget > 0 && dailyAverage > dailyBudget,
                     daysUntilPayday = daysUntil,
                     transactions = visible,
-                    showMainOnly = effectiveMainOnly,
-                    canFilter = hasAccounts,
+                    filter = filter,
                     userType = userType,
                     isLoading = false,
                 )
@@ -115,8 +134,15 @@ class HomeViewModel @Inject constructor(
         }
     }
 
-    fun onToggleMainOnly() {
-        viewModelScope.launch { setShowMainOnlyUseCase(!uiState.value.showMainOnly) }
+    /** 칩 탭 — 전체는 배타(둘 다 해제), 메인·숨김은 각각 독립 토글 */
+    fun onFilterChip(chip: HomeFilterChip) {
+        val cur = uiState.value.filter
+        val next = when (chip) {
+            HomeFilterChip.MAIN -> cur.copy(showMain = !cur.showMain)
+            HomeFilterChip.HIDDEN -> cur.copy(showHidden = !cur.showHidden)
+            HomeFilterChip.ALL -> HomeFilter(showMain = false, showHidden = false)
+        }
+        viewModelScope.launch { setHomeFilterUseCase(next) }
     }
 
     fun onSetIgnored(id: Long, ignored: Boolean) {
@@ -144,12 +170,12 @@ class HomeViewModel @Inject constructor(
     }
 
     fun onPromoteToMain(transaction: Transaction) {
-        val pattern = transaction.extractedAccount ?: return
+        // 계좌번호(extractedAccount)가 없으면 출처(앱) 기준으로 등록
         viewModelScope.launch {
             promoteToMainUseCase(
                 packageName = transaction.packageName,
                 bankName = transaction.sourceName,
-                accountPattern = pattern,
+                accountPattern = transaction.extractedAccount,
             )
         }
     }

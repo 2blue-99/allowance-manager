@@ -22,8 +22,10 @@ class PreferencesDataSource @Inject constructor(
         val INTRO_SHOWN = booleanPreferencesKey("intro_shown")
         val ONBOARDING_DONE = booleanPreferencesKey("onboarding_done")
         val STATUS_BAR_ENABLED = booleanPreferencesKey("status_bar_enabled")
-        val SHOW_MAIN_ONLY = booleanPreferencesKey("show_main_only")
+        val HOME_SHOW_MAIN = booleanPreferencesKey("home_show_main")      // 홈 필터 - 메인 포함
+        val HOME_SHOW_HIDDEN = booleanPreferencesKey("home_show_hidden")  // 홈 필터 - 숨김 포함
         val USER_TYPE = stringPreferencesKey("user_type")           // 사용자 유형 (student/youth/common)
+        val HOME_GUIDE_SHOWN = booleanPreferencesKey("home_guide_shown")  // 홈 최초 진입 가이드 노출 여부
 
         private const val DEFAULT_PAYDAY = 25
         private const val DEFAULT_USER_TYPE = "common"              // UserType.Default.key
@@ -44,8 +46,14 @@ class PreferencesDataSource @Inject constructor(
     fun getStatusBarEnabled(): Flow<Boolean> = get(STATUS_BAR_ENABLED, true)
     suspend fun setStatusBarEnabled(enabled: Boolean) = set(STATUS_BAR_ENABLED, enabled)
 
-    fun getShowMainOnly(): Flow<Boolean> = get(SHOW_MAIN_ONLY, true)
-    suspend fun setShowMainOnly(mainOnly: Boolean) = set(SHOW_MAIN_ONLY, mainOnly)
+    fun getHomeShowMain(): Flow<Boolean> = get(HOME_SHOW_MAIN, true)
+    suspend fun setHomeShowMain(show: Boolean) = set(HOME_SHOW_MAIN, show)
+
+    fun getHomeShowHidden(): Flow<Boolean> = get(HOME_SHOW_HIDDEN, false)
+    suspend fun setHomeShowHidden(show: Boolean) = set(HOME_SHOW_HIDDEN, show)
+
+    fun getHomeGuideShown(): Flow<Boolean> = get(HOME_GUIDE_SHOWN, false)
+    suspend fun setHomeGuideShown(shown: Boolean) = set(HOME_GUIDE_SHOWN, shown)
 
     private fun <T> get(key: Preferences.Key<T>, defaultValue: T): Flow<T> =
         dataStore.data.map { it[key] ?: defaultValue }

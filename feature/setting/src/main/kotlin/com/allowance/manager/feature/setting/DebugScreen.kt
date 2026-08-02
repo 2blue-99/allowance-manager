@@ -10,7 +10,10 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
+import android.widget.Toast
+import androidx.hilt.navigation.compose.hiltViewModel
 import com.allowance.manager.core.designsystem.component.AmButton
 import com.allowance.manager.core.designsystem.component.AmScreenHeader
 import com.allowance.manager.core.designsystem.theme.AmColors
@@ -26,11 +29,17 @@ fun DebugRoute(
     onBack: () -> Unit,
     onNavigateToIntro: () -> Unit,
     onNavigateToOnboarding: () -> Unit,
+    viewModel: DebugViewModel = hiltViewModel(),
 ) {
+    val context = LocalContext.current
     DebugScreen(
         onBack = onBack,
         onNavigateToIntro = onNavigateToIntro,
         onNavigateToOnboarding = onNavigateToOnboarding,
+        onResetHomeGuide = {
+            viewModel.resetHomeGuide()
+            Toast.makeText(context, "홈 가이드 리셋 — 홈 재진입 시 다시 노출", Toast.LENGTH_SHORT).show()
+        },
     )
 }
 
@@ -39,6 +48,7 @@ fun DebugScreen(
     onBack: () -> Unit = {},
     onNavigateToIntro: () -> Unit = {},
     onNavigateToOnboarding: () -> Unit = {},
+    onResetHomeGuide: () -> Unit = {},
 ) {
     Column(
         modifier = Modifier.fillMaxSize().background(AmColors.ScreenBg).padding(AmSpacing.xl),
@@ -51,5 +61,10 @@ fun DebugScreen(
         AmButton(text = "인트로 화면으로", onClick = onNavigateToIntro, modifier = Modifier.fillMaxWidth())
         Spacer(Modifier.height(AmSpacing.md))
         AmButton(text = "온보딩 화면으로", onClick = onNavigateToOnboarding, modifier = Modifier.fillMaxWidth())
+
+        Spacer(Modifier.height(AmSpacing.xl))
+        Text("가이드", style = AmType.label, color = AmColors.TextSecondary)
+        Spacer(Modifier.height(AmSpacing.md))
+        AmButton(text = "홈 가이드 다시 보기", onClick = onResetHomeGuide, modifier = Modifier.fillMaxWidth())
     }
 }

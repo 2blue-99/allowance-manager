@@ -25,6 +25,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
@@ -48,9 +49,11 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.snapshots.SnapshotStateMap
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalDensity
@@ -62,6 +65,8 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.allowance.manager.core.domain.model.HomeFilter
+import com.allowance.manager.core.domain.model.HomeFilterChip
 import com.allowance.manager.core.domain.model.Transaction
 import com.allowance.manager.core.domain.model.TransactionCategory
 import com.allowance.manager.core.domain.model.TransactionType
@@ -73,12 +78,16 @@ import com.allowance.manager.core.designsystem.component.AmDialog
 import com.allowance.manager.core.designsystem.component.AmOutlinedButton
 import com.allowance.manager.core.designsystem.component.AmProgressBar
 import com.allowance.manager.core.designsystem.component.AmThousandsTransformation
-import com.allowance.manager.core.designsystem.component.AmToggle
 import com.allowance.manager.core.designsystem.component.AmTextField
 import com.allowance.manager.core.designsystem.theme.AmColors
 import com.allowance.manager.core.designsystem.theme.AmShape
 import com.allowance.manager.core.designsystem.theme.AmSpacing
 import com.allowance.manager.core.designsystem.theme.AmType
+import com.allowance.manager.core.ui.guide.GuideStep
+import com.allowance.manager.core.ui.guide.SpotShape
+import com.allowance.manager.core.ui.guide.SpotlightGuide
+import com.allowance.manager.core.ui.guide.guideTarget
+import com.allowance.manager.core.ui.guide.rememberGuideTargets
 import com.allowance.manager.core.ui.transaction.SwipeRevealRow
 import com.allowance.manager.core.ui.transaction.TransactionDetailSheet
 import com.allowance.manager.core.ui.transaction.TransactionRow
@@ -98,15 +107,18 @@ fun HomeRoute(
     viewModel: HomeViewModel = hiltViewModel(),
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+    val showGuide by viewModel.showGuide.collectAsStateWithLifecycle()
     HomeScreen(
         uiState = uiState,
         onNavigateToSetting = onNavigateToSetting,
-        onToggleMainOnly = viewModel::onToggleMainOnly,
+        onFilterChip = viewModel::onFilterChip,
         onSetIgnored = viewModel::onSetIgnored,
         onDelete = viewModel::onDelete,
         onPromoteToMain = viewModel::onPromoteToMain,
         onSaveTransaction = viewModel::onSaveTransaction,
         onAddTransaction = viewModel::onAddTransaction,
+        showGuide = showGuide,
+        onGuideFinished = viewModel::onGuideFinished,
     )
 }
 
@@ -114,17 +126,20 @@ fun HomeRoute(
 fun HomeScreen(
     uiState: HomeUiState,
     onNavigateToSetting: () -> Unit = {},
-    onToggleMainOnly: () -> Unit = {},
+    onFilterChip: (HomeFilterChip) -> Unit = {},
     onSetIgnored: (Long, Boolean) -> Unit = { _, _ -> },
     onDelete: (Long) -> Unit = {},
     onPromoteToMain: (Transaction) -> Unit = {},
     onSaveTransaction: (Long, String, TransactionCategory?) -> Unit = { _, _, _ -> },
     onAddTransaction: (TransactionType, Long, String, TransactionCategory?, String) -> Unit = { _, _, _, _, _ -> },
+    showGuide: Boolean = false,
+    onGuideFinished: () -> Unit = {},
     modifier: Modifier = Modifier,
 ) {
     var selected by remember { mutableStateOf<Transaction?>(null) }
     var pendingDelete by remember { mutableStateOf<Transaction?>(null) }
     var showAdd by remember { mutableStateOf(false) }
+    val guideTargets = rememberGuideTargets()
     val snackbarHostState = remember { SnackbarHostState() }
     var pendingToast by remember { mutableStateOf<String?>(null) }
     // 시트가 완전히 내려간(=selected/showAdd 해제) 뒤 0.3초 있다가 스낵바 표시 (약 2초 유지)
@@ -138,13 +153,14 @@ fun HomeScreen(
 
     Box(modifier = modifier.fillMaxSize()) {
         Column(modifier = Modifier.fillMaxSize().background(AmColors.ScreenBg)) {
-            Hero(uiState = uiState, onNavigateToSetting = onNavigateToSetting)
+            Hero(uiState = uiState, onNavigateToSetting = onNavigateToSetting, guideTargets = guideTargets)
             BottomContent(
                 uiState = uiState,
-                onToggleMainOnly = onToggleMainOnly,
+                onFilterChip = onFilterChip,
                 onSelect = { selected = it },
                 onIgnore = { onSetIgnored(it.id, !it.isIgnored) },
                 onRequestDelete = { pendingDelete = it },
+                guideTargets = guideTargets,
                 modifier = Modifier.weight(1f),
             )
         }
@@ -177,7 +193,7 @@ fun HomeScreen(
         // 좌하단 추가 FAB
         FloatingActionButton(
             onClick = { showAdd = true },
-            modifier = Modifier.align(Alignment.BottomEnd).padding(20.dp),
+            modifier = Modifier.align(Alignment.BottomEnd).padding(20.dp).guideTarget("fab", guideTargets),
             containerColor = AmColors.Emerald,
             contentColor = Color.White,
         ) {
@@ -195,12 +211,33 @@ fun HomeScreen(
             hostState = snackbarHostState,
             modifier = Modifier.align(Alignment.BottomCenter).padding(bottom = 16.dp),
         )
+
+        // 최초 진입 가이드(스포트라이트). 시트가 안 떠 있을 때만.
+        if (showGuide && selected == null && !showAdd) {
+            SpotlightGuide(
+                steps = homeGuideSteps(uiState.userType.label),
+                targets = guideTargets,
+                onFinish = onGuideFinished,
+            )
+        }
     }
 }
 
+private fun homeGuideSteps(label: String): List<GuideStep> = listOf(
+    GuideStep("hero", "이번 달 쓸 수 있는 ${label}이에요.\n지출을 빼고 실시간으로 줄어들어요.", SpotShape.OVAL),
+    GuideStep("expenseIncome", "이번 달 지출·수입을 한눈에.\n결제 알림을 자동 감지해 기록해줘요.", SpotShape.OVAL),
+    GuideStep("firstItem", "내역을 탭하면 분류·메모를 남기고,\n메인으로 등록할 수 있어요.", SpotShape.OVAL),
+    GuideStep("fab", "자동 감지 안 되는 현금 지출은\n여기서 직접 추가하세요.", SpotShape.CIRCLE),
+    GuideStep("settings", "계좌 등록·${label} 변경 같은 건\n여기 설정에서 바꿀 수 있어요~", SpotShape.CIRCLE),
+)
+
 // ── 히어로 ───────────────────────────────────────────
 @Composable
-private fun Hero(uiState: HomeUiState, onNavigateToSetting: () -> Unit) {
+private fun Hero(
+    uiState: HomeUiState,
+    onNavigateToSetting: () -> Unit,
+    guideTargets: SnapshotStateMap<String, Rect>,
+) {
     Column(
         modifier = Modifier
             .fillMaxWidth()
@@ -215,13 +252,15 @@ private fun Hero(uiState: HomeUiState, onNavigateToSetting: () -> Unit) {
             verticalAlignment = Alignment.CenterVertically,
         ) {
             Text("가계부", style = AmType.title, color = AmColors.TextPrimary)
-            IconBtn(label = "⚙️", onClick = onNavigateToSetting)
+            Box(Modifier.guideTarget("settings", guideTargets)) {
+                IconBtn(label = "⚙️", onClick = onNavigateToSetting)
+            }
         }
 
         Spacer(Modifier.height(6.dp))
-        BudgetCard(uiState = uiState)
+        Box(Modifier.fillMaxWidth().guideTarget("hero", guideTargets)) { BudgetCard(uiState = uiState) }
         Spacer(Modifier.height(12.dp))
-        ExpenseIncomeCard(uiState = uiState)
+        Box(Modifier.fillMaxWidth().guideTarget("expenseIncome", guideTargets)) { ExpenseIncomeCard(uiState = uiState) }
         Spacer(Modifier.height(12.dp))
         StatsRow(uiState = uiState)
     }
@@ -361,10 +400,11 @@ private fun StatCell(value: String, label: String, modifier: Modifier = Modifier
 @Composable
 private fun BottomContent(
     uiState: HomeUiState,
-    onToggleMainOnly: () -> Unit,
+    onFilterChip: (HomeFilterChip) -> Unit,
     onSelect: (Transaction) -> Unit,
     onIgnore: (Transaction) -> Unit,
     onRequestDelete: (Transaction) -> Unit,
+    guideTargets: SnapshotStateMap<String, Rect>,
     modifier: Modifier = Modifier,
 ) {
     Box(
@@ -376,18 +416,23 @@ private fun BottomContent(
             contentPadding = PaddingValues(horizontal = AmSpacing.xl, vertical = AmSpacing.md),
             verticalArrangement = Arrangement.spacedBy(9.dp),
         ) {
-            item { ListHeader(showMainOnly = uiState.showMainOnly, onToggleMainOnly = onToggleMainOnly) }
+            item { ListHeader(filter = uiState.filter, onFilterChip = onFilterChip) }
 
             if (uiState.transactions.isEmpty()) {
-                item { EmptyState() }
+                item { EmptyState(filter = uiState.filter) }
             } else {
-                items(uiState.transactions, key = { it.id }) { tx ->
-                    // 왼쪽으로 밀면 무시·삭제 액션 노출
+                itemsIndexed(uiState.transactions, key = { _, tx -> tx.id }) { index, tx ->
+                    // 왼쪽으로 밀면 무시·삭제 액션 노출. 첫 항목은 가이드 대상으로 등록.
+                    val rowModifier = if (index == 0) {
+                        Modifier.animateItem().guideTarget("firstItem", guideTargets)
+                    } else {
+                        Modifier.animateItem()
+                    }
                     SwipeRevealRow(
                         ignored = tx.isIgnored,
                         onIgnore = { onIgnore(tx) },
                         onDelete = { onRequestDelete(tx) },
-                        modifier = Modifier.animateItem(),
+                        modifier = rowModifier,
                     ) {
                         TransactionRow(tx = tx, onClick = { onSelect(tx) })
                     }
@@ -398,33 +443,37 @@ private fun BottomContent(
 }
 
 @Composable
-private fun ListHeader(showMainOnly: Boolean, onToggleMainOnly: () -> Unit) {
-    Row(
+private fun ListHeader(filter: HomeFilter, onFilterChip: (HomeFilterChip) -> Unit) {
+    Column(
         modifier = Modifier.fillMaxWidth().padding(horizontal = 2.dp, vertical = 2.dp),
-        horizontalArrangement = Arrangement.SpaceBetween,
-        verticalAlignment = Alignment.CenterVertically,
+        verticalArrangement = Arrangement.spacedBy(10.dp),
     ) {
         Text("이번달 내역", style = AmType.labelStrong, color = AmColors.TextPrimary)
-        // 메인만 보기 토글은 항상 노출
-        Row(
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(6.dp),
-        ) {
-            AmToggle(checked = showMainOnly, onCheckedChange = { onToggleMainOnly() })
-            Text(
-                text = "메인만 보기",
-                style = AmType.captionStrong,
-                color = if (showMainOnly) AmColors.TextPrimary else AmColors.TextSecondary,
-            )
+        // 메인 / 숨김 / 전체 — 메인·숨김은 독립 토글, 전체는 배타(둘 다 해제)
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            HomeFilterChip.entries.forEach { chip ->
+                val selected = when (chip) {
+                    HomeFilterChip.MAIN -> filter.showMain
+                    HomeFilterChip.HIDDEN -> filter.showHidden
+                    HomeFilterChip.ALL -> filter.isAll
+                }
+                AmChip(label = chip.label, selected = selected) { onFilterChip(chip) }
+            }
         }
     }
 }
 
 @Composable
-private fun EmptyState() {
+private fun EmptyState(filter: HomeFilter) {
+    val message = when {
+        filter.isAll -> "이번달 내역이 없어요"
+        filter.showMain && filter.showHidden -> "표시할 내역이 없어요"
+        filter.showMain -> "메인 내역이 없어요"
+        else -> "숨긴 내역이 없어요"
+    }
     AmCard(modifier = Modifier.fillMaxWidth(), contentPadding = PaddingValues(vertical = 28.dp)) {
         Box(modifier = Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
-            Text("이번달 내역이 없어요", style = AmType.caption, color = AmColors.TextSecondary)
+            Text(message, style = AmType.caption, color = AmColors.TextSecondary)
         }
     }
 }
