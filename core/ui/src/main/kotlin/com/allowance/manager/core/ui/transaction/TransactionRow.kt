@@ -35,6 +35,12 @@ fun TransactionRow(tx: Transaction, onClick: () -> Unit) {
     val dim = ignored || (!tx.isMain && !tx.isManual)
     val isIncome = tx.type == TransactionType.INCOME || tx.amount < 0
 
+    // 메모가 있으면 타이틀=메모 / 하단=시간·출처, 없으면 타이틀=출처 / 하단=시간
+    val memo = tx.memo?.takeIf { it.isNotBlank() }
+    val time = formatListTimestamp(tx.createdAt)
+    val title = memo ?: tx.sourceName
+    val subtitle = if (memo != null) "$time · ${tx.sourceName}" else time
+
     AmCard(
         modifier = Modifier.fillMaxWidth(),
         // 무시 항목은 카드 자체를 회색으로 → 합계에서 빠졌음을 확실히 표현
@@ -57,7 +63,7 @@ fun TransactionRow(tx: Transaction, onClick: () -> Unit) {
                 Column {
                     Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(5.dp)) {
                         Text(
-                            tx.sourceName,
+                            title,
                             style = AmType.label,
                             color = if (dim) AmColors.TextSecondary else AmColors.TextPrimary,
                             textDecoration = if (ignored) TextDecoration.LineThrough else TextDecoration.None,
@@ -72,7 +78,6 @@ fun TransactionRow(tx: Transaction, onClick: () -> Unit) {
                             }
                         }
                     }
-                    val subtitle = tx.memo?.takeIf { it.isNotBlank() } ?: formatTime(tx.createdAt)
                     Text(subtitle, style = AmType.tiny, color = AmColors.TextTertiary)
                 }
             }

@@ -112,7 +112,7 @@ fun TransactionDetailSheet(
                     Spacer(Modifier.width(14.dp))
                     Column(Modifier.weight(1f)) {
                         Text(signedAmount(tx), style = AmType.amountLarge, color = amountColor(tx, false))
-                        Text("${tx.sourceName} · ${formatTime(tx.createdAt)}", style = AmType.caption, color = AmColors.TextSecondary)
+                        Text("${tx.sourceName} · ${formatFullTimestamp(tx.createdAt)}", style = AmType.caption, color = AmColors.TextSecondary)
                     }
                     Icon(
                         Icons.Outlined.Delete,

@@ -6,6 +6,7 @@ import com.allowance.manager.core.domain.model.Transaction
 import com.allowance.manager.core.domain.model.TransactionType
 import com.allowance.manager.core.domain.util.amountToComma
 import java.time.Instant
+import java.time.LocalDate
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 import java.util.Locale
@@ -31,7 +32,28 @@ fun amountColor(tx: Transaction, dim: Boolean): Color = when {
     else -> AmColors.Red
 }
 
-private val timeFormatter: DateTimeFormatter = DateTimeFormatter.ofPattern("a h:mm", Locale.KOREAN)
+private val timeFormatter: DateTimeFormatter = DateTimeFormatter.ofPattern("a h:mm", Locale.KOREAN)      // 오후 1:30
+private val monthDayFormatter: DateTimeFormatter = DateTimeFormatter.ofPattern("MM.dd", Locale.KOREAN)   // 08.02
+private val shortDateFormatter: DateTimeFormatter = DateTimeFormatter.ofPattern("yy.MM.dd", Locale.KOREAN) // 25.08.01
+private val fullFormatter: DateTimeFormatter = DateTimeFormatter.ofPattern("yy.MM.dd a h:mm", Locale.KOREAN) // 25.08.01 오후 1:30
 
-fun formatTime(epochMs: Long): String =
-    Instant.ofEpochMilli(epochMs).atZone(ZoneId.systemDefault()).toLocalDateTime().format(timeFormatter)
+/**
+ * 리스트용 타임스탬프(상대 표기).
+ * - 오늘: 시각만 (오후 1:30)
+ * - 1년 이내(오늘 제외): 월.일 (08.02)
+ * - 1년 초과: 연.월.일 (25.08.01)
+ */
+fun formatListTimestamp(epochMs: Long): String {
+    val dateTime = Instant.ofEpochMilli(epochMs).atZone(ZoneId.systemDefault()).toLocalDateTime()
+    val date = dateTime.toLocalDate()
+    val today = LocalDate.now()
+    return when {
+        date == today -> dateTime.format(timeFormatter)
+        date.isAfter(today.minusYears(1)) -> dateTime.format(monthDayFormatter)
+        else -> dateTime.format(shortDateFormatter)
+    }
+}
+
+/** 상세시트용 전체 표기 (항상 연.월.일 + 시각): 25.08.01 오후 1:30 */
+fun formatFullTimestamp(epochMs: Long): String =
+    Instant.ofEpochMilli(epochMs).atZone(ZoneId.systemDefault()).toLocalDateTime().format(fullFormatter)
