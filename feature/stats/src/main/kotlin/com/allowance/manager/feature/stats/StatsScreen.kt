@@ -1,5 +1,10 @@
 package com.allowance.manager.feature.stats
 
+import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -88,16 +93,33 @@ fun StatsScreen(
             onNewer = onNewer,
         )
         Spacer(Modifier.height(AmSpacing.md))
-        SummaryCard(
-            month = uiState.selected,
-            summary = uiState.summary,
-            onOpenMonth = { onOpenMonth(uiState.selected) },
-        )
-        Spacer(Modifier.height(AmSpacing.md))
-        CategoryCard(month = uiState.selected, categories = uiState.categories, total = uiState.summary.expense)
+        // 선택 월이 바뀌면 요약·파이를 통째로 페이드 인/아웃 (같은 달 데이터 갱신엔 애니메이션 없음)
+        AnimatedContent(
+            targetState = MonthDetail(uiState.selected, uiState.summary, uiState.categories),
+            transitionSpec = { fadeIn(tween(220)) togetherWith fadeOut(tween(180)) },
+            contentKey = { it.month },
+            label = "statsDetail",
+        ) { detail ->
+            Column {
+                SummaryCard(
+                    month = detail.month,
+                    summary = detail.summary,
+                    onOpenMonth = { onOpenMonth(detail.month) },
+                )
+                Spacer(Modifier.height(AmSpacing.md))
+                CategoryCard(month = detail.month, categories = detail.categories, total = detail.summary.expense)
+            }
+        }
         Spacer(Modifier.height(AmSpacing.md))
     }
 }
+
+/** 선택 월의 요약·분류 스냅샷 — 월 변경 시 이전/새 데이터를 각각 잡아 페이드 크로스 처리 */
+private data class MonthDetail(
+    val month: java.time.YearMonth,
+    val summary: MonthSummary,
+    val categories: List<CategorySlice>,
+)
 
 // ── 6개월 막대 차트 (지출 막대 + 계단식 용돈 점선) ──
 @Composable
