@@ -11,6 +11,7 @@ object AmColors {
     val Navy = Color(0xFF0D1B2A)        // 주요 텍스트(TextPrimary)·아이콘
     val HeroBg = Color(0xFF283C58)      // 홈 예산 카드 배경(밝은 네이비)
     val Emerald = Color(0xFF10B981)     // 액센트
+    val EmeraldDark = Color(0xFF0E9E6E) // 액센트 딥(후원 카드 그라데이션 등)
     val EmeraldBg = Color(0xFFECFDF5)   // 액센트 연한 배경
     val Red = Color(0xFFEF4444)         // 지출·경고
     val RedBg = Color(0xFFFDECEC)
