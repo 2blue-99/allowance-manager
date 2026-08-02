@@ -1,6 +1,5 @@
 package com.allowance.manager.core.domain.usecase.transaction
 
-import com.allowance.manager.core.domain.model.MaskedAccount
 import com.allowance.manager.core.domain.model.ParsedTransaction
 import com.allowance.manager.core.domain.model.Transaction
 import com.allowance.manager.core.domain.repository.AccountRepository
@@ -16,8 +15,9 @@ class RecordTransactionUseCase @Inject constructor(
     private val accountRepository: AccountRepository,
 ) {
     suspend operator fun invoke(parsed: ParsedTransaction): Long {
+        // 번호 계좌는 계좌번호로, 출처 계좌는 앱(packageName)으로 매칭 (Account.matchesTransaction)
         val accountId = accountRepository.getEnabled()
-            .firstOrNull { MaskedAccount.matches(parsed.extractedAccount, it.accountPattern) }
+            .firstOrNull { it.matchesTransaction(parsed.extractedAccount, parsed.packageName) }
             ?.id
 
         return transactionRepository.record(

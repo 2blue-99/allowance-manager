@@ -63,6 +63,10 @@ class TransactionRepositoryImpl @Inject constructor(
             .map { it.id }
         if (ids.isNotEmpty()) transactionDao.promoteByIds(ids, accountId)
     }
+
+    // 출처(앱) 기준 승격은 SQL로 처리 (계좌번호 없는 같은 packageName 내역)
+    override suspend fun promoteToMainBySource(packageName: String, accountId: Long) =
+        transactionDao.promoteBySource(packageName, accountId)
 }
 
 private fun Transaction.toEntity() = TransactionEntity(

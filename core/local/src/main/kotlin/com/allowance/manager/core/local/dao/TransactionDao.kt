@@ -55,6 +55,20 @@ interface TransactionDao {
     @Query("UPDATE transactions SET account_id = :accountId WHERE id IN (:ids)")
     suspend fun promoteByIds(ids: List<Long>, accountId: Long)
 
+    /**
+     * 출처(앱) 기준 승격: 같은 packageName의 **계좌번호 없는** 미매칭 내역에 accountId 소급 적용.
+     * (계좌번호 있는 내역은 번호 매칭 대상이므로 제외)
+     */
+    @Query(
+        """
+        UPDATE transactions SET account_id = :accountId
+        WHERE account_id IS NULL
+          AND package_name = :packageName
+          AND (extracted_account IS NULL OR extracted_account = '')
+        """
+    )
+    suspend fun promoteBySource(packageName: String, accountId: Long)
+
     /** 월별 지출 합계 (메인·무시아님·EXPENSE). ym = "yyyy-MM" (기기 로컬 타임존 기준) */
     @Query(
         """

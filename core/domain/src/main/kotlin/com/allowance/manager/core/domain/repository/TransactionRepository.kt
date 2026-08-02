@@ -26,4 +26,7 @@ interface TransactionRepository {
 
     /** 같은 계좌 패턴의 비메인 내역을 메인(accountId)으로 승격 */
     suspend fun promoteToMain(pattern: String, accountId: Long)
+
+    /** 같은 출처(앱)의 계좌번호 없는 비메인 내역을 메인(accountId)으로 승격 */
+    suspend fun promoteToMainBySource(packageName: String, accountId: Long)
 }

@@ -151,7 +151,8 @@ fun TransactionDetailSheet(
                         )
                         SheetToggleRow(
                             title = "메인 계좌로 등록",
-                            subtitle = tx.extractedAccount.orEmpty(),
+                            // 계좌번호가 있으면 번호를, 없으면 출처(앱 표시명)를 안내
+                            subtitle = tx.extractedAccount?.takeIf { it.isNotBlank() } ?: tx.sourceName,
                             // 로컬 토글만 바꾸고(취소 가능) 실제 승격은 저장 시 반영
                             checked = promote,
                             onCheckedChange = { promote = it },
@@ -201,7 +202,8 @@ fun TransactionDetailSheet(
                         val memoChanged = memo.trim().ifBlank { null } != tx.memo
                         val categoryChanged = category != tx.category
                         val ignoredChanged = ignored != tx.isIgnored
-                        val promoteNow = promote && !tx.isMain && tx.extractedAccount != null
+                        // 계좌번호 없어도 출처(앱) 기준으로 등록 가능 → extractedAccount 조건 제거
+                        val promoteNow = promote && !tx.isMain
                         if (memoChanged || categoryChanged) onSaveTransaction(tx.id, memo, category)
                         if (ignoredChanged) onSetIgnored(tx.id, ignored)
                         if (promoteNow) onPromoteToMain(tx)
