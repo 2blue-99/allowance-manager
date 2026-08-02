@@ -52,6 +52,7 @@ import com.allowance.manager.core.designsystem.theme.AmSpacing
 import com.allowance.manager.core.designsystem.theme.AmType
 import com.allowance.manager.core.domain.model.UserType
 import com.allowance.manager.core.domain.util.amountToComma
+import com.allowance.manager.core.ui.VerticalSpacer
 
 private const val PAYDAY_EOM = 0
 
@@ -251,6 +252,10 @@ fun SettingScreen(
                         },
                     )
                 }
+            }
+
+            item {
+                VerticalSpacer(20.dp)
             }
         }
     }
