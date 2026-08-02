@@ -8,16 +8,18 @@ package com.allowance.manager.core.domain.model
  * - label: 예산 호칭 (화면 노출)
  * - hint: 유형 설명 (온보딩 선택지 보조 문구)
  * - topic: 호칭 뒤 조사 은/는 (예: "월 용돈은 …")
+ * - object_: 호칭 뒤 조사 을/를 (예: "용돈을 …" / "생활비를 …")
  */
 enum class UserType(
     val key: String,
     val label: String,
     val hint: String,
     val topic: String,
+    val objectParticle: String,
 ) {
-    STUDENT("student", "용돈", "아직 학생이시라면", "은"),
-    YOUTH("youth", "생활비", "경제활동을 하고 계시다면", "는"),
-    COMMON("common", "예산", "둘 다 애매할 땐", "은");
+    STUDENT("student", "용돈", "아직 학생이시라면", "은", "을"),
+    YOUTH("youth", "생활비", "경제활동을 하고 계시다면", "는", "를"),
+    COMMON("common", "예산", "둘 다 애매할 땐", "은", "을");
 
     companion object {
         val Default = COMMON

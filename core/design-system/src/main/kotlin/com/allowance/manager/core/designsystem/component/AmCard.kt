@@ -27,12 +27,13 @@ fun AmCard(
     shape: Shape = AmShape.card,
     contentPadding: PaddingValues = PaddingValues(AmSpacing.lg),
     onClick: (() -> Unit)? = null,
+    rippleColor: Color = Color.Unspecified,   // 어두운 카드 등에서 리플색을 덮어쓸 때
     content: @Composable () -> Unit,
 ) {
     val shaped = modifier
         .clip(shape)
         .background(color)
-        .let { if (onClick != null) it.amRippleClickable(onClick = onClick) else it }
+        .let { if (onClick != null) it.amRippleClickable(rippleColor = rippleColor, onClick = onClick) else it }
         .padding(contentPadding)
     Box(modifier = shaped) { content() }
 }

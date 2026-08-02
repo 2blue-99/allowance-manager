@@ -1,6 +1,7 @@
 package com.allowance.manager.feature.home
 
 import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.Orientation
@@ -45,6 +46,7 @@ import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
@@ -52,6 +54,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshots.SnapshotStateMap
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.graphics.Color
@@ -60,6 +63,7 @@ import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.IntOffset
@@ -72,6 +76,7 @@ import com.allowance.manager.core.domain.model.LedgerFilterChip
 import com.allowance.manager.core.domain.model.Transaction
 import com.allowance.manager.core.domain.model.TransactionCategory
 import com.allowance.manager.core.domain.model.TransactionType
+import com.allowance.manager.core.domain.model.UserType
 import com.allowance.manager.core.domain.util.amountToComma
 import com.allowance.manager.core.designsystem.component.AmButton
 import com.allowance.manager.core.designsystem.component.AmCard
@@ -216,7 +221,7 @@ fun HomeScreen(
         // 최초 진입 가이드(스포트라이트). 시트가 안 떠 있을 때만.
         if (showGuide && selected == null && !showAdd) {
             SpotlightGuide(
-                steps = homeGuideSteps(uiState.userType.label),
+                steps = homeGuideSteps(uiState.userType),
                 targets = guideTargets,
                 onFinish = onGuideFinished,
             )
@@ -224,11 +229,27 @@ fun HomeScreen(
     }
 }
 
-private fun homeGuideSteps(label: String): List<GuideStep> = listOf(
-    GuideStep("hero", "이번 달 쓸 수 있는 ${label}이에요.\n지출을 빼고 실시간으로 줄어들어요.", SpotShape.OVAL),
-    GuideStep("expenseIncome", "이번 달 지출·수입을 한눈에.\n결제 알림을 자동 감지해 기록해줘요.", SpotShape.OVAL),
-    GuideStep("firstItem", "내역을 탭하면 분류·메모를 남기고,\n메인으로 등록할 수 있어요.", SpotShape.OVAL),
-    GuideStep("fab", "자동 감지 안 되는 현금 지출은\n여기서 직접 추가하세요.", SpotShape.CIRCLE),
+private fun homeGuideSteps(type: UserType): List<GuideStep> = listOf(
+    GuideStep(
+        "hero",
+        "이번 달 남은 ${type.label}${type.objectParticle} 한눈에 파악할 수 있어요.\n지출이 발생할 때마다 실시간으로 줄어들어요.",
+        SpotShape.RECT,
+    ),
+    GuideStep(
+        "expenseIncome",
+        "이번 달 지출과 수입,\n${type.label} 관리를 돕는 정보를 확인해요.",
+        SpotShape.RECT,
+    ),
+    GuideStep(
+        "firstItem",
+        "입출금 내역이 여기에 쌓여요.\n클릭해서 카테고리, 메모 등 자세한 정보를 기록할 수 있어요.",
+        SpotShape.RECT,
+    ),
+    GuideStep(
+        "fab",
+        "추가하고 싶은 입·출금은\n직접 추가할 수 있어요.",
+        SpotShape.CIRCLE,
+    ),
 )
 
 // ── 히어로 ───────────────────────────────────────────
@@ -246,21 +267,43 @@ private fun Hero(
     ) {
         Box(Modifier.fillMaxWidth().guideTarget("hero", guideTargets)) { BudgetCard(uiState = uiState) }
         Spacer(Modifier.height(12.dp))
-        Box(Modifier.fillMaxWidth().guideTarget("expenseIncome", guideTargets)) { ExpenseIncomeCard(uiState = uiState) }
-        Spacer(Modifier.height(12.dp))
-        StatsRow(uiState = uiState)
+        // 가이드 2번: 지출·수입 + 하루 지출 권장 지표까지 하나의 하이라이트로 묶음
+        Box(Modifier.fillMaxWidth().guideTarget("expenseIncome", guideTargets)) {
+            Column {
+                ExpenseIncomeCard(uiState = uiState)
+                Spacer(Modifier.height(12.dp))
+                StatsRow(uiState = uiState)
+            }
+        }
     }
 }
 
 // 이번 달 남은 용돈 — 다크 카드 + 소진율 바 (바 아래 양 끝: 소진율·예산)
+// 진입/클릭 시 금액은 0→현재치 카운트업, 소진율 바는 0→현재치 채움.
 @Composable
 private fun BudgetCard(uiState: HomeUiState) {
     val fillColor = if (uiState.isOver) AmColors.Red else AmColors.Emerald
+    val targetRatio = if (uiState.isOver) 1f else uiState.spentRatio
+
+    var playKey by remember { mutableIntStateOf(0) }
+    val amountAnim = remember { Animatable(0f) }
+    val ratioAnim = remember { Animatable(0f) }
+    // 진입(최초 컴포지션)·클릭(playKey)·데이터 변경 시 0부터 재생
+    LaunchedEffect(playKey, uiState.remaining, targetRatio) {
+        amountAnim.snapTo(0f)
+        ratioAnim.snapTo(0f)
+        launch { amountAnim.animateTo(uiState.remaining.toFloat(), tween(durationMillis = 500)) }
+        ratioAnim.animateTo(targetRatio, tween(durationMillis = 500))
+    }
+    val shownAmount = amountAnim.value.toLong()
+
     AmCard(
         modifier = Modifier.fillMaxWidth(),
         color = AmColors.HeroBg,
         shape = AmShape.cardLarge,
         contentPadding = PaddingValues(horizontal = 22.dp, vertical = 30.dp),
+        rippleColor = Color.White,          // 어두운 카드 → 흰색 리플
+        onClick = { playKey++ },            // 탭하면 다시 재생
     ) {
         Column(
             modifier = Modifier.fillMaxWidth(),
@@ -273,14 +316,14 @@ private fun BudgetCard(uiState: HomeUiState) {
             )
             Spacer(Modifier.height(10.dp))
             Text(
-                text = if (uiState.isOver) "-${abs(uiState.remaining).amountToComma()}원" else "${uiState.remaining.amountToComma()}원",
+                text = if (uiState.isOver) "-${abs(shownAmount).amountToComma()}원" else "${shownAmount.amountToComma()}원",
                 style = AmType.amountHero,
                 color = if (uiState.isOver) AmColors.Red else Color.White,
             )
             Spacer(Modifier.height(23.dp))
-            // 소진율 바 (풀 너비)
+            // 소진율 바 (풀 너비) — 채움 비율 애니메이션
             AmProgressBar(
-                ratio = if (uiState.isOver) 1f else uiState.spentRatio,
+                ratio = ratioAnim.value,
                 fillColor = fillColor,
                 trackColor = AmColors.HeroBarTrack,
                 height = 9.dp,
@@ -294,7 +337,8 @@ private fun BudgetCard(uiState: HomeUiState) {
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 Text(
-                    text = if (uiState.isOver) "초과" else "${(uiState.spentRatio * 100).toInt()}% 사용",
+                    // 퍼센트도 바와 함께 0부터 카운트업
+                    text = if (uiState.isOver) "초과" else "${(ratioAnim.value * 100).toInt()}% 사용",
                     style = AmType.labelStrong,
                     color = fillColor,
                 )
@@ -398,7 +442,12 @@ private fun BottomContent(
                 verticalArrangement = Arrangement.spacedBy(9.dp),
             ) {
                 if (uiState.transactions.isEmpty()) {
-                    item { EmptyState(filter = uiState.filter) }
+                    // 신규 유저(빈 리스트): 가이드 3번째 스텝 대상을 EmptyState로 잡아 안내
+                    item {
+                        Box(Modifier.fillMaxWidth().guideTarget("firstItem", guideTargets)) {
+                            EmptyState(filter = uiState.filter)
+                        }
+                    }
                 } else {
                     itemsIndexed(uiState.transactions, key = { _, tx -> tx.id }) { index, tx ->
                         // 왼쪽으로 밀면 무시·삭제 액션 노출. 첫 항목은 가이드 대상으로 등록.
@@ -424,8 +473,13 @@ private fun BottomContent(
 
 @Composable
 private fun EmptyState(filter: LedgerFilter) {
+    // 전체(=신규 유저, 데이터 자체가 없음): 예시 샘플 + 안내
+    if (filter.isAll) {
+        SampleHint()
+        return
+    }
+    // 필터로 인해 비어 있는 경우: 안내 문구만
     val message = when {
-        filter.isAll -> "입출금 내역이 없어요"
         filter.showMain && filter.showHidden -> "표시할 내역이 없어요"
         filter.showMain -> "메인 내역이 없어요"
         else -> "숨긴 내역이 없어요"
@@ -434,6 +488,48 @@ private fun EmptyState(filter: LedgerFilter) {
         Box(modifier = Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
             Text(message, style = AmType.caption, color = AmColors.TextSecondary)
         }
+    }
+}
+
+// 신규 유저용 예시 아이템 — 흐린 '예시' 배지 + 실제 내역 모양. 결제가 감지되면 이 자리에 실데이터가 쌓인다.
+@Composable
+private fun SampleHint() {
+    Column(modifier = Modifier.fillMaxWidth()) {
+        AmCard(
+            modifier = Modifier.fillMaxWidth().alpha(0.6f),
+            contentPadding = PaddingValues(14.dp),
+        ) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Row(horizontalArrangement = Arrangement.spacedBy(9.dp), verticalAlignment = Alignment.CenterVertically) {
+                    Box(
+                        modifier = Modifier.size(34.dp).clip(RoundedCornerShape(8.dp)).background(AmColors.EmeraldBg),
+                        contentAlignment = Alignment.Center,
+                    ) { Text("☕", fontSize = 15.sp) }
+                    Column {
+                        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(5.dp)) {
+                            Text("스타벅스", style = AmType.label, color = AmColors.TextPrimary)
+                            Box(Modifier.clip(RoundedCornerShape(5.dp)).background(AmColors.Divider).padding(horizontal = 5.dp, vertical = 1.dp)) {
+                                Text("예시", style = AmType.tag, color = AmColors.TextSecondary)
+                            }
+                        }
+                        Text("오후 1:30", style = AmType.tiny, color = AmColors.TextTertiary)
+                    }
+                }
+                Text("-5,600원", style = AmType.labelStrong, color = AmColors.Red)
+            }
+        }
+        Spacer(Modifier.height(10.dp))
+        Text(
+            "결제 알림이 오면 이렇게 자동으로 기록돼요.",
+            style = AmType.caption,
+            color = AmColors.TextSecondary,
+            textAlign = TextAlign.Center,
+            modifier = Modifier.fillMaxWidth(),
+        )
     }
 }
 
