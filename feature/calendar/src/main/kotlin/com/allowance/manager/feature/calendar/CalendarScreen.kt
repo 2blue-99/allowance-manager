@@ -50,8 +50,6 @@ import com.allowance.manager.core.designsystem.theme.AmColors
 import com.allowance.manager.core.designsystem.theme.AmShape
 import com.allowance.manager.core.designsystem.theme.AmSpacing
 import com.allowance.manager.core.designsystem.theme.AmType
-import com.allowance.manager.core.domain.model.LedgerFilter
-import com.allowance.manager.core.domain.model.LedgerFilterChip
 import com.allowance.manager.core.domain.model.Transaction
 import com.allowance.manager.core.domain.model.TransactionCategory
 import com.allowance.manager.core.domain.util.amountToComma
@@ -80,7 +78,6 @@ fun CalendarRoute(
         onQueryChange = viewModel::onQueryChange,
         onToggleCategory = viewModel::onToggleCategory,
         onClearCategories = viewModel::onClearCategoryFilter,
-        onFilterChip = viewModel::onFilterChip,
         onSetIgnored = viewModel::onSetIgnored,
         onDelete = viewModel::onDelete,
         onSaveTransaction = viewModel::onSaveTransaction,
@@ -98,7 +95,6 @@ fun CalendarScreen(
     onQueryChange: (String) -> Unit = {},
     onToggleCategory: (TransactionCategory) -> Unit = {},
     onClearCategories: () -> Unit = {},
-    onFilterChip: (LedgerFilterChip) -> Unit = {},
     onSetIgnored: (Long, Boolean) -> Unit = { _, _ -> },
     onDelete: (Long) -> Unit = {},
     onSaveTransaction: (Long, String, TransactionCategory?) -> Unit = { _, _, _ -> },
@@ -127,8 +123,7 @@ fun CalendarScreen(
             SummaryCard(expense = uiState.expense, income = uiState.income)
             Spacer(Modifier.height(12.dp))
             LedgerListHeader(
-                filter = uiState.filter,
-                onFilterChip = onFilterChip,
+                showChips = false,   // 월별은 전체 고정 → 필터 칩 없이 제목 + 검색만
                 trailing = { SearchToggle(active = uiState.searchActive, onToggle = onToggleSearch) },
             )
 

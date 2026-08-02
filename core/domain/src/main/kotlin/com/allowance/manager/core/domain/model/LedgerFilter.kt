@@ -18,8 +18,8 @@ data class LedgerFilter(
     val isAll: Boolean get() = !showMain && !showHidden
 
     companion object {
-        val Home = LedgerFilter(showMain = true, showHidden = false)      // 홈 기본: 메인만
-        val Calendar = LedgerFilter(showMain = false, showHidden = false) // 월별 기본: 전체
+        val Home = LedgerFilter(showMain = false, showHidden = false)     // 홈 기본: 전체 (이후 선택은 저장됨)
+        val Calendar = LedgerFilter(showMain = false, showHidden = false) // 월별: 전체 고정
     }
 }
 

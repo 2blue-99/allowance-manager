@@ -45,10 +45,11 @@ fun LedgerFilterChips(
  */
 @Composable
 fun LedgerListHeader(
-    filter: LedgerFilter,
-    onFilterChip: (LedgerFilterChip) -> Unit,
     modifier: Modifier = Modifier,
     title: String = "입출금 내역",
+    filter: LedgerFilter = LedgerFilter.Home,
+    onFilterChip: (LedgerFilterChip) -> Unit = {},
+    showChips: Boolean = true,
     trailing: (@Composable () -> Unit)? = null,
 ) {
     Row(
@@ -58,7 +59,7 @@ fun LedgerListHeader(
     ) {
         Text(title, style = AmType.labelStrong, color = AmColors.TextPrimary)
         Spacer(Modifier.weight(1f))
-        LedgerFilterChips(filter = filter, onChip = onFilterChip)
+        if (showChips) LedgerFilterChips(filter = filter, onChip = onFilterChip)
         trailing?.invoke()
     }
 }

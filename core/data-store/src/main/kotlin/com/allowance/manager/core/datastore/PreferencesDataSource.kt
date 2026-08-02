@@ -50,9 +50,9 @@ class PreferencesDataSource @Inject constructor(
     suspend fun setStatusBarEnabled(enabled: Boolean) = set(STATUS_BAR_ENABLED, enabled)
 
     // 필터 두 키를 한 플로우로 읽고(중간 튐 방지) 한 트랜잭션으로 쓴다. Pair = (메인, 숨김)
-    // 홈 기본 = 메인만(true,false)
+    // 홈 기본 = 전체(false,false) — 이후 사용자가 고른 값은 저장됨
     fun getHomeFilter(): Flow<Pair<Boolean, Boolean>> = dataStore.data
-        .map { (it[HOME_SHOW_MAIN] ?: true) to (it[HOME_SHOW_HIDDEN] ?: false) }
+        .map { (it[HOME_SHOW_MAIN] ?: false) to (it[HOME_SHOW_HIDDEN] ?: false) }
         .distinctUntilChanged()
     suspend fun setHomeFilter(main: Boolean, hidden: Boolean) {
         dataStore.edit {
