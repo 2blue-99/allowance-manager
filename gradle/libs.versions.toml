@@ -20,6 +20,7 @@ kotlinxSerializationJson = "1.7.3"
 timber = "5.0.1"
 glance = "1.1.1"
 glanceVersion = "1.1.1"
+billing = "7.0.0"
 
 [libraries]
 # AndroidX Core
@@ -73,6 +74,7 @@ kotlinx-serialization-json = { group = "org.jetbrains.kotlinx", name = "kotlinx-
 
 # Timber
 timber = { group = "com.jakewharton.timber", name = "timber", version.ref = "timber" }
+billing-ktx = { group = "com.android.billingclient", name = "billing-ktx", version.ref = "billing" }
 androidx-glance-appwidget = { group = "androidx.glance", name = "glance-appwidget", version.ref = "glance" }
 androidx-glance-preview = { group = "androidx.glance", name = "glance-preview", version.ref = "glance" }
 androidx-glance = { group = "androidx.glance", name = "glance", version.ref = "glanceVersion" }

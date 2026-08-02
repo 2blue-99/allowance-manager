@@ -56,7 +56,10 @@ fun AmDialog(
                 horizontalArrangement = Arrangement.spacedBy(AmSpacing.xl, Alignment.End),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
-                AmTextButton(text = dismissText, onClick = onDismiss, color = AmColors.TextSecondary)
+                // dismissText가 비면 취소 버튼 숨김 (단일 버튼 다이얼로그 지원)
+                if (dismissText.isNotBlank()) {
+                    AmTextButton(text = dismissText, onClick = onDismiss, color = AmColors.TextSecondary)
+                }
                 AmTextButton(
                     text = confirmText,
                     onClick = { if (confirmEnabled) onConfirm() },

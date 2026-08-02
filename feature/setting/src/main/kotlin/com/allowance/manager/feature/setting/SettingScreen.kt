@@ -9,9 +9,13 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
+import android.app.Activity
+import android.content.Intent
+import android.net.Uri
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
@@ -55,6 +59,12 @@ fun SettingRoute(
         runCatching { context.packageManager.getPackageInfo(context.packageName, 0).versionName }
             .getOrNull().orEmpty()
     }
+
+    // 후원(인앱 결제) — 화면 생존 동안 클라이언트 유지, 이탈 시 연결 해제
+    val donationManager = remember { DonationManager(context) }
+    DisposableEffect(Unit) { onDispose { donationManager.release() } }
+    var showThanks by remember { mutableStateOf(false) }
+
     SettingScreen(
         uiState = uiState,
         versionName = versionName,
@@ -65,7 +75,51 @@ fun SettingRoute(
         onBudgetChange = viewModel::setBudget,
         onPaydayChange = viewModel::setPayday,
         onUserTypeChange = viewModel::setUserType,
+        onSupport = {
+            (context as? Activity)?.let { activity ->
+                donationManager.donate(activity) { result ->
+                    if (result == DonationManager.Result.SUCCESS) showThanks = true
+                }
+            }
+        },
+        onFeedback = { context.startFeedbackEmail() },
+        onRate = { context.openPlayStore() },
     )
+
+    if (showThanks) {
+        AmDialog(
+            title = "후원해 주셔서 감사해요 ☕",
+            onDismiss = { showThanks = false },
+            onConfirm = { showThanks = false },
+            confirmText = "닫기",
+            dismissText = "",
+        ) {
+            // TODO: 감사 문구는 추후 확정 (주인이 전달 예정)
+            Text(
+                "보내주신 커피값으로 더 편한 가계부를 만들게요.\n덕분에 오늘도 힘내서 개발합니다!",
+                fontSize = 13.sp,
+                color = AmColors.TextSecondary,
+            )
+        }
+    }
+}
+
+// devcoderblue@gmail.com 로 건의 메일 작성
+private fun android.content.Context.startFeedbackEmail() {
+    val intent = Intent(Intent.ACTION_SENDTO).apply {
+        data = Uri.parse("mailto:devcoderblue@gmail.com")
+        putExtra(Intent.EXTRA_SUBJECT, "[가계부] 건의하기")
+    }
+    runCatching { startActivity(intent) }
+}
+
+// 플레이스토어 앱 페이지 (없으면 웹으로 폴백)
+private fun android.content.Context.openPlayStore() {
+    runCatching {
+        startActivity(Intent(Intent.ACTION_VIEW, Uri.parse("market://details?id=$packageName")))
+    }.onFailure {
+        startActivity(Intent(Intent.ACTION_VIEW, Uri.parse("https://play.google.com/store/apps/details?id=$packageName")))
+    }
 }
 
 /** 표현 계층: uiState와 콜백만 받는다. (Preview 가능) */
@@ -80,6 +134,9 @@ fun SettingScreen(
     onBudgetChange: (Long) -> Unit = {},
     onPaydayChange: (Int) -> Unit = {},
     onUserTypeChange: (UserType) -> Unit = {},
+    onSupport: () -> Unit = {},
+    onFeedback: () -> Unit = {},
+    onRate: () -> Unit = {},
 ) {
     // 다이얼로그 노출 여부는 순수 UI 상태 → 화면이 직접 보유
     var showBudgetDialog by remember { mutableStateOf(false) }
@@ -116,6 +173,18 @@ fun SettingScreen(
         }
         Spacer(Modifier.height(AmSpacing.sm))
         AmSettingRow(title = "계좌 관리", subtitle = "메인 계좌 등록·수정", onClick = onNavigateToAccount) {
+            AmChevron()
+        }
+        Spacer(Modifier.height(AmSpacing.sm))
+        AmSettingRow(title = "개발자 후원하기", subtitle = "개발자 커피값 후원 ☕", onClick = onSupport) {
+            AmChevron()
+        }
+        Spacer(Modifier.height(AmSpacing.sm))
+        AmSettingRow(title = "건의하기", subtitle = "devcoderblue@gmail.com", onClick = onFeedback) {
+            AmChevron()
+        }
+        Spacer(Modifier.height(AmSpacing.sm))
+        AmSettingRow(title = "평가하기", subtitle = "플레이스토어에서 별점 남기기", onClick = onRate) {
             AmChevron()
         }
         Spacer(Modifier.height(AmSpacing.sm))
