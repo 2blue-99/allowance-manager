@@ -376,20 +376,21 @@ private fun BottomContent(
     guideTargets: SnapshotStateMap<String, Rect>,
     modifier: Modifier = Modifier,
 ) {
-    Box(
-        modifier = modifier
-            .clip(AmShape.sheetTop)
-            .background(AmColors.ScreenBg),
-    ) {
-        Column(modifier = Modifier.fillMaxSize()) {
-            // 헤더는 고정 — 아래 리스트만 스크롤 (월별과 동일)
-            LedgerListHeader(
-                filter = uiState.filter,
-                onFilterChip = onFilterChip,
-                modifier = Modifier.padding(horizontal = AmSpacing.xl, vertical = AmSpacing.md),
-            )
+    // 월별과 동일 구조: 헤더는 clip(sheetTop) 밖, 리스트만 독립 clip Box 안.
+    // → 리스트 애니메이션 잔상이 헤더(입출금 내역) 영역으로 새지 않도록 클리핑됨.
+    Column(modifier = modifier) {
+        LedgerListHeader(
+            filter = uiState.filter,
+            onFilterChip = onFilterChip,
+            modifier = Modifier.padding(horizontal = AmSpacing.xl, vertical = AmSpacing.md),
+        )
+        Box(
+            modifier = Modifier
+                .weight(1f)
+                .clip(AmShape.sheetTop)
+                .background(AmColors.ScreenBg),
+        ) {
             LazyColumn(
-                modifier = Modifier.weight(1f),
                 contentPadding = PaddingValues(horizontal = AmSpacing.xl, vertical = AmSpacing.sm),
                 verticalArrangement = Arrangement.spacedBy(9.dp),
             ) {
