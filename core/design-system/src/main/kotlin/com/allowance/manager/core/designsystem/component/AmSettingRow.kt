@@ -105,17 +105,7 @@ fun AmSettingItem(
 ) {
     val rowModifier = modifier
         .fillMaxWidth()
-        .let {
-            if (onClick != null) {
-                it.clickable(
-                    interactionSource = remember { MutableInteractionSource() },
-                    indication = null,
-                    onClick = onClick,
-                )
-            } else {
-                it
-            }
-        }
+        .let { if (onClick != null) it.amRippleClickable(onClick = onClick) else it }
         .padding(horizontal = 16.dp, vertical = 15.dp)
     Row(modifier = rowModifier, verticalAlignment = Alignment.CenterVertically) {
         Column(modifier = Modifier.weight(1f)) {

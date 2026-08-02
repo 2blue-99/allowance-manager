@@ -32,17 +32,7 @@ fun AmCard(
     val shaped = modifier
         .clip(shape)
         .background(color)
-        .let {
-            if (onClick != null) {
-                it.clickable(
-                    interactionSource = remember { MutableInteractionSource() },
-                    indication = null,
-                    onClick = onClick,
-                )
-            } else {
-                it
-            }
-        }
+        .let { if (onClick != null) it.amRippleClickable(onClick = onClick) else it }
         .padding(contentPadding)
     Box(modifier = shaped) { content() }
 }

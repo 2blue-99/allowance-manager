@@ -56,7 +56,9 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.unit.Dp
@@ -140,13 +142,14 @@ fun HomeScreen(
     val guideTargets = rememberGuideTargets()
     val snackbarHostState = remember { SnackbarHostState() }
     var pendingToast by remember { mutableStateOf<String?>(null) }
-    // 시트가 완전히 내려간(=selected/showAdd 해제) 뒤 0.3초 있다가 스낵바 표시 (약 2초 유지)
-    LaunchedEffect(selected, showAdd) {
-        val msg = pendingToast
-        if (selected == null && !showAdd && msg != null) {
-            withTimeoutOrNull(1500) { snackbarHostState.showSnackbar(msg) }
-            pendingToast = null
-        }
+    val haptic = LocalHapticFeedback.current
+    // 저장/추가 즉시 트리거 → 시트가 거의 내려간 ~0.2s 뒤 햅틱과 함께 노출 (기존 시트 닫힘 대기 대비 약 0.1s 빠름)
+    LaunchedEffect(pendingToast) {
+        val msg = pendingToast ?: return@LaunchedEffect
+        delay(200)
+        haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+        withTimeoutOrNull(1500) { snackbarHostState.showSnackbar(msg) }
+        pendingToast = null
     }
 
     Box(modifier = modifier.fillMaxSize()) {

@@ -52,6 +52,7 @@ import androidx.lifecycle.compose.LifecycleEventEffect
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.allowance.manager.core.designsystem.anim.AmMotion
 import com.allowance.manager.core.designsystem.component.AmButton
+import com.allowance.manager.core.designsystem.component.amRippleClickable
 import com.allowance.manager.core.designsystem.component.AmCard
 import com.allowance.manager.core.designsystem.component.AmChip
 import com.allowance.manager.core.designsystem.component.AmLineTextField
@@ -198,11 +199,7 @@ private fun UserTypeOption(type: UserType, selected: Boolean, onClick: () -> Uni
             .clip(AmShape.card)
             .border(1.5.dp, if (selected) Accent else AmColors.BarTrack, AmShape.card)
             .background(if (selected) AmColors.EmeraldBg else AmColors.CardBg)
-            .clickable(
-                interactionSource = remember { MutableInteractionSource() },
-                indication = null,
-                onClick = onClick,
-            )
+            .amRippleClickable(onClick = onClick)
             .padding(horizontal = 16.dp, vertical = 14.dp),
     ) {
         // 뱃지 (호칭)

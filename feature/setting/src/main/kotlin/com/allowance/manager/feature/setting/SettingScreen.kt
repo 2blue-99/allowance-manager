@@ -3,9 +3,12 @@ package com.allowance.manager.feature.setting
 import android.app.Activity
 import android.content.Intent
 import android.net.Uri
+import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.interaction.collectIsPressedAsState
+import androidx.compose.material3.ripple
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -21,6 +24,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
@@ -286,14 +290,18 @@ fun SettingScreen(
 // 후원 강조 카드 — 에메랄드 그라데이션. 글씨 포인트는 기존 설정 행과 동일 크기, 카드만 크게.
 @Composable
 private fun SupportCard(onClick: () -> Unit) {
+    val interaction = remember { MutableInteractionSource() }
+    val pressed by interaction.collectIsPressedAsState()
+    val scale by animateFloatAsState(if (pressed) 0.97f else 1f, label = "supportScale")
     Row(
         modifier = Modifier
             .fillMaxWidth()
+            .graphicsLayer { scaleX = scale; scaleY = scale }   // 프레스 스케일(C)
             .clip(AmShape.cardLarge)
             .background(Brush.linearGradient(listOf(AmColors.Emerald, AmColors.EmeraldDark)))
             .clickable(
-                interactionSource = remember { MutableInteractionSource() },
-                indication = null,
+                interactionSource = interaction,
+                indication = ripple(color = Color.White),        // 어두운 카드라 흰색 리플
                 onClick = onClick,
             )
             .padding(horizontal = 18.dp, vertical = 22.dp),
