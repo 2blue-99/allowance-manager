@@ -45,7 +45,7 @@ object AmType {
         TextStyle(fontFamily = pretendard, fontSize = size.sp, fontWeight = weight, letterSpacing = ls)
 
     // 금액·큰 숫자
-    val amountHero = t(34, FontWeight.ExtraBold, (-1.2).sp)   // 홈 남은 용돈
+    val amountHero = t(36, FontWeight.ExtraBold, (-1.2).sp)   // 홈 남은 용돈(메인 강조)
     val amountLarge = t(28, FontWeight.ExtraBold)             // 통계 총액
 
     // 제목

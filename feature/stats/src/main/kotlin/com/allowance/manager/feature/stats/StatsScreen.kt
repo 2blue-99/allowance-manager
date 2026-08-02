@@ -42,7 +42,6 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.allowance.manager.core.designsystem.component.AmCard
-import com.allowance.manager.core.designsystem.component.AmScreenHeader
 import com.allowance.manager.core.designsystem.theme.AmColors
 import com.allowance.manager.core.designsystem.theme.AmShape
 import com.allowance.manager.core.designsystem.theme.AmSpacing
@@ -82,9 +81,6 @@ fun StatsScreen(
             .verticalScroll(rememberScrollState())
             .padding(AmSpacing.xl),
     ) {
-        AmScreenHeader(title = "통계")
-        Spacer(Modifier.height(AmSpacing.lg))
-
         ChartCard(
             uiState = uiState,
             onSelectMonth = onSelectMonth,

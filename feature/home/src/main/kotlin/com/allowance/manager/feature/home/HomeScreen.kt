@@ -88,7 +88,7 @@ import com.allowance.manager.core.ui.guide.SpotShape
 import com.allowance.manager.core.ui.guide.SpotlightGuide
 import com.allowance.manager.core.ui.guide.guideTarget
 import com.allowance.manager.core.ui.guide.rememberGuideTargets
-import com.allowance.manager.core.ui.transaction.LedgerFilterChips
+import com.allowance.manager.core.ui.transaction.LedgerListHeader
 import com.allowance.manager.core.ui.transaction.SwipeRevealRow
 import com.allowance.manager.core.ui.transaction.TransactionDetailSheet
 import com.allowance.manager.core.ui.transaction.TransactionRow
@@ -104,14 +104,12 @@ import kotlin.math.roundToInt
 
 @Composable
 fun HomeRoute(
-    onNavigateToSetting: () -> Unit,
     viewModel: HomeViewModel = hiltViewModel(),
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val showGuide by viewModel.showGuide.collectAsStateWithLifecycle()
     HomeScreen(
         uiState = uiState,
-        onNavigateToSetting = onNavigateToSetting,
         onFilterChip = viewModel::onFilterChip,
         onSetIgnored = viewModel::onSetIgnored,
         onDelete = viewModel::onDelete,
@@ -126,7 +124,6 @@ fun HomeRoute(
 @Composable
 fun HomeScreen(
     uiState: HomeUiState,
-    onNavigateToSetting: () -> Unit = {},
     onFilterChip: (LedgerFilterChip) -> Unit = {},
     onSetIgnored: (Long, Boolean) -> Unit = { _, _ -> },
     onDelete: (Long) -> Unit = {},
@@ -154,7 +151,7 @@ fun HomeScreen(
 
     Box(modifier = modifier.fillMaxSize()) {
         Column(modifier = Modifier.fillMaxSize().background(AmColors.ScreenBg)) {
-            Hero(uiState = uiState, onNavigateToSetting = onNavigateToSetting, guideTargets = guideTargets)
+            Hero(uiState = uiState, guideTargets = guideTargets)
             BottomContent(
                 uiState = uiState,
                 onFilterChip = onFilterChip,
@@ -229,14 +226,12 @@ private fun homeGuideSteps(label: String): List<GuideStep> = listOf(
     GuideStep("expenseIncome", "이번 달 지출·수입을 한눈에.\n결제 알림을 자동 감지해 기록해줘요.", SpotShape.OVAL),
     GuideStep("firstItem", "내역을 탭하면 분류·메모를 남기고,\n메인으로 등록할 수 있어요.", SpotShape.OVAL),
     GuideStep("fab", "자동 감지 안 되는 현금 지출은\n여기서 직접 추가하세요.", SpotShape.CIRCLE),
-    GuideStep("settings", "계좌 등록·${label} 변경 같은 건\n여기 설정에서 바꿀 수 있어요~", SpotShape.CIRCLE),
 )
 
 // ── 히어로 ───────────────────────────────────────────
 @Composable
 private fun Hero(
     uiState: HomeUiState,
-    onNavigateToSetting: () -> Unit,
     guideTargets: SnapshotStateMap<String, Rect>,
 ) {
     Column(
@@ -246,38 +241,11 @@ private fun Hero(
             .padding(horizontal = AmSpacing.xl)
             .padding(top = 12.dp, bottom = 4.dp),
     ) {
-        // 타이틀 행 — 라이트 배경 위 다크 텍스트
-        Row(
-            modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            Text("가계부", style = AmType.title, color = AmColors.TextPrimary)
-            Box(Modifier.guideTarget("settings", guideTargets)) {
-                IconBtn(label = "⚙️", onClick = onNavigateToSetting)
-            }
-        }
-
-        Spacer(Modifier.height(6.dp))
         Box(Modifier.fillMaxWidth().guideTarget("hero", guideTargets)) { BudgetCard(uiState = uiState) }
         Spacer(Modifier.height(12.dp))
         Box(Modifier.fillMaxWidth().guideTarget("expenseIncome", guideTargets)) { ExpenseIncomeCard(uiState = uiState) }
         Spacer(Modifier.height(12.dp))
         StatsRow(uiState = uiState)
-    }
-}
-
-@Composable
-private fun IconBtn(label: String, onClick: () -> Unit = {}) {
-    Box(
-        modifier = Modifier
-            .size(38.dp)
-            .clip(AmShape.pill)
-            .background(AmColors.ChipBg)
-            .clickable(onClick = onClick),
-        contentAlignment = Alignment.Center,
-    ) {
-        Text(text = label, fontSize = 15.sp)
     }
 }
 
@@ -289,7 +257,7 @@ private fun BudgetCard(uiState: HomeUiState) {
         modifier = Modifier.fillMaxWidth(),
         color = AmColors.HeroBg,
         shape = AmShape.cardLarge,
-        contentPadding = PaddingValues(horizontal = 22.dp, vertical = 28.dp),
+        contentPadding = PaddingValues(horizontal = 22.dp, vertical = 30.dp),
     ) {
         Column(
             modifier = Modifier.fillMaxWidth(),
@@ -297,25 +265,25 @@ private fun BudgetCard(uiState: HomeUiState) {
         ) {
             Text(
                 "이번 달 남은 ${uiState.userType.label}",
-                style = AmType.labelSoft,
-                color = Color.White.copy(alpha = 0.45f),
+                style = AmType.labelSoft.copy(fontSize = 13.sp),
+                color = Color.White.copy(alpha = 0.55f),
             )
-            Spacer(Modifier.height(8.dp))
+            Spacer(Modifier.height(10.dp))
             Text(
                 text = if (uiState.isOver) "-${abs(uiState.remaining).amountToComma()}원" else "${uiState.remaining.amountToComma()}원",
                 style = AmType.amountHero,
                 color = if (uiState.isOver) AmColors.Red else Color.White,
             )
-            Spacer(Modifier.height(22.dp))
+            Spacer(Modifier.height(23.dp))
             // 소진율 바 (풀 너비)
             AmProgressBar(
                 ratio = if (uiState.isOver) 1f else uiState.spentRatio,
                 fillColor = fillColor,
                 trackColor = AmColors.HeroBarTrack,
-                height = 8.dp,
+                height = 9.dp,
                 modifier = Modifier.fillMaxWidth(),
             )
-            Spacer(Modifier.height(9.dp))
+            Spacer(Modifier.height(10.dp))
             // 바 아래 양 끝: 좌 소진율 / 우 예산 (바를 두 값이 감싸도록)
             Row(
                 modifier = Modifier.fillMaxWidth(),
@@ -413,29 +381,36 @@ private fun BottomContent(
             .clip(AmShape.sheetTop)
             .background(AmColors.ScreenBg),
     ) {
-        LazyColumn(
-            contentPadding = PaddingValues(horizontal = AmSpacing.xl, vertical = AmSpacing.md),
-            verticalArrangement = Arrangement.spacedBy(9.dp),
-        ) {
-            item { ListHeader(filter = uiState.filter, onFilterChip = onFilterChip) }
-
-            if (uiState.transactions.isEmpty()) {
-                item { EmptyState(filter = uiState.filter) }
-            } else {
-                itemsIndexed(uiState.transactions, key = { _, tx -> tx.id }) { index, tx ->
-                    // 왼쪽으로 밀면 무시·삭제 액션 노출. 첫 항목은 가이드 대상으로 등록.
-                    val rowModifier = if (index == 0) {
-                        Modifier.animateItem().guideTarget("firstItem", guideTargets)
-                    } else {
-                        Modifier.animateItem()
-                    }
-                    SwipeRevealRow(
-                        ignored = tx.isIgnored,
-                        onIgnore = { onIgnore(tx) },
-                        onDelete = { onRequestDelete(tx) },
-                        modifier = rowModifier,
-                    ) {
-                        TransactionRow(tx = tx, onClick = { onSelect(tx) })
+        Column(modifier = Modifier.fillMaxSize()) {
+            // 헤더는 고정 — 아래 리스트만 스크롤 (월별과 동일)
+            LedgerListHeader(
+                filter = uiState.filter,
+                onFilterChip = onFilterChip,
+                modifier = Modifier.padding(horizontal = AmSpacing.xl, vertical = AmSpacing.md),
+            )
+            LazyColumn(
+                modifier = Modifier.weight(1f),
+                contentPadding = PaddingValues(horizontal = AmSpacing.xl, vertical = AmSpacing.sm),
+                verticalArrangement = Arrangement.spacedBy(9.dp),
+            ) {
+                if (uiState.transactions.isEmpty()) {
+                    item { EmptyState(filter = uiState.filter) }
+                } else {
+                    itemsIndexed(uiState.transactions, key = { _, tx -> tx.id }) { index, tx ->
+                        // 왼쪽으로 밀면 무시·삭제 액션 노출. 첫 항목은 가이드 대상으로 등록.
+                        val rowModifier = if (index == 0) {
+                            Modifier.animateItem().guideTarget("firstItem", guideTargets)
+                        } else {
+                            Modifier.animateItem()
+                        }
+                        SwipeRevealRow(
+                            ignored = tx.isIgnored,
+                            onIgnore = { onIgnore(tx) },
+                            onDelete = { onRequestDelete(tx) },
+                            modifier = rowModifier,
+                        ) {
+                            TransactionRow(tx = tx, onClick = { onSelect(tx) })
+                        }
                     }
                 }
             }
@@ -444,22 +419,9 @@ private fun BottomContent(
 }
 
 @Composable
-private fun ListHeader(filter: LedgerFilter, onFilterChip: (LedgerFilterChip) -> Unit) {
-    Row(
-        modifier = Modifier.fillMaxWidth().padding(horizontal = 2.dp, vertical = 2.dp),
-        horizontalArrangement = Arrangement.SpaceBetween,
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        Text("이번달 내역", style = AmType.labelStrong, color = AmColors.TextPrimary)
-        // 메인 / 숨김 / 전체 — 공용 칩(홈·월별 공유)
-        LedgerFilterChips(filter = filter, onChip = onFilterChip)
-    }
-}
-
-@Composable
 private fun EmptyState(filter: LedgerFilter) {
     val message = when {
-        filter.isAll -> "이번달 내역이 없어요"
+        filter.isAll -> "입출금 내역이 없어요"
         filter.showMain && filter.showHidden -> "표시할 내역이 없어요"
         filter.showMain -> "메인 내역이 없어요"
         else -> "숨긴 내역이 없어요"

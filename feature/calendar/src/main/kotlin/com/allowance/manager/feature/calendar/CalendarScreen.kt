@@ -55,7 +55,7 @@ import com.allowance.manager.core.domain.model.LedgerFilterChip
 import com.allowance.manager.core.domain.model.Transaction
 import com.allowance.manager.core.domain.model.TransactionCategory
 import com.allowance.manager.core.domain.util.amountToComma
-import com.allowance.manager.core.ui.transaction.LedgerFilterChips
+import com.allowance.manager.core.ui.transaction.LedgerListHeader
 import com.allowance.manager.core.ui.transaction.SwipeRevealRow
 import com.allowance.manager.core.ui.transaction.TransactionDetailSheet
 import com.allowance.manager.core.ui.transaction.TransactionRow
@@ -126,11 +126,10 @@ fun CalendarScreen(
         Column(modifier = Modifier.padding(horizontal = AmSpacing.xl)) {
             SummaryCard(expense = uiState.expense, income = uiState.income)
             Spacer(Modifier.height(12.dp))
-            ListHeader(
+            LedgerListHeader(
                 filter = uiState.filter,
-                searchActive = uiState.searchActive,
                 onFilterChip = onFilterChip,
-                onToggleSearch = onToggleSearch,
+                trailing = { SearchToggle(active = uiState.searchActive, onToggle = onToggleSearch) },
             )
 
             // 🔍 활성 시에만 검색창 + 분류 필터 노출 (해제하면 원복)
@@ -288,43 +287,28 @@ private fun SummaryCell(label: String, value: String, valueColor: Color, modifie
     }
 }
 
-// ── 리스트 헤더 (제목 + 메인/숨김/전체 칩 + 🔍 토글) ──
+// ── 검색·필터 토글 (공용 헤더의 우측 슬롯) ──
 @Composable
-private fun ListHeader(
-    filter: LedgerFilter,
-    searchActive: Boolean,
-    onFilterChip: (LedgerFilterChip) -> Unit,
-    onToggleSearch: () -> Unit,
-) {
-    Row(
-        modifier = Modifier.fillMaxWidth().padding(horizontal = 2.dp),
-        horizontalArrangement = Arrangement.spacedBy(8.dp),
-        verticalAlignment = Alignment.CenterVertically,
+private fun SearchToggle(active: Boolean, onToggle: () -> Unit) {
+    // 활성 시 초록 배경으로 눌린 상태 표현
+    Box(
+        modifier = Modifier
+            .size(34.dp)
+            .clip(AmShape.pill)
+            .background(if (active) AmColors.Emerald else AmColors.ChipBg)
+            .clickable(
+                interactionSource = remember { MutableInteractionSource() },
+                indication = null,
+                onClick = onToggle,
+            ),
+        contentAlignment = Alignment.Center,
     ) {
-        Text("이 달 내역", style = AmType.labelStrong, color = AmColors.TextPrimary)
-        Spacer(Modifier.weight(1f))
-        // 범위 필터(메인/숨김/전체)는 상시 노출 — 홈과 공용 칩
-        LedgerFilterChips(filter = filter, onChip = onFilterChip)
-        // 활성 시 초록 배경으로 눌린 상태 표현
-        Box(
-            modifier = Modifier
-                .size(34.dp)
-                .clip(AmShape.pill)
-                .background(if (searchActive) AmColors.Emerald else AmColors.ChipBg)
-                .clickable(
-                    interactionSource = remember { MutableInteractionSource() },
-                    indication = null,
-                    onClick = onToggleSearch,
-                ),
-            contentAlignment = Alignment.Center,
-        ) {
-            Icon(
-                Icons.Outlined.Search,
-                contentDescription = "검색·필터",
-                tint = if (searchActive) Color.White else AmColors.TextSecondary,
-                modifier = Modifier.size(18.dp),
-            )
-        }
+        Icon(
+            Icons.Outlined.Search,
+            contentDescription = "검색·필터",
+            tint = if (active) Color.White else AmColors.TextSecondary,
+            modifier = Modifier.size(18.dp),
+        )
     }
 }
 
@@ -408,7 +392,7 @@ private fun EmptyState(searchActive: Boolean) {
         AmCard(modifier = Modifier.fillMaxWidth(), contentPadding = PaddingValues(vertical = 32.dp)) {
             Box(modifier = Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
                 Text(
-                    if (searchActive) "조건에 맞는 내역이 없어요" else "이 달 내역이 없어요",
+                    if (searchActive) "조건에 맞는 내역이 없어요" else "입출금 내역이 없어요",
                     style = AmType.caption,
                     color = AmColors.TextSecondary,
                 )

@@ -28,6 +28,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.BarChart
 import androidx.compose.material.icons.filled.CalendarMonth
 import androidx.compose.material.icons.filled.Home
+import androidx.compose.material.icons.filled.MoreHoriz
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Scaffold
@@ -89,7 +90,9 @@ private val bottomTabs = listOf(
 fun AppNavHost(navController: NavHostController, startDestination: StartDestination) {
     val backStackEntry by navController.currentBackStackEntryAsState()
     val currentDestination = backStackEntry?.destination
-    val showBottomBar = bottomTabs.any { currentDestination.isOn(it.kClass) }
+    // 더보기(설정)도 탭처럼 취급 → 진입해도 바텀바 유지
+    val showBottomBar = bottomTabs.any { currentDestination.isOn(it.kClass) } ||
+        currentDestination.isOn(SettingRoute::class)
     val startRoute: Any = when (startDestination) {
         StartDestination.INTRO -> IntroRoute
         StartDestination.ONBOARDING -> OnboardingRoute
@@ -135,6 +138,13 @@ fun AppNavHost(navController: NavHostController, startDestination: StartDestinat
                                 onClick = { navController.navigateToTab(tab.route) },
                             )
                         }
+                        // 더보기(설정)도 다른 탭과 동일한 전환 방식 → 탭 간 이동 일관성 유지
+                        BottomBarItem(
+                            selected = currentDestination.isOn(SettingRoute::class),
+                            icon = Icons.Filled.MoreHoriz,
+                            label = "더보기",
+                            onClick = { navController.navigateToTab(SettingRoute) },
+                        )
                     }
                     // 시스템 내비게이터(제스처 바) 영역만큼 흰 여백 확보
                     Spacer(
@@ -182,9 +192,7 @@ fun AppNavHost(navController: NavHostController, startDestination: StartDestinat
                     }
                 },
             )
-            homeScreen(
-                onNavigateToSetting = { navController.navigate(SettingRoute) },
-            )
+            homeScreen()
             calendarScreen()
             statsScreen(
                 onOpenMonth = { ym ->
