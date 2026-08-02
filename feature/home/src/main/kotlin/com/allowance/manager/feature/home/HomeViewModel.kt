@@ -15,6 +15,7 @@ import com.allowance.manager.core.domain.usecase.setting.GetHomeGuideShownUseCas
 import com.allowance.manager.core.domain.usecase.setting.SetHomeFilterUseCase
 import com.allowance.manager.core.domain.usecase.setting.SetHomeGuideShownUseCase
 import kotlinx.coroutines.flow.SharingStarted
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import com.allowance.manager.core.domain.usecase.transaction.DeleteTransactionUseCase
@@ -74,6 +75,9 @@ class HomeViewModel @Inject constructor(
     private val _uiState = MutableStateFlow(HomeUiState())
     val uiState: StateFlow<HomeUiState> = _uiState.asStateFlow()
 
+    // 필터는 로컬 상태가 소스(즉시 반영) — 저장은 부수효과. 저장 왕복 지연으로 인한 버벅임 방지.
+    private val filterState = MutableStateFlow(LedgerFilter.Home)
+
     // 최초 진입 가이드 노출 여부 (아직 안 봤으면 true)
     val showGuide: StateFlow<Boolean> = getHomeGuideShownUseCase()
         .map { !it }
@@ -84,12 +88,15 @@ class HomeViewModel @Inject constructor(
     }
 
     init {
+        // 저장된 필터로 1회 초기화(이후엔 로컬이 소스)
+        viewModelScope.launch { filterState.value = getHomeFilterUseCase().first() }
+
         viewModelScope.launch {
             combine(
                 observeBudgetStatusUseCase(),
                 observeCurrentTransactionsUseCase(),
                 observeAccountsUseCase(),
-                getHomeFilterUseCase(),
+                filterState,
                 getUserTypeUseCase(),
             ) { status, transactions, _, filter, userType ->
                 // 멀티 토글 필터: 전체(둘 다 꺼짐) / 메인 / 숨김 / 메인+숨김
@@ -132,7 +139,9 @@ class HomeViewModel @Inject constructor(
 
     /** 칩 탭 — 전체는 배타(둘 다 해제), 메인·숨김은 각각 독립 토글 */
     fun onFilterChip(chip: LedgerFilterChip) {
-        viewModelScope.launch { setHomeFilterUseCase(uiState.value.filter.toggle(chip)) }
+        val next = filterState.value.toggle(chip)
+        filterState.value = next                                   // 즉시 반영
+        viewModelScope.launch { setHomeFilterUseCase(next) }       // 저장은 뒤따름
     }
 
     fun onSetIgnored(id: Long, ignored: Boolean) {

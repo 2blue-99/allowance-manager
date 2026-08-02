@@ -23,6 +23,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.launch
 import java.time.YearMonth
@@ -71,6 +72,8 @@ class CalendarViewModel @Inject constructor(
     private val categoryFilter = MutableStateFlow<Set<TransactionCategory>>(emptySet())
     private val searchActive = MutableStateFlow(false)
     private val minMonth = MutableStateFlow<YearMonth?>(null)
+    // 필터는 로컬 상태가 소스(즉시 반영) — 저장은 부수효과. 저장 왕복 지연 버벅임 방지.
+    private val ledgerFilter = MutableStateFlow(LedgerFilter.Calendar)
 
     private val _uiState = MutableStateFlow(CalendarUiState())
     val uiState: StateFlow<CalendarUiState> = _uiState.asStateFlow()
@@ -78,13 +81,15 @@ class CalendarViewModel @Inject constructor(
     @OptIn(ExperimentalCoroutinesApi::class)
     private val monthTransactions = month.flatMapLatest { observeMonthTransactionsUseCase(it) }
 
-    private val filterParams = combine(query, categoryFilter, searchActive, getCalendarFilterUseCase()) { q, c, a, l ->
+    private val filterParams = combine(query, categoryFilter, searchActive, ledgerFilter) { q, c, a, l ->
         FilterParams(q, c, a, l)
     }
 
     init {
         // 첫 내역의 달(이전-달 이동 하한) 1회 조회
         viewModelScope.launch { minMonth.value = getFirstTransactionMonthUseCase() }
+        // 저장된 필터로 1회 초기화(이후엔 로컬이 소스)
+        viewModelScope.launch { ledgerFilter.value = getCalendarFilterUseCase().first() }
 
         viewModelScope.launch {
             combine(month, monthTransactions, minMonth, filterParams) { m, raw, min, fp ->
@@ -172,7 +177,9 @@ class CalendarViewModel @Inject constructor(
 
     /** 메인/숨김/전체 칩 탭 — 전체는 배타, 메인·숨김은 각각 독립 토글 (월별 전용 저장) */
     fun onFilterChip(chip: LedgerFilterChip) {
-        viewModelScope.launch { setCalendarFilterUseCase(uiState.value.filter.toggle(chip)) }
+        val next = ledgerFilter.value.toggle(chip)
+        ledgerFilter.value = next                                     // 즉시 반영
+        viewModelScope.launch { setCalendarFilterUseCase(next) }      // 저장은 뒤따름
     }
 
     // ── 내역 액션 (상세 시트 공용) ──
