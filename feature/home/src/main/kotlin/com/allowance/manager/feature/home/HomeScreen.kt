@@ -65,8 +65,8 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import com.allowance.manager.core.domain.model.HomeFilter
-import com.allowance.manager.core.domain.model.HomeFilterChip
+import com.allowance.manager.core.domain.model.LedgerFilter
+import com.allowance.manager.core.domain.model.LedgerFilterChip
 import com.allowance.manager.core.domain.model.Transaction
 import com.allowance.manager.core.domain.model.TransactionCategory
 import com.allowance.manager.core.domain.model.TransactionType
@@ -88,6 +88,7 @@ import com.allowance.manager.core.ui.guide.SpotShape
 import com.allowance.manager.core.ui.guide.SpotlightGuide
 import com.allowance.manager.core.ui.guide.guideTarget
 import com.allowance.manager.core.ui.guide.rememberGuideTargets
+import com.allowance.manager.core.ui.transaction.LedgerFilterChips
 import com.allowance.manager.core.ui.transaction.SwipeRevealRow
 import com.allowance.manager.core.ui.transaction.TransactionDetailSheet
 import com.allowance.manager.core.ui.transaction.TransactionRow
@@ -126,7 +127,7 @@ fun HomeRoute(
 fun HomeScreen(
     uiState: HomeUiState,
     onNavigateToSetting: () -> Unit = {},
-    onFilterChip: (HomeFilterChip) -> Unit = {},
+    onFilterChip: (LedgerFilterChip) -> Unit = {},
     onSetIgnored: (Long, Boolean) -> Unit = { _, _ -> },
     onDelete: (Long) -> Unit = {},
     onPromoteToMain: (Transaction) -> Unit = {},
@@ -400,7 +401,7 @@ private fun StatCell(value: String, label: String, modifier: Modifier = Modifier
 @Composable
 private fun BottomContent(
     uiState: HomeUiState,
-    onFilterChip: (HomeFilterChip) -> Unit,
+    onFilterChip: (LedgerFilterChip) -> Unit,
     onSelect: (Transaction) -> Unit,
     onIgnore: (Transaction) -> Unit,
     onRequestDelete: (Transaction) -> Unit,
@@ -443,28 +444,20 @@ private fun BottomContent(
 }
 
 @Composable
-private fun ListHeader(filter: HomeFilter, onFilterChip: (HomeFilterChip) -> Unit) {
-    Column(
+private fun ListHeader(filter: LedgerFilter, onFilterChip: (LedgerFilterChip) -> Unit) {
+    Row(
         modifier = Modifier.fillMaxWidth().padding(horizontal = 2.dp, vertical = 2.dp),
-        verticalArrangement = Arrangement.spacedBy(10.dp),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically,
     ) {
         Text("이번달 내역", style = AmType.labelStrong, color = AmColors.TextPrimary)
-        // 메인 / 숨김 / 전체 — 메인·숨김은 독립 토글, 전체는 배타(둘 다 해제)
-        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            HomeFilterChip.entries.forEach { chip ->
-                val selected = when (chip) {
-                    HomeFilterChip.MAIN -> filter.showMain
-                    HomeFilterChip.HIDDEN -> filter.showHidden
-                    HomeFilterChip.ALL -> filter.isAll
-                }
-                AmChip(label = chip.label, selected = selected) { onFilterChip(chip) }
-            }
-        }
+        // 메인 / 숨김 / 전체 — 공용 칩(홈·월별 공유)
+        LedgerFilterChips(filter = filter, onChip = onFilterChip)
     }
 }
 
 @Composable
-private fun EmptyState(filter: HomeFilter) {
+private fun EmptyState(filter: LedgerFilter) {
     val message = when {
         filter.isAll -> "이번달 내역이 없어요"
         filter.showMain && filter.showHidden -> "표시할 내역이 없어요"

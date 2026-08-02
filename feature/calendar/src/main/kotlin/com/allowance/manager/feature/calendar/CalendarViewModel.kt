@@ -2,11 +2,17 @@ package com.allowance.manager.feature.calendar
 
 import androidx.lifecycle.viewModelScope
 import com.allowance.manager.core.common.BaseViewModel
+import com.allowance.manager.core.domain.model.LedgerFilter
+import com.allowance.manager.core.domain.model.LedgerFilterChip
 import com.allowance.manager.core.domain.model.Transaction
 import com.allowance.manager.core.domain.model.TransactionCategory
 import com.allowance.manager.core.domain.model.TransactionType
+import com.allowance.manager.core.domain.model.matches
+import com.allowance.manager.core.domain.model.toggle
 import com.allowance.manager.core.domain.usecase.calendar.GetFirstTransactionMonthUseCase
 import com.allowance.manager.core.domain.usecase.calendar.ObserveMonthTransactionsUseCase
+import com.allowance.manager.core.domain.usecase.setting.GetCalendarFilterUseCase
+import com.allowance.manager.core.domain.usecase.setting.SetCalendarFilterUseCase
 import com.allowance.manager.core.domain.usecase.transaction.DeleteTransactionUseCase
 import com.allowance.manager.core.domain.usecase.transaction.IgnoreTransactionUseCase
 import com.allowance.manager.core.domain.usecase.transaction.PromoteToMainUseCase
@@ -30,6 +36,7 @@ data class CalendarUiState(
     val searchActive: Boolean = false,
     val query: String = "",
     val categoryFilter: Set<TransactionCategory> = emptySet(),
+    val filter: LedgerFilter = LedgerFilter.Calendar,   // 메인/숨김/전체 (홈과 분리 저장)
     val minMonth: YearMonth? = null,                    // 이보다 과거로는 이동 불가 (첫 내역의 달)
     val isLoading: Boolean = true,
 ) {
@@ -44,6 +51,7 @@ private data class FilterParams(
     val query: String,
     val categories: Set<TransactionCategory>,
     val searchActive: Boolean,
+    val ledger: LedgerFilter,
 )
 
 @HiltViewModel
@@ -54,6 +62,8 @@ class CalendarViewModel @Inject constructor(
     private val deleteTransactionUseCase: DeleteTransactionUseCase,
     private val updateTransactionUseCase: UpdateTransactionUseCase,
     private val promoteToMainUseCase: PromoteToMainUseCase,
+    getCalendarFilterUseCase: GetCalendarFilterUseCase,
+    private val setCalendarFilterUseCase: SetCalendarFilterUseCase,
 ) : BaseViewModel() {
 
     private val month = MutableStateFlow(YearMonth.now())
@@ -68,8 +78,8 @@ class CalendarViewModel @Inject constructor(
     @OptIn(ExperimentalCoroutinesApi::class)
     private val monthTransactions = month.flatMapLatest { observeMonthTransactionsUseCase(it) }
 
-    private val filterParams = combine(query, categoryFilter, searchActive) { q, c, a ->
-        FilterParams(q, c, a)
+    private val filterParams = combine(query, categoryFilter, searchActive, getCalendarFilterUseCase()) { q, c, a, l ->
+        FilterParams(q, c, a, l)
     }
 
     init {
@@ -91,11 +101,12 @@ class CalendarViewModel @Inject constructor(
         fp: FilterParams,
     ): CalendarUiState {
         val filtered = raw.filter { tx ->
+            val matchLedger = fp.ledger.matches(tx)
             val matchCategory = fp.categories.isEmpty() || tx.category in fp.categories
             val matchQuery = fp.query.isBlank() ||
                 tx.sourceName.contains(fp.query, ignoreCase = true) ||
                 (tx.memo?.contains(fp.query, ignoreCase = true) == true)
-            matchCategory && matchQuery
+            matchLedger && matchCategory && matchQuery
         }
         // 무시(합계 제외) 항목은 요약에서 뺀다. 리스트에는 그대로 노출.
         val counted = filtered.filter { !it.isIgnored }
@@ -109,6 +120,7 @@ class CalendarViewModel @Inject constructor(
             searchActive = fp.searchActive,
             query = fp.query,
             categoryFilter = fp.categories,
+            filter = fp.ledger,
             minMonth = minMonth,
             isLoading = false,
         )
@@ -158,6 +170,11 @@ class CalendarViewModel @Inject constructor(
         categoryFilter.value = emptySet()
     }
 
+    /** 메인/숨김/전체 칩 탭 — 전체는 배타, 메인·숨김은 각각 독립 토글 (월별 전용 저장) */
+    fun onFilterChip(chip: LedgerFilterChip) {
+        viewModelScope.launch { setCalendarFilterUseCase(uiState.value.filter.toggle(chip)) }
+    }
+
     // ── 내역 액션 (상세 시트 공용) ──
     fun onSetIgnored(id: Long, ignored: Boolean) {
         viewModelScope.launch { ignoreTransactionUseCase(id, ignored) }
@@ -172,12 +189,12 @@ class CalendarViewModel @Inject constructor(
     }
 
     fun onPromoteToMain(transaction: Transaction) {
-        val pattern = transaction.extractedAccount ?: return
+        // 계좌번호(extractedAccount)가 없으면 출처(앱) 기준으로 등록
         viewModelScope.launch {
             promoteToMainUseCase(
                 packageName = transaction.packageName,
                 bankName = transaction.sourceName,
-                accountPattern = pattern,
+                accountPattern = transaction.extractedAccount,
             )
         }
     }

@@ -4,7 +4,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.tooling.preview.Preview
 import com.allowance.manager.core.designsystem.theme.AllowanceManagerTheme
 import com.allowance.manager.core.domain.model.Account
-import com.allowance.manager.core.domain.model.HomeFilter
+import com.allowance.manager.core.domain.model.LedgerFilter
 import com.allowance.manager.core.domain.model.Transaction
 import com.allowance.manager.core.domain.model.TransactionType
 import com.allowance.manager.feature.account.AccountSettingScreen
@@ -76,7 +76,7 @@ private val sampleHome = HomeUiState(
         sampleTransaction(3, "네이버페이 충전", 10_000, ignored = true),
         sampleTransaction(4, "미등록 결제", 3_200, accountId = null),
     ),
-    filter = HomeFilter(showMain = false, showHidden = false),
+    filter = LedgerFilter(showMain = false, showHidden = false),
     isLoading = false,
 )
 

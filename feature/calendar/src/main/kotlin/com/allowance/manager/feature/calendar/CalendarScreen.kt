@@ -50,9 +50,12 @@ import com.allowance.manager.core.designsystem.theme.AmColors
 import com.allowance.manager.core.designsystem.theme.AmShape
 import com.allowance.manager.core.designsystem.theme.AmSpacing
 import com.allowance.manager.core.designsystem.theme.AmType
+import com.allowance.manager.core.domain.model.LedgerFilter
+import com.allowance.manager.core.domain.model.LedgerFilterChip
 import com.allowance.manager.core.domain.model.Transaction
 import com.allowance.manager.core.domain.model.TransactionCategory
 import com.allowance.manager.core.domain.util.amountToComma
+import com.allowance.manager.core.ui.transaction.LedgerFilterChips
 import com.allowance.manager.core.ui.transaction.SwipeRevealRow
 import com.allowance.manager.core.ui.transaction.TransactionDetailSheet
 import com.allowance.manager.core.ui.transaction.TransactionRow
@@ -77,6 +80,7 @@ fun CalendarRoute(
         onQueryChange = viewModel::onQueryChange,
         onToggleCategory = viewModel::onToggleCategory,
         onClearCategories = viewModel::onClearCategoryFilter,
+        onFilterChip = viewModel::onFilterChip,
         onSetIgnored = viewModel::onSetIgnored,
         onDelete = viewModel::onDelete,
         onSaveTransaction = viewModel::onSaveTransaction,
@@ -94,6 +98,7 @@ fun CalendarScreen(
     onQueryChange: (String) -> Unit = {},
     onToggleCategory: (TransactionCategory) -> Unit = {},
     onClearCategories: () -> Unit = {},
+    onFilterChip: (LedgerFilterChip) -> Unit = {},
     onSetIgnored: (Long, Boolean) -> Unit = { _, _ -> },
     onDelete: (Long) -> Unit = {},
     onSaveTransaction: (Long, String, TransactionCategory?) -> Unit = { _, _, _ -> },
@@ -121,7 +126,12 @@ fun CalendarScreen(
         Column(modifier = Modifier.padding(horizontal = AmSpacing.xl)) {
             SummaryCard(expense = uiState.expense, income = uiState.income)
             Spacer(Modifier.height(12.dp))
-            ListHeader(searchActive = uiState.searchActive, onToggleSearch = onToggleSearch)
+            ListHeader(
+                filter = uiState.filter,
+                searchActive = uiState.searchActive,
+                onFilterChip = onFilterChip,
+                onToggleSearch = onToggleSearch,
+            )
 
             // 🔍 활성 시에만 검색창 + 분류 필터 노출 (해제하면 원복)
             AnimatedVisibility(visible = uiState.searchActive) {
@@ -278,15 +288,23 @@ private fun SummaryCell(label: String, value: String, valueColor: Color, modifie
     }
 }
 
-// ── 리스트 헤더 (제목 + 🔍 토글) ──
+// ── 리스트 헤더 (제목 + 메인/숨김/전체 칩 + 🔍 토글) ──
 @Composable
-private fun ListHeader(searchActive: Boolean, onToggleSearch: () -> Unit) {
+private fun ListHeader(
+    filter: LedgerFilter,
+    searchActive: Boolean,
+    onFilterChip: (LedgerFilterChip) -> Unit,
+    onToggleSearch: () -> Unit,
+) {
     Row(
         modifier = Modifier.fillMaxWidth().padding(horizontal = 2.dp),
-        horizontalArrangement = Arrangement.SpaceBetween,
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Text("이 달 내역", style = AmType.labelStrong, color = AmColors.TextPrimary)
+        Spacer(Modifier.weight(1f))
+        // 범위 필터(메인/숨김/전체)는 상시 노출 — 홈과 공용 칩
+        LedgerFilterChips(filter = filter, onChip = onFilterChip)
         // 활성 시 초록 배경으로 눌린 상태 표현
         Box(
             modifier = Modifier

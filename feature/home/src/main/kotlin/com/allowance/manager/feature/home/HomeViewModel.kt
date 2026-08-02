@@ -5,8 +5,10 @@ import com.allowance.manager.core.domain.model.Transaction
 import com.allowance.manager.core.domain.usecase.account.ObserveAccountsUseCase
 import com.allowance.manager.core.domain.usecase.budget.GetUserTypeUseCase
 import com.allowance.manager.core.domain.usecase.budget.ObserveBudgetStatusUseCase
-import com.allowance.manager.core.domain.model.HomeFilter
-import com.allowance.manager.core.domain.model.HomeFilterChip
+import com.allowance.manager.core.domain.model.LedgerFilter
+import com.allowance.manager.core.domain.model.LedgerFilterChip
+import com.allowance.manager.core.domain.model.matches
+import com.allowance.manager.core.domain.model.toggle
 import com.allowance.manager.core.domain.model.UserType
 import com.allowance.manager.core.domain.usecase.setting.GetHomeFilterUseCase
 import com.allowance.manager.core.domain.usecase.setting.GetHomeGuideShownUseCase
@@ -47,7 +49,7 @@ data class HomeUiState(
     val overPace: Boolean = false,      // 하루 평균 > 권장 → 과속
     val daysUntilPayday: Int = 0,       // 다음 월급일까지 D-day
     val transactions: List<Transaction> = emptyList(),
-    val filter: HomeFilter = HomeFilter.Default,  // 내역 세그먼트 필터 (메인/전체/숨김)
+    val filter: LedgerFilter = LedgerFilter.Home,  // 내역 필터 (메인/숨김/전체)
     val userType: UserType = UserType.Default,   // 사용자 유형 → 예산 호칭(용돈/생활비/예산)
     val isLoading: Boolean = true,
 )
@@ -91,13 +93,7 @@ class HomeViewModel @Inject constructor(
                 getUserTypeUseCase(),
             ) { status, transactions, _, filter, userType ->
                 // 멀티 토글 필터: 전체(둘 다 꺼짐) / 메인 / 숨김 / 메인+숨김
-                val visible = when {
-                    filter.isAll -> transactions
-                    filter.showMain && filter.showHidden ->
-                        transactions.filter { it.isMain || it.isManual || it.isIgnored }
-                    filter.showMain -> transactions.filter { (it.isMain || it.isManual) && !it.isIgnored }
-                    else -> transactions.filter { it.isIgnored }   // 숨김만
-                }
+                val visible = transactions.filter { filter.matches(it) }
 
                 // 하루 권장액·평균·D-day: 사이클 경계와 오늘 기준으로 계산 (0일 나눗셈 방어)
                 val today = LocalDate.now()
@@ -135,14 +131,8 @@ class HomeViewModel @Inject constructor(
     }
 
     /** 칩 탭 — 전체는 배타(둘 다 해제), 메인·숨김은 각각 독립 토글 */
-    fun onFilterChip(chip: HomeFilterChip) {
-        val cur = uiState.value.filter
-        val next = when (chip) {
-            HomeFilterChip.MAIN -> cur.copy(showMain = !cur.showMain)
-            HomeFilterChip.HIDDEN -> cur.copy(showHidden = !cur.showHidden)
-            HomeFilterChip.ALL -> HomeFilter(showMain = false, showHidden = false)
-        }
-        viewModelScope.launch { setHomeFilterUseCase(next) }
+    fun onFilterChip(chip: LedgerFilterChip) {
+        viewModelScope.launch { setHomeFilterUseCase(uiState.value.filter.toggle(chip)) }
     }
 
     fun onSetIgnored(id: Long, ignored: Boolean) {
