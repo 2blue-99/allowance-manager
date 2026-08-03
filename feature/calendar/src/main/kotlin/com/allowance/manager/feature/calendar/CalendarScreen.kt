@@ -78,7 +78,9 @@ fun CalendarRoute(
         onQueryChange = viewModel::onQueryChange,
         onToggleCategory = viewModel::onToggleCategory,
         onClearCategories = viewModel::onClearCategoryFilter,
-        onSetIgnored = viewModel::onSetIgnored,
+        onSetHidden = viewModel::onSetHidden,
+        onIgnoreSource = viewModel::onIgnoreSource,
+        countIgnorable = viewModel::countIgnorable,
         onDelete = viewModel::onDelete,
         onSaveTransaction = viewModel::onSaveTransaction,
         onPromoteToMain = viewModel::onPromoteToMain,
@@ -95,7 +97,9 @@ fun CalendarScreen(
     onQueryChange: (String) -> Unit = {},
     onToggleCategory: (TransactionCategory) -> Unit = {},
     onClearCategories: () -> Unit = {},
-    onSetIgnored: (Long, Boolean) -> Unit = { _, _ -> },
+    onSetHidden: (Long, Boolean) -> Unit = { _, _ -> },
+    onIgnoreSource: (Transaction) -> Unit = {},
+    countIgnorable: suspend (Transaction) -> Int = { 0 },
     onDelete: (Long) -> Unit = {},
     onSaveTransaction: (Long, String, TransactionCategory?) -> Unit = { _, _, _ -> },
     onPromoteToMain: (Transaction) -> Unit = {},
@@ -144,7 +148,7 @@ fun CalendarScreen(
             transactions = uiState.transactions,
             searchActive = uiState.searchActive,
             onSelect = { selected = it },
-            onIgnore = { onSetIgnored(it.id, !it.isIgnored) },
+            onToggleHidden = { onSetHidden(it.id, !it.isHidden) },
             onRequestDelete = { pendingDelete = it },
             modifier = Modifier.weight(1f),
         )
@@ -167,9 +171,11 @@ fun CalendarScreen(
         TransactionDetailSheet(
             tx = tx,
             onDismiss = { selected = null },
-            onSetIgnored = onSetIgnored,
+            onSetHidden = onSetHidden,
             onDelete = onDelete,
             onPromoteToMain = onPromoteToMain,
+            onIgnoreSource = onIgnoreSource,
+            countIgnorable = countIgnorable,
             onSaveTransaction = onSaveTransaction,
         )
     }
@@ -351,7 +357,7 @@ private fun TransactionList(
     transactions: List<Transaction>,
     searchActive: Boolean,
     onSelect: (Transaction) -> Unit,
-    onIgnore: (Transaction) -> Unit,
+    onToggleHidden: (Transaction) -> Unit,
     onRequestDelete: (Transaction) -> Unit,
     modifier: Modifier = Modifier,
 ) {
@@ -365,8 +371,8 @@ private fun TransactionList(
             ) {
                 items(transactions, key = { it.id }) { tx ->
                     SwipeRevealRow(
-                        ignored = tx.isIgnored,
-                        onIgnore = { onIgnore(tx) },
+                        hidden = tx.isHidden,
+                        onToggleHidden = { onToggleHidden(tx) },
                         onDelete = { onRequestDelete(tx) },
                         modifier = Modifier.animateItem(),
                     ) {

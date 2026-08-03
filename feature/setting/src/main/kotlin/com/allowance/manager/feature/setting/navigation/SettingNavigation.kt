@@ -11,12 +11,14 @@ object SettingRoute
 fun NavGraphBuilder.settingScreen(
     onBack: () -> Unit,
     onNavigateToAccount: () -> Unit,
+    onNavigateToIgnored: () -> Unit,
     onNavigateToDebug: (() -> Unit)? = null,
 ) {
     composable<SettingRoute> {
         SettingRoute(
             onBack = onBack,
             onNavigateToAccount = onNavigateToAccount,
+            onNavigateToIgnored = onNavigateToIgnored,
             onNavigateToDebug = onNavigateToDebug,
         )
     }

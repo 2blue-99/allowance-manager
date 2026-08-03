@@ -4,6 +4,7 @@ import android.content.Context
 import androidx.room.Room
 import com.allowance.manager.core.local.dao.AccountDao
 import com.allowance.manager.core.local.dao.BudgetDao
+import com.allowance.manager.core.local.dao.IgnoredAccountDao
 import com.allowance.manager.core.local.dao.TransactionDao
 import com.allowance.manager.core.local.database.AppDatabase
 import dagger.Module
@@ -38,4 +39,8 @@ object DatabaseModule {
     @Provides
     fun provideBudgetDao(database: AppDatabase): BudgetDao =
         database.budgetDao()
+
+    @Provides
+    fun provideIgnoredAccountDao(database: AppDatabase): IgnoredAccountDao =
+        database.ignoredAccountDao()
 }

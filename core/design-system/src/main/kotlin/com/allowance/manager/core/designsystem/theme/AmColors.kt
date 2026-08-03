@@ -19,7 +19,9 @@ object AmColors {
     // 서피스
     val ScreenBg = Color(0xFFF0F2F6)    // 화면 배경(라이트 그레이)
     val CardBg = Color(0xFFFFFFFF)      // 카드
-    val IgnoredBg = Color(0xFFE2E6EC)   // 무시 처리된 항목 카드
+    val HiddenBg = Color(0xFFE2E6EC)    // 숨김 처리된 항목 카드
+    val NeutralBtnBg = Color(0xFFEDEFF3)   // 보조(취소) 버튼 채움 배경
+    val NeutralBtnText = Color(0xFF4E5968) // 보조 버튼 텍스트
     val ChipBg = Color(0xFFECECEC)      // 옵션 칩·플레이스홀더
     val Divider = Color(0xFFF4F6FA)
     val BarTrack = Color(0xFFE3E7EE)    // 차트 막대 트랙
@@ -41,10 +43,12 @@ object AmColors {
     val CatCafe = Color(0xFFFFC24B)       // 카페·간식
     val CatTransport = Color(0xFF4DA3FF)  // 교통
     val CatShopping = Color(0xFFFF6FB5)   // 쇼핑
+    val CatFashion = Color(0xFFCE72C8)    // 패션·미용
     val CatLiving = Color(0xFF5AD1C0)     // 생활
     val CatHealth = Color(0xFFFF6B6B)     // 의료·건강
-    val CatCulture = Color(0xFF9B8CFF)    // 문화·여가
+    val CatCulture = Color(0xFF9B8CFF)    // 문화·취미
     val CatEducation = Color(0xFF4EC38A)  // 교육
+    val CatEvent = Color(0xFFC68A5E)      // 경조사·선물
     val CatHousing = Color(0xFF7C93B4)    // 주거·통신
     val CatIncome = Color(0xFF34D399)     // 수입
     val CatTransfer = Color(0xFFA9B4C4)   // 이체

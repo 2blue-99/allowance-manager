@@ -80,4 +80,40 @@ class NotificationParserTest {
         )
         assertNull(result)
     }
+
+    @Test
+    fun `Layer2 - 키워드+맨숫자 노이즈(메신저)는 null`() {
+        // 원 단위·잔액·계좌번호가 전혀 없는 맨숫자 → 돈 형태 아님 → 드롭
+        val result = NotificationParser.parse(
+            packageName = "com.Slack",
+            title = "proj_abc_waas: [ABC]",
+            text = "승인 요청 1건 확인해주세요",
+        )
+        assertNull(result)
+    }
+
+    @Test
+    fun `Layer2 - 원 단위 금액은 어떤 앱이어도 인정(화이트리스트 없음)`() {
+        // 화이트리스트를 없앴으므로 등록 안 된 앱이라도 '원' 금액이면 인정
+        val result = NotificationParser.parse(
+            packageName = "com.unknown.newbank",
+            title = "결제",
+            text = "스타벅스 4,500원 승인",
+        )
+        requireNotNull(result)
+        assertEquals(TransactionType.EXPENSE, result.type)
+        assertEquals(4_500L, result.amount)
+    }
+
+    @Test
+    fun `Layer2 - 원은 없지만 잔액 동반하면 키워드 뒤 숫자 인정`() {
+        val result = NotificationParser.parse(
+            packageName = "com.kbstar.kbbank",
+            title = "출금 3000",
+            text = "체크카드 출금 3000 잔액 12,000",
+        )
+        requireNotNull(result)
+        assertEquals(TransactionType.EXPENSE, result.type)
+        assertEquals(3_000L, result.amount)
+    }
 }

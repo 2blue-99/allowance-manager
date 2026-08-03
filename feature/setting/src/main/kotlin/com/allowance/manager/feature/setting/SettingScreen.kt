@@ -67,6 +67,7 @@ private fun paydayLabel(payday: Int): String = if (payday <= 0) "말일" else "$
 fun SettingRoute(
     onBack: () -> Unit,
     onNavigateToAccount: () -> Unit = {},
+    onNavigateToIgnored: () -> Unit = {},
     // debug 빌드에서만 non-null → 디버그 진입 노출
     onNavigateToDebug: (() -> Unit)? = null,
     viewModel: SettingViewModel = hiltViewModel(),
@@ -89,6 +90,7 @@ fun SettingRoute(
         versionName = versionName,
         onBack = onBack,
         onNavigateToAccount = onNavigateToAccount,
+        onNavigateToIgnored = onNavigateToIgnored,
         onNavigateToDebug = onNavigateToDebug,
         onStatusBarEnabledChange = viewModel::setStatusBarEnabled,
         onBudgetChange = viewModel::setBudget,
@@ -148,6 +150,7 @@ fun SettingScreen(
     versionName: String = "",
     onBack: () -> Unit = {},
     onNavigateToAccount: () -> Unit = {},
+    onNavigateToIgnored: () -> Unit = {},
     onNavigateToDebug: (() -> Unit)? = null,
     onStatusBarEnabledChange: (Boolean) -> Unit = {},
     onBudgetChange: (Long) -> Unit = {},
@@ -214,6 +217,11 @@ fun SettingScreen(
                         },
                         {
                             AmSettingItem(title = "계좌 관리", subtitle = "메인 계좌 등록·수정", onClick = onNavigateToAccount) {
+                                AmChevron()
+                            }
+                        },
+                        {
+                            AmSettingItem(title = "무시 계좌 관리", subtitle = "무시한 출처·계좌 조회·해제", onClick = onNavigateToIgnored) {
                                 AmChevron()
                             }
                         },

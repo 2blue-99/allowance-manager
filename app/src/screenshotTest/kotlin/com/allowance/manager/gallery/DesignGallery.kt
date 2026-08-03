@@ -4,6 +4,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.tooling.preview.Preview
 import com.allowance.manager.core.designsystem.theme.AllowanceManagerTheme
 import com.allowance.manager.core.domain.model.Account
+import com.allowance.manager.core.domain.model.IgnoredAccount
 import com.allowance.manager.core.domain.model.LedgerFilter
 import com.allowance.manager.core.domain.model.Transaction
 import com.allowance.manager.core.domain.model.TransactionType
@@ -17,6 +18,8 @@ import com.allowance.manager.feature.intro.IntroScreen
 import com.allowance.manager.feature.onboarding.OnboardingInfoScreen
 import com.allowance.manager.feature.onboarding.OnboardingPermissionScreen
 import com.allowance.manager.feature.onboarding.OnboardingUiState
+import com.allowance.manager.feature.setting.IgnoredAccountScreen
+import com.allowance.manager.feature.setting.IgnoredAccountUiState
 import com.allowance.manager.feature.setting.SettingScreen
 import com.allowance.manager.feature.setting.SettingUiState
 import com.allowance.manager.feature.splash.SplashScreen
@@ -42,7 +45,7 @@ private fun sampleTransaction(
     source: String,
     amount: Long,
     type: TransactionType = TransactionType.EXPENSE,
-    ignored: Boolean = false,
+    hidden: Boolean = false,
     accountId: Long? = 1L,
 ) = Transaction(
     id = id,
@@ -54,7 +57,7 @@ private fun sampleTransaction(
     extractedAccount = "941602-**-***318",
     accountId = accountId,
     memo = null,
-    isIgnored = ignored,
+    isHidden = hidden,
     createdAt = 1_753_000_000_000L,
 )
 
@@ -73,7 +76,7 @@ private val sampleHome = HomeUiState(
     transactions = listOf(
         sampleTransaction(1, "스타벅스", 5_600),
         sampleTransaction(2, "급여 입금", 2_400_000, TransactionType.INCOME),
-        sampleTransaction(3, "네이버페이 충전", 10_000, ignored = true),
+        sampleTransaction(3, "네이버페이 충전", 10_000, hidden = true),
         sampleTransaction(4, "미등록 결제", 3_200, accountId = null),
     ),
     filter = LedgerFilter(showMain = false, showHidden = false),
@@ -122,7 +125,7 @@ private val sampleCalendar = CalendarUiState(
     transactions = listOf(
         sampleTransaction(1, "스타벅스", 5_600),
         sampleTransaction(2, "급여 입금", 2_400_000, TransactionType.INCOME),
-        sampleTransaction(3, "네이버페이 충전", 10_000, ignored = true),
+        sampleTransaction(3, "네이버페이 충전", 10_000, hidden = true),
         sampleTransaction(4, "GS25 편의점", 8_200),
     ),
     expense = 13_800L,       // 노출 리스트 기준 (무시 제외)
@@ -136,6 +139,14 @@ private val sampleAccounts = AccountUiState(
         Account(id = 1, packageName = "", bankName = "국민은행", accountPattern = "94160277777318", enabled = true),
         Account(id = 2, packageName = "", bankName = "카카오뱅크", accountPattern = "333311112222", enabled = false),
     ),
+)
+
+private val sampleIgnored = IgnoredAccountUiState(
+    accounts = listOf(
+        IgnoredAccount(id = 1, packageName = "com.kbstar.kbbank", sourceName = "국민은행", accountPattern = "94160277777318"),
+        IgnoredAccount(id = 2, packageName = "com.Slack", sourceName = "Slack", accountPattern = ""),
+    ),
+    isLoading = false,
 )
 
 // ── 화면 프리뷰 ──────────────────────────────────────
@@ -180,6 +191,12 @@ private fun SettingPreview() = AllowanceManagerTheme {
 @Preview(name = "9. 계좌 관리", group = GROUP, showBackground = true, widthDp = 360, heightDp = 740)
 @Composable
 private fun AccountPreview() = AllowanceManagerTheme { AccountSettingScreen(uiState = sampleAccounts) }
+
+@Preview(name = "10. 무시 계좌 관리", group = GROUP, showBackground = true, widthDp = 360, heightDp = 740)
+@Composable
+private fun IgnoredAccountPreview() = AllowanceManagerTheme {
+    IgnoredAccountScreen(uiState = sampleIgnored)
+}
 
 // ── 상태별 검수 ──────────────────────────────────────
 @Preview(name = "홈 · 예산 초과", group = "상태별", showBackground = true, widthDp = 360, heightDp = 740)

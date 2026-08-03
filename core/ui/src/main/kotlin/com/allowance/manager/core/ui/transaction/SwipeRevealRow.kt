@@ -42,13 +42,13 @@ import kotlinx.coroutines.launch
 import kotlin.math.roundToInt
 
 /**
- * 왼쪽으로 밀면 무시·삭제 액션을 드러내는 행 (draggable + Animatable, 안정 API).
+ * 왼쪽으로 밀면 숨김·삭제 액션을 드러내는 행 (draggable + Animatable, 안정 API).
  * 홈·월별 등 내역 리스트에서 공통으로 사용한다.
  */
 @Composable
 fun SwipeRevealRow(
-    ignored: Boolean,
-    onIgnore: () -> Unit,
+    hidden: Boolean,
+    onToggleHidden: () -> Unit,
     onDelete: () -> Unit,
     modifier: Modifier = Modifier,
     content: @Composable () -> Unit,
@@ -60,15 +60,15 @@ fun SwipeRevealRow(
     val scope = rememberCoroutineScope()
 
     Box(modifier = modifier.clip(AmShape.card)) {
-        // 배경: 오른쪽에 무시·삭제
+        // 배경: 오른쪽에 숨김·삭제
         Row(modifier = Modifier.matchParentSize(), horizontalArrangement = Arrangement.End) {
             SwipeAction(
-                icon = if (ignored) Icons.Outlined.Visibility else Icons.Outlined.VisibilityOff,
-                label = if (ignored) "복원" else "무시",
+                icon = if (hidden) Icons.Outlined.Visibility else Icons.Outlined.VisibilityOff,
+                label = if (hidden) "복원" else "숨김",
                 background = AmColors.ChipBg,
                 foreground = AmColors.TextSecondary,
                 width = actionWidth,
-            ) { scope.launch { offsetX.animateTo(0f) }; onIgnore() }
+            ) { scope.launch { offsetX.animateTo(0f) }; onToggleHidden() }
             SwipeAction(
                 icon = Icons.Outlined.Delete,
                 label = "삭제",

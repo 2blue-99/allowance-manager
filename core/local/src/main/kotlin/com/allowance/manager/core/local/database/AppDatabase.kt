@@ -4,9 +4,11 @@ import androidx.room.Database
 import androidx.room.RoomDatabase
 import com.allowance.manager.core.local.dao.AccountDao
 import com.allowance.manager.core.local.dao.BudgetDao
+import com.allowance.manager.core.local.dao.IgnoredAccountDao
 import com.allowance.manager.core.local.dao.TransactionDao
 import com.allowance.manager.core.local.entity.AccountEntity
 import com.allowance.manager.core.local.entity.BudgetEntity
+import com.allowance.manager.core.local.entity.IgnoredAccountEntity
 import com.allowance.manager.core.local.entity.TransactionEntity
 
 @Database(
@@ -14,12 +16,14 @@ import com.allowance.manager.core.local.entity.TransactionEntity
         AccountEntity::class,
         TransactionEntity::class,
         BudgetEntity::class,
+        IgnoredAccountEntity::class,
     ],
-    version = 7,
+    version = 8,
     exportSchema = true,
 )
 abstract class AppDatabase : RoomDatabase() {
     abstract fun accountDao(): AccountDao
     abstract fun transactionDao(): TransactionDao
     abstract fun budgetDao(): BudgetDao
+    abstract fun ignoredAccountDao(): IgnoredAccountDao
 }

@@ -48,6 +48,8 @@ import androidx.compose.ui.unit.sp
 import com.allowance.manager.core.designsystem.anim.AmMotion
 import com.allowance.manager.core.designsystem.component.amRippleClickable
 import com.allowance.manager.core.designsystem.theme.AmColors
+import com.allowance.manager.core.ui.guide.guideTarget
+import com.allowance.manager.core.ui.guide.rememberGuideTargets
 import androidx.navigation.NavDestination
 import androidx.navigation.NavDestination.Companion.hasRoute
 import androidx.navigation.NavDestination.Companion.hierarchy
@@ -68,6 +70,8 @@ import com.allowance.manager.StartDestination
 import com.allowance.manager.BuildConfig
 import com.allowance.manager.feature.setting.navigation.DebugRoute
 import com.allowance.manager.feature.setting.navigation.debugScreen
+import com.allowance.manager.feature.setting.navigation.IgnoredAccountRoute
+import com.allowance.manager.feature.setting.navigation.ignoredAccountScreen
 import com.allowance.manager.feature.setting.navigation.SettingRoute
 import com.allowance.manager.feature.setting.navigation.settingScreen
 import com.allowance.manager.feature.stats.navigation.StatsRoute
@@ -79,18 +83,21 @@ private data class BottomTab(
     val kClass: KClass<*>,
     val label: String,
     val icon: ImageVector,
+    val guideKey: String? = null,   // 홈 가이드 스포트라이트 대상 키 (없으면 미대상)
 )
 
 private val bottomTabs = listOf(
     BottomTab(HomeRoute, HomeRoute::class, "홈", Icons.Filled.Home),
-    BottomTab(CalendarRoute(), CalendarRoute::class, "월별", Icons.Filled.CalendarMonth),
-    BottomTab(StatsRoute, StatsRoute::class, "통계", Icons.Filled.BarChart),
+    BottomTab(CalendarRoute(), CalendarRoute::class, "월별", Icons.Filled.CalendarMonth, guideKey = "calendar"),
+    BottomTab(StatsRoute, StatsRoute::class, "통계", Icons.Filled.BarChart, guideKey = "stats"),
 )
 
 @Composable
 fun AppNavHost(navController: NavHostController, startDestination: StartDestination) {
     val backStackEntry by navController.currentBackStackEntryAsState()
     val currentDestination = backStackEntry?.destination
+    // 홈 가이드 좌표 저장소 — 홈 콘텐츠 + 바텀 네비(월별/통계)가 공유
+    val guideTargets = rememberGuideTargets()
     // 더보기(설정)도 탭처럼 취급 → 진입해도 바텀바 유지
     val showBottomBar = bottomTabs.any { currentDestination.isOn(it.kClass) } ||
         currentDestination.isOn(SettingRoute::class)
@@ -136,6 +143,7 @@ fun AppNavHost(navController: NavHostController, startDestination: StartDestinat
                                 selected = currentDestination.isOn(tab.kClass),
                                 icon = tab.icon,
                                 label = tab.label,
+                                modifier = if (tab.guideKey != null) Modifier.guideTarget(tab.guideKey, guideTargets) else Modifier,
                                 onClick = { navController.navigateToTab(tab.route) },
                             )
                         }
@@ -193,7 +201,7 @@ fun AppNavHost(navController: NavHostController, startDestination: StartDestinat
                     }
                 },
             )
-            homeScreen()
+            homeScreen(guideTargets = guideTargets)
             calendarScreen()
             statsScreen(
                 onOpenMonth = { ym ->
@@ -206,6 +214,7 @@ fun AppNavHost(navController: NavHostController, startDestination: StartDestinat
             settingScreen(
                 onBack = { navController.popBackStack() },
                 onNavigateToAccount = { navController.navigate(AccountSettingRoute) },
+                onNavigateToIgnored = { navController.navigate(IgnoredAccountRoute) },
                 // debug 빌드에서만 디버그 진입 노출
                 onNavigateToDebug = if (BuildConfig.DEBUG) {
                     { navController.navigate(DebugRoute) }
@@ -214,6 +223,9 @@ fun AppNavHost(navController: NavHostController, startDestination: StartDestinat
                 },
             )
             accountSettingScreen(
+                onBack = { navController.popBackStack() },
+            )
+            ignoredAccountScreen(
                 onBack = { navController.popBackStack() },
             )
             debugScreen(
@@ -233,6 +245,7 @@ private fun RowScope.BottomBarItem(
     selected: Boolean,
     icon: ImageVector,
     label: String,
+    modifier: Modifier = Modifier,
     onClick: () -> Unit,
 ) {
     val color by animateColorAsState(
@@ -244,6 +257,7 @@ private fun RowScope.BottomBarItem(
         modifier = Modifier
             .weight(1f)
             .fillMaxHeight()
+            .then(modifier)
             .amRippleClickable(onClick = onClick),
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center,

@@ -83,7 +83,7 @@ class AllowanceNotificationListenerService : NotificationListenerService() {
 
         serviceScope.launch {
             runCatching {
-                recordTransactionUseCase(
+                val id = recordTransactionUseCase(
                     ParsedTransaction(
                         type = result.type,
                         amount = result.amount,
@@ -94,7 +94,7 @@ class AllowanceNotificationListenerService : NotificationListenerService() {
                         rawText = result.content,
                     )
                 )
-                log("→ 저장 완료")
+                if (id == null) log("→ 무시 계좌 매칭 → 드롭(저장 안 함)") else log("→ 저장 완료")
             }.onFailure { Timber.tag(TAG).e(it, "거래 저장 실패") }
         }
     }

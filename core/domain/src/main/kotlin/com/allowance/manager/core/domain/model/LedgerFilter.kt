@@ -4,7 +4,7 @@ package com.allowance.manager.core.domain.model
  * 내역 리스트 필터 — 멀티 토글(메인 / 숨김 / 전체). 홈·월별 화면이 공유한다.
  *
  * - 메인(showMain): 메인 계좌·수동 내역 포함
- * - 숨김(showHidden): 숨김(무시) 처리한 내역 포함 — 복원 진입점
+ * - 숨김(showHidden): 숨김 처리한 내역 포함 — 복원 진입점
  * - 전체: 두 토글이 모두 꺼진 상태(isAll) — 감지된 전부 표시
  *
  * 메인·숨김은 각각 독립 토글이라 둘 다 켤 수 있고, 둘 다 끄면 자동으로 '전체'가 된다.
@@ -40,7 +40,7 @@ fun LedgerFilter.toggle(chip: LedgerFilterChip): LedgerFilter = when (chip) {
 /** 내역 한 건이 현재 필터에 노출되어야 하는지 */
 fun LedgerFilter.matches(tx: Transaction): Boolean = when {
     isAll -> true
-    showMain && showHidden -> tx.isMain || tx.isManual || tx.isIgnored
-    showMain -> (tx.isMain || tx.isManual) && !tx.isIgnored
-    else -> tx.isIgnored   // 숨김만
+    showMain && showHidden -> tx.isMain || tx.isManual || tx.isHidden
+    showMain -> (tx.isMain || tx.isManual) && !tx.isHidden
+    else -> tx.isHidden   // 숨김만
 }

@@ -7,8 +7,10 @@ import com.allowance.manager.core.domain.model.TransactionCategory
 import com.allowance.manager.core.domain.model.TransactionType
 import com.allowance.manager.core.domain.usecase.calendar.GetFirstTransactionMonthUseCase
 import com.allowance.manager.core.domain.usecase.calendar.ObserveMonthTransactionsUseCase
+import com.allowance.manager.core.domain.usecase.ignore.AddIgnoredAccountUseCase
+import com.allowance.manager.core.domain.usecase.ignore.CountIgnorableTransactionsUseCase
 import com.allowance.manager.core.domain.usecase.transaction.DeleteTransactionUseCase
-import com.allowance.manager.core.domain.usecase.transaction.IgnoreTransactionUseCase
+import com.allowance.manager.core.domain.usecase.transaction.HideTransactionUseCase
 import com.allowance.manager.core.domain.usecase.transaction.PromoteToMainUseCase
 import com.allowance.manager.core.domain.usecase.transaction.UpdateTransactionUseCase
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -25,8 +27,8 @@ import javax.inject.Inject
 data class CalendarUiState(
     val month: YearMonth = YearMonth.now(),
     val transactions: List<Transaction> = emptyList(), // 검색·필터가 적용된 '노출 리스트'
-    val expense: Long = 0L,                             // 노출 리스트 기준 지출 합계 (무시 제외)
-    val income: Long = 0L,                              // 노출 리스트 기준 수입 합계 (무시 제외)
+    val expense: Long = 0L,                             // 노출 리스트 기준 지출 합계 (숨김 제외)
+    val income: Long = 0L,                              // 노출 리스트 기준 수입 합계 (숨김 제외)
     val searchActive: Boolean = false,
     val query: String = "",
     val categoryFilter: Set<TransactionCategory> = emptySet(),
@@ -50,7 +52,9 @@ private data class FilterParams(
 class CalendarViewModel @Inject constructor(
     private val observeMonthTransactionsUseCase: ObserveMonthTransactionsUseCase,
     private val getFirstTransactionMonthUseCase: GetFirstTransactionMonthUseCase,
-    private val ignoreTransactionUseCase: IgnoreTransactionUseCase,
+    private val hideTransactionUseCase: HideTransactionUseCase,
+    private val addIgnoredAccountUseCase: AddIgnoredAccountUseCase,
+    private val countIgnorableTransactionsUseCase: CountIgnorableTransactionsUseCase,
     private val deleteTransactionUseCase: DeleteTransactionUseCase,
     private val updateTransactionUseCase: UpdateTransactionUseCase,
     private val promoteToMainUseCase: PromoteToMainUseCase,
@@ -97,8 +101,8 @@ class CalendarViewModel @Inject constructor(
                 (tx.memo?.contains(fp.query, ignoreCase = true) == true)
             matchCategory && matchQuery
         }
-        // 무시(합계 제외) 항목은 요약에서 뺀다. 리스트에는 그대로 노출.
-        val counted = filtered.filter { !it.isIgnored }
+        // 숨김(합계 제외) 항목은 요약에서 뺀다. 리스트에는 그대로 노출.
+        val counted = filtered.filter { !it.isHidden }
         val expense = counted.filter { it.type == TransactionType.EXPENSE }.sumOf { it.amount }
         val income = counted.filter { it.type == TransactionType.INCOME }.sumOf { it.amount }
         return CalendarUiState(
@@ -159,9 +163,15 @@ class CalendarViewModel @Inject constructor(
     }
 
     // ── 내역 액션 (상세 시트 공용) ──
-    fun onSetIgnored(id: Long, ignored: Boolean) {
-        viewModelScope.launch { ignoreTransactionUseCase(id, ignored) }
+    fun onSetHidden(id: Long, hidden: Boolean) {
+        viewModelScope.launch { hideTransactionUseCase(id, hidden) }
     }
+
+    fun onIgnoreSource(tx: Transaction) {
+        viewModelScope.launch { addIgnoredAccountUseCase(tx) }
+    }
+
+    suspend fun countIgnorable(tx: Transaction): Int = countIgnorableTransactionsUseCase(tx)
 
     fun onDelete(id: Long) {
         viewModelScope.launch { deleteTransactionUseCase(id) }

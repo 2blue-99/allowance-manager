@@ -131,14 +131,14 @@ class StatsViewModel @Inject constructor(
         }
 
         // 선택 달 요약·카테고리 (집계 대상 = 메인/수동 · 무시 아님)
-        val counted = selectedTx.filter { it.isCounted && !it.isIgnored }
+        val counted = selectedTx.filter { it.isCounted && !it.isHidden }
         val expenseTx = counted.filter { it.type == TransactionType.EXPENSE }
         val totalExpense = expenseTx.sumOf { it.amount }
         val income = counted.filter { it.type == TransactionType.INCOME }.sumOf { it.amount }
         val budget = budgetFor(p.selected, p.history)
 
         val categories = expenseTx
-            .groupBy { it.category }
+            .groupBy { it.category ?: TransactionCategory.ETC }   // 미지정은 기타로 합산
             .map { (cat, list) -> cat to list.sumOf { it.amount } }
             .filter { it.second > 0 }
             .sortedByDescending { it.second }

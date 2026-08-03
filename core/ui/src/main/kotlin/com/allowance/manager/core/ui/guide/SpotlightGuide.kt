@@ -1,5 +1,9 @@
 package com.allowance.manager.core.ui.guide
 
+import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.FastOutSlowInEasing
+import androidx.compose.animation.core.animateRectAsState
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -19,9 +23,11 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateMapOf
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshots.SnapshotStateMap
@@ -57,12 +63,17 @@ import kotlin.math.roundToInt
 /** 스포트라이트 구멍 모양 — 카드·내역은 요소를 감싸는 둥근 사각형, 버튼(추가)은 원 */
 enum class SpotShape { RECT, CIRCLE }
 
-/** 가이드 한 스텝: 강조 대상 key + 문구 + 모양 */
+/**
+ * 가이드 한 스텝: 강조 대상 key(들) + 문구 + 모양.
+ * keys가 여러 개면 그 영역들을 감싸는 union을 하나의 구멍으로 하이라이트한다(예: 월별+통계 탭).
+ */
 data class GuideStep(
-    val key: String,
+    val keys: List<String>,
     val message: String,
     val shape: SpotShape = SpotShape.RECT,
-)
+) {
+    constructor(key: String, message: String, shape: SpotShape = SpotShape.RECT) : this(listOf(key), message, shape)
+}
 
 /** 강조 대상들의 창(window) 좌표 저장소 */
 @Composable
@@ -94,17 +105,32 @@ fun SpotlightGuide(
     targets: SnapshotStateMap<String, Rect>,
     onFinish: () -> Unit,
 ) {
-    // 좌표가 측정된 스텝만 (측정 전이거나 없는 대상은 제외)
-    val visible = steps.filter { targets[it.key] != null }
+    // 좌표가 측정된 스텝만 (측정 전이거나 없는 대상은 제외). 다중 key는 모두 측정돼야 노출.
+    val visible = steps.filter { s -> s.keys.all { targets[it] != null } }
     if (visible.isEmpty()) return
 
     var rawIndex by remember { mutableIntStateOf(0) }
     val index = rawIndex.coerceIn(0, visible.lastIndex)
     val step = visible[index]
-    val rectWindow = targets[step.key] ?: return
+    // 여러 key면 각 영역을 감싸는 union을 하나의 구멍으로
+    val rectWindow = step.keys.mapNotNull { targets[it] }
+        .reduceOrNull { a, r -> Rect(minOf(a.left, r.left), minOf(a.top, r.top), maxOf(a.right, r.right), maxOf(a.bottom, r.bottom)) }
+        ?: return
     val isLast = index == visible.lastIndex
 
-    fun next() { if (isLast) onFinish() else rawIndex = index + 1 }
+    // 등장: 페이드 인 / 종료(건너뛰기·시작하기·뒤로가기 밖 탭): 페이드 아웃 후 onFinish
+    var finishing by remember { mutableStateOf(false) }
+    val overlayAlpha = remember { Animatable(0f) }
+    LaunchedEffect(finishing) {
+        if (finishing) {
+            overlayAlpha.animateTo(0f, tween(durationMillis = 180))
+            onFinish()
+        } else {
+            overlayAlpha.animateTo(1f, tween(durationMillis = 260))
+        }
+    }
+    fun finish() { finishing = true }
+    fun next() { if (isLast) finish() else rawIndex = index + 1 }
     fun prev() { if (index > 0) rawIndex = index - 1 }
 
     // ⚠️ 상태바 높이는 반드시 팝업 '밖'(메인 창)에서 읽는다.
@@ -117,12 +143,19 @@ fun SpotlightGuide(
     Popup(
         popupPositionProvider = fullscreenPositionProvider,
         properties = PopupProperties(focusable = true),
-        onDismissRequest = onFinish,
+        onDismissRequest = { finish() },
     ) {
-        BoxWithConstraints(modifier = Modifier.fillMaxSize()) {
+        BoxWithConstraints(modifier = Modifier.fillMaxSize().graphicsLayer { alpha = overlayAlpha.value }) {
             val screenH = constraints.maxHeight.toFloat()
 
             val rect = rectWindow.translate(0f, -statusBarTop)
+
+            // 스텝 전환 시 구멍이 다음 요소로 부드럽게 이동·크기 변화
+            val animRect by animateRectAsState(
+                targetValue = rect,
+                animationSpec = tween(durationMillis = 320, easing = FastOutSlowInEasing),
+                label = "spotlightHole",
+            )
 
             // 구멍이 요소를 감싸는 여백 + 둥근 모서리 반경 — Canvas·문구 위치에서 공유
             val pad = with(density) { 6.dp.toPx() }
@@ -137,15 +170,16 @@ fun SpotlightGuide(
                 drawRect(DimColor)
                 when (step.shape) {
                     SpotShape.CIRCLE -> {
-                        val r = maxOf(rect.width, rect.height) / 2f * 1.35f + pad
-                        drawCircle(Color.Transparent, r, rect.center, blendMode = BlendMode.Clear)
+                        // 전환 중 넓은 카드에서 좁은 FAB로 올 때 원이 잠깐 거대해지지 않도록 min 사용
+                        val r = minOf(animRect.width, animRect.height) / 2f * 1.35f + pad
+                        drawCircle(Color.Transparent, r, animRect.center, blendMode = BlendMode.Clear)
                     }
                     SpotShape.RECT -> {
                         // 요소를 딱 감싸는 둥근 사각형 (카드·내역 모양과 일치)
                         drawRoundRect(
                             color = Color.Transparent,
-                            topLeft = Offset(rect.left - pad, rect.top - pad),
-                            size = Size(rect.width + pad * 2, rect.height + pad * 2),
+                            topLeft = Offset(animRect.left - pad, animRect.top - pad),
+                            size = Size(animRect.width + pad * 2, animRect.height + pad * 2),
                             cornerRadius = CornerRadius(cornerPx, cornerPx),
                             blendMode = BlendMode.Clear,
                         )
@@ -157,11 +191,11 @@ fun SpotlightGuide(
             var tipHeight by remember(index) { mutableIntStateOf(0) }
             // 구멍(타원/원)의 실제 세로 반지름 → rect가 아니라 구멍 가장자리 기준으로 배치
             val holeHalfH = when (step.shape) {
-                SpotShape.CIRCLE -> maxOf(rect.width, rect.height) / 2f * 1.35f + pad
-                SpotShape.RECT -> rect.height / 2f + pad
+                SpotShape.CIRCLE -> minOf(animRect.width, animRect.height) / 2f * 1.35f + pad
+                SpotShape.RECT -> animRect.height / 2f + pad
             }
-            val holeTop = rect.center.y - holeHalfH
-            val holeBottom = rect.center.y + holeHalfH
+            val holeTop = animRect.center.y - holeHalfH
+            val holeBottom = animRect.center.y + holeHalfH
             val gapPx = with(density) { 24.dp.toPx() }   // 구멍과 문구 사이 간격
             val sidePx = with(density) { 22.dp.toPx() }
             val below = rect.center.y < screenH * 0.5f
@@ -177,16 +211,16 @@ fun SpotlightGuide(
                 Text(
                     "${index + 1} / ${visible.size}",
                     color = Color(0xFF5EE0A8),
-                    fontSize = 11.sp,
+                    fontSize = 13.sp,
                     fontWeight = FontWeight.ExtraBold,
                 )
                 Spacer(Modifier.padding(top = 6.dp))
                 Text(
                     step.message,
                     color = Color.White,
-                    fontSize = 14.sp,
+                    fontSize = 16.sp,
                     fontWeight = FontWeight.Bold,
-                    lineHeight = 21.sp,
+                    lineHeight = 23.sp,
                 )
                 Spacer(Modifier.padding(top = 14.dp))
                 Row(verticalAlignment = Alignment.CenterVertically) {
@@ -223,7 +257,7 @@ fun SpotlightGuide(
                             color = Color.White.copy(alpha = 0.62f),
                             fontSize = 13.sp,
                             modifier = Modifier
-                                .noRippleClickable { onFinish() }
+                                .noRippleClickable { finish() }
                                 .padding(vertical = 4.dp, horizontal = 2.dp),
                         )
                     }

@@ -6,7 +6,10 @@ import timber.log.Timber
 /**
  * 금융 앱 결제/입출금 알림에서 금액·계좌·입출금 구분을 파싱.
  *
- * v3: 모든 숫자 알림을 받되, 입출금/결제 키워드가 있는 건만 거래로 인정(노이즈 1차 필터).
+ * v3: 앱을 가리지 않고 받되(화이트리스트 없음), 입출금/결제 키워드 + "돈 형태" 금액(Layer 2)을
+ * 갖춘 것만 거래로 인정.
+ * - Layer 2: 금액이 `원` 단위(6,500원)이거나 잔액·마스킹 계좌번호를 동반할 때만 인정.
+ *   맨숫자(예: 메신저 "[ABC] 1")는 탈락 → 노이즈 차단.
  * 취소·환불 키워드는 마이너스(-) 지출로 처리.
  * 파싱 규칙은 우선 하드코딩, 이후 Remote Config로 확장 예정.
  */
@@ -64,7 +67,12 @@ object NotificationParser {
         // 입출금/결제/취소 키워드가 하나도 없으면 거래 아님 → 노이즈로 무시
         if (!isRefund && !isIncome && !isExpense) return null
 
-        val magnitude = extractAmount(content) ?: return null
+        val balance = BALANCE_REGEX.find(content)?.groupValues?.get(1)?.toLongAmount()
+        val account = ACCOUNT_REGEX.find(content)?.value
+
+        // Layer 2: "돈 형태" 금액만 인정 (잔액/계좌번호 동반이 강한 신호). 맨숫자 노이즈는 여기서 탈락.
+        val magnitude = extractMoneyAmount(content, hasStrongSignal = balance != null || account != null)
+            ?: return null
 
         val type: TransactionType
         val amount: Long
@@ -73,9 +81,6 @@ object NotificationParser {
             isIncome -> { type = TransactionType.INCOME; amount = magnitude }
             else -> { type = TransactionType.EXPENSE; amount = magnitude }
         }
-
-        val balance = BALANCE_REGEX.find(content)?.groupValues?.get(1)?.toLongAmount()
-        val account = ACCOUNT_REGEX.find(content)?.value
 
         Timber.d("parse: pkg=$packageName type=$type amount=$amount account=$account balance=$balance")
 
@@ -89,9 +94,17 @@ object NotificationParser {
         )
     }
 
-    private fun extractAmount(content: String): Long? {
-        AMOUNT_NEAR_KEYWORD_REGEX.find(content)?.groupValues?.get(1)?.toLongAmount()?.let { return it }
+    /**
+     * Layer 2 — "돈 형태" 금액만 인정해 노이즈(메신저·메일 등)를 거른다.
+     * - `원` 단위 금액(6,500원 / 1원)은 무조건 인정 (가장 강한 신호, 위치 무관)
+     * - 원이 없으면 잔액·마스킹 계좌번호를 동반한 경우에만 키워드 뒤 숫자를 인정
+     * - 그 외 맨숫자(예: 메신저 "[ABC] 승인 1")는 거래 아님 → null
+     */
+    private fun extractMoneyAmount(content: String, hasStrongSignal: Boolean): Long? {
         AMOUNT_WON_REGEX.find(content)?.groupValues?.get(1)?.toLongAmount()?.let { return it }
+        if (hasStrongSignal) {
+            AMOUNT_NEAR_KEYWORD_REGEX.find(content)?.groupValues?.get(1)?.toLongAmount()?.let { return it }
+        }
         return null
     }
 

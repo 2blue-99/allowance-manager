@@ -9,13 +9,16 @@ import androidx.activity.SystemBarStyle
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.viewModels
+import androidx.compose.material3.Text
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
 import androidx.navigation.compose.rememberNavController
-import com.allowance.manager.core.designsystem.CommonDialog
+import com.allowance.manager.core.designsystem.component.AmDialog
 import com.allowance.manager.core.designsystem.theme.AllowanceManagerTheme
+import com.allowance.manager.core.designsystem.theme.AmColors
+import com.allowance.manager.core.designsystem.theme.AmType
 import com.allowance.manager.navigation.AppNavHost
 import com.allowance.manager.service.StatusBarService
 import com.google.firebase.messaging.FirebaseMessaging
@@ -57,10 +60,11 @@ class MainActivity : ComponentActivity() {
                     AppNavHost(navController = navController, startDestination = start)
 
                     if (uiState.showForceUpdateDialog) {
-                        CommonDialog(
-                            message = uiState.updateNote,
-                            primaryButtonText = "업데이트",
-                            onPrimaryClick = {
+                        AmDialog(
+                            title = "업데이트 안내",
+                            // 강제 업데이트 → 닫기/뒤로로 닫히지 않음(무동작), 업데이트만 진행
+                            onDismiss = {},
+                            onConfirm = {
                                 startActivity(
                                     Intent(
                                         Intent.ACTION_VIEW,
@@ -68,9 +72,11 @@ class MainActivity : ComponentActivity() {
                                     )
                                 )
                             },
-                            secondaryButtonText = "닫기",
-                            onSecondaryClick = {},
-                        )
+                            confirmText = "업데이트",
+                            dismissText = "닫기",
+                        ) {
+                            Text(uiState.updateNote, style = AmType.body, color = AmColors.TextSecondary)
+                        }
                     }
                 }
             }

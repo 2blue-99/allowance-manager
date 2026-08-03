@@ -52,8 +52,8 @@ class TransactionRepositoryImpl @Inject constructor(
             }
         }
 
-    override suspend fun setIgnored(id: Long, ignored: Boolean) {
-        transactionDao.getById(id)?.let { transactionDao.update(it.copy(isIgnored = ignored)) }
+    override suspend fun setHidden(id: Long, hidden: Boolean) {
+        transactionDao.getById(id)?.let { transactionDao.update(it.copy(isHidden = hidden)) }
     }
 
     // 마스킹 계좌 대조는 SQL로 불가 → 미매칭 내역을 불러와 도메인 규칙으로 판정 후 일괄 승격
@@ -67,6 +67,26 @@ class TransactionRepositoryImpl @Inject constructor(
     // 출처(앱) 기준 승격은 SQL로 처리 (계좌번호 없는 같은 packageName 내역)
     override suspend fun promoteToMainBySource(packageName: String, accountId: Long) =
         transactionDao.promoteBySource(packageName, accountId)
+
+    // 번호 기준은 마스킹 대조가 필요해 도메인에서 필터, 출처 기준은 SQL로 처리
+    override suspend fun countMatchingForIgnore(pattern: String?, packageName: String): Int =
+        if (pattern != null) {
+            transactionDao.getWithExtractedAccount()
+                .count { MaskedAccount.matches(it.extractedAccount, pattern) }
+        } else {
+            transactionDao.countBySource(packageName)
+        }
+
+    override suspend fun deleteMatchingForIgnore(pattern: String?, packageName: String) {
+        if (pattern != null) {
+            val ids = transactionDao.getWithExtractedAccount()
+                .filter { MaskedAccount.matches(it.extractedAccount, pattern) }
+                .map { it.id }
+            if (ids.isNotEmpty()) transactionDao.deleteByIds(ids)
+        } else {
+            transactionDao.deleteBySource(packageName)
+        }
+    }
 }
 
 private fun Transaction.toEntity() = TransactionEntity(
@@ -80,7 +100,7 @@ private fun Transaction.toEntity() = TransactionEntity(
     accountId = accountId,
     category = category?.name,
     memo = memo,
-    isIgnored = isIgnored,
+    isHidden = isHidden,
     isManual = isManual,
     createdAt = createdAt,
 )
@@ -96,7 +116,7 @@ private fun TransactionEntity.toDomain() = Transaction(
     accountId = accountId,
     category = category?.let { runCatching { TransactionCategory.valueOf(it) }.getOrNull() },
     memo = memo,
-    isIgnored = isIgnored,
+    isHidden = isHidden,
     isManual = isManual,
     createdAt = createdAt,
 )

@@ -11,10 +11,10 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import com.allowance.manager.core.designsystem.theme.AmColors
 import com.allowance.manager.core.designsystem.theme.AmShape
@@ -48,22 +48,23 @@ fun AmDialog(
                 .padding(AmSpacing.xl),
         ) {
             Text(title, style = AmType.dialogTitle, color = AmColors.TextPrimary)
-            Spacer(Modifier.height(AmSpacing.lg))
+            Spacer(Modifier.height(22.dp))   // 타이틀 아래 간격 (A안: 기존 16 → 22)
             content()
             Spacer(Modifier.height(AmSpacing.xl))
             Row(
                 modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(AmSpacing.xl, Alignment.End),
-                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(AmSpacing.md),
             ) {
                 // dismissText가 비면 취소 버튼 숨김 (단일 버튼 다이얼로그 지원)
                 if (dismissText.isNotBlank()) {
-                    AmTextButton(text = dismissText, onClick = onDismiss, color = AmColors.TextSecondary)
+                    AmSecondaryButton(text = dismissText, onClick = onDismiss, modifier = Modifier.weight(1f))
                 }
-                AmTextButton(
+                AmButton(
                     text = confirmText,
                     onClick = { if (confirmEnabled) onConfirm() },
-                    color = if (confirmEnabled) confirmColor else AmColors.TextTertiary,
+                    enabled = confirmEnabled,
+                    containerColor = confirmColor,
+                    modifier = Modifier.weight(1f),
                 )
             }
         }

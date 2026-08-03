@@ -13,10 +13,8 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -31,6 +29,7 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.allowance.manager.core.designsystem.component.AmButton
 import com.allowance.manager.core.designsystem.component.AmCard
+import com.allowance.manager.core.designsystem.component.AmDialog
 import com.allowance.manager.core.designsystem.component.AmScreenHeader
 import com.allowance.manager.core.designsystem.component.AmTextButton
 import com.allowance.manager.core.designsystem.component.AmTextField
@@ -182,24 +181,23 @@ private fun EditAccountDialog(
     onSave: () -> Unit,
     onCancel: () -> Unit,
 ) {
-    AlertDialog(
-        onDismissRequest = onCancel,
-        title = { Text("계좌 수정") },
-        text = {
-            Column(verticalArrangement = Arrangement.spacedBy(AmSpacing.sm)) {
-                AmTextField(
-                    value = account.bankName,
-                    onValueChange = { onChange(it, account.accountPattern) },
-                    label = "은행/앱 이름",
-                )
-                AmTextField(
-                    value = account.accountPattern,
-                    onValueChange = { onChange(account.bankName, it) },
-                    label = "계좌 패턴",
-                )
-            }
-        },
-        confirmButton = { TextButton(onClick = onSave, enabled = account.accountPattern.isNotBlank()) { Text("저장") } },
-        dismissButton = { TextButton(onClick = onCancel) { Text("취소") } },
-    )
+    AmDialog(
+        title = "계좌 수정",
+        onDismiss = onCancel,
+        onConfirm = onSave,
+        confirmEnabled = account.accountPattern.isNotBlank(),
+    ) {
+        Column(verticalArrangement = Arrangement.spacedBy(AmSpacing.sm)) {
+            AmTextField(
+                value = account.bankName,
+                onValueChange = { onChange(it, account.accountPattern) },
+                label = "은행/앱 이름",
+            )
+            AmTextField(
+                value = account.accountPattern,
+                onValueChange = { onChange(account.bankName, it) },
+                label = "계좌 패턴",
+            )
+        }
+    }
 }

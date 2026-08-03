@@ -1,19 +1,18 @@
 package com.allowance.manager.core.designsystem.component
 
 import androidx.compose.animation.core.animateFloatAsState
-import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.foundation.layout.height
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
-import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.Dp
@@ -28,6 +27,8 @@ val AmButtonHeight: Dp = 52.dp
 /**
  * 기본 Primary 버튼. Material Button을 감싸 브랜드 컬러(테마 primary=에메랄드) 사용.
  * 전체폭이 필요하면 modifier에 fillMaxWidth() 전달.
+ *
+ * @param containerColor 채움색을 덮어쓸 때(예: 삭제=빨강). null이면 테마 primary(에메랄드).
  */
 @Composable
 fun AmButton(
@@ -36,6 +37,7 @@ fun AmButton(
     modifier: Modifier = Modifier,
     enabled: Boolean = true,
     height: Dp = AmButtonHeight,
+    containerColor: Color? = null,
 ) {
     val interaction = remember { MutableInteractionSource() }
     val pressed by interaction.collectIsPressedAsState()
@@ -44,6 +46,11 @@ fun AmButton(
         onClick = onClick,
         enabled = enabled,
         shape = AmShape.card,
+        colors = if (containerColor != null) {
+            ButtonDefaults.buttonColors(containerColor = containerColor, contentColor = Color.White)
+        } else {
+            ButtonDefaults.buttonColors()
+        },
         interactionSource = interaction,
         modifier = modifier
             .height(height)
@@ -54,10 +61,11 @@ fun AmButton(
 }
 
 /**
- * 보조(Outlined) 버튼. '취소' 등 Primary와 나란히 놓는 중립 액션에 사용.
+ * 보조(회색 채움) 버튼. '취소' 등 Primary와 나란히 놓는 중립 액션에 사용(토스식 채움 톤).
+ * Primary와 같은 '채움' 언어라 한 세트로 자연스럽게 보인다.
  */
 @Composable
-fun AmOutlinedButton(
+fun AmSecondaryButton(
     text: String,
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
@@ -66,14 +74,15 @@ fun AmOutlinedButton(
 ) {
     val interaction = remember { MutableInteractionSource() }
     val pressed by interaction.collectIsPressedAsState()
-    val scale by animateFloatAsState(if (pressed) 0.97f else 1f, label = "amOutlinedButtonScale")
-    OutlinedButton(
+    val scale by animateFloatAsState(if (pressed) 0.97f else 1f, label = "amSecondaryButtonScale")
+    Button(
         onClick = onClick,
         enabled = enabled,
         shape = AmShape.card,
-        // 기본 outline(테마)이 검게 보여 명시적 회색 테두리 + 중립 텍스트로 지정
-        border = BorderStroke(1.dp, AmColors.BarTrack),
-        colors = ButtonDefaults.outlinedButtonColors(contentColor = AmColors.TextSecondary),
+        colors = ButtonDefaults.buttonColors(
+            containerColor = AmColors.NeutralBtnBg,
+            contentColor = AmColors.NeutralBtnText,
+        ),
         interactionSource = interaction,
         modifier = modifier
             .height(height)
@@ -91,7 +100,7 @@ fun AmTextButton(
     text: String,
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
-    color: androidx.compose.ui.graphics.Color = AmColors.TextSecondary,
+    color: Color = AmColors.TextSecondary,
     fontSize: androidx.compose.ui.unit.TextUnit = 13.sp,
     fontWeight: FontWeight = FontWeight.Bold,
 ) {

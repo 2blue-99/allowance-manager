@@ -10,7 +10,7 @@ import androidx.room.PrimaryKey
  *
  * - amount: 지출=양수, 취소/환불=음수(type=EXPENSE), 입금=양수(type=INCOME)
  * - accountId: 매칭된 등록계좌 id. null 이면 비메인(예산 미반영)
- * - 이번달 지출 합계 = SUM(amount) WHERE type='EXPENSE' AND account_id NOT NULL AND is_ignored=0
+ * - 이번달 지출 합계 = SUM(amount) WHERE type='EXPENSE' AND account_id NOT NULL AND is_hidden=0
  */
 @Entity(
     tableName = "transactions",
@@ -33,8 +33,8 @@ data class TransactionEntity(
     val accountId: Long?,                   // null = 비메인
     val category: String?,                  // TransactionCategory.name, null = 미분류
     val memo: String?,
-    @ColumnInfo(name = "is_ignored")
-    val isIgnored: Boolean = false,
+    @ColumnInfo(name = "is_hidden")
+    val isHidden: Boolean = false,
     @ColumnInfo(name = "is_manual")
     val isManual: Boolean = false,
     @ColumnInfo(name = "created_at")

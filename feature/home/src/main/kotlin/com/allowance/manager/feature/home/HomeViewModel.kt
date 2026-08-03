@@ -18,8 +18,10 @@ import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
+import com.allowance.manager.core.domain.usecase.ignore.AddIgnoredAccountUseCase
+import com.allowance.manager.core.domain.usecase.ignore.CountIgnorableTransactionsUseCase
 import com.allowance.manager.core.domain.usecase.transaction.DeleteTransactionUseCase
-import com.allowance.manager.core.domain.usecase.transaction.IgnoreTransactionUseCase
+import com.allowance.manager.core.domain.usecase.transaction.HideTransactionUseCase
 import com.allowance.manager.core.domain.usecase.transaction.ObserveCurrentTransactionsUseCase
 import com.allowance.manager.core.domain.usecase.transaction.AddManualTransactionUseCase
 import com.allowance.manager.core.domain.usecase.transaction.PromoteToMainUseCase
@@ -63,7 +65,9 @@ class HomeViewModel @Inject constructor(
     getHomeFilterUseCase: GetHomeFilterUseCase,
     getUserTypeUseCase: GetUserTypeUseCase,
     private val setHomeFilterUseCase: SetHomeFilterUseCase,
-    private val ignoreTransactionUseCase: IgnoreTransactionUseCase,
+    private val hideTransactionUseCase: HideTransactionUseCase,
+    private val addIgnoredAccountUseCase: AddIgnoredAccountUseCase,
+    private val countIgnorableTransactionsUseCase: CountIgnorableTransactionsUseCase,
     private val deleteTransactionUseCase: DeleteTransactionUseCase,
     private val promoteToMainUseCase: PromoteToMainUseCase,
     private val updateTransactionUseCase: UpdateTransactionUseCase,
@@ -113,7 +117,7 @@ class HomeViewModel @Inject constructor(
                 val spentRatio = if (status.budget > 0) (status.spent.toFloat() / status.budget).coerceIn(0f, 1f) else 0f
                 // 이번 달 수입 = 사이클 내 집계대상(메인·수동) · 무시 아님 · INCOME
                 val income = transactions
-                    .filter { it.isCounted && !it.isIgnored && it.type == TransactionType.INCOME }
+                    .filter { it.isCounted && !it.isHidden && it.type == TransactionType.INCOME }
                     .sumOf { it.amount }
 
                 HomeUiState(
@@ -144,9 +148,17 @@ class HomeViewModel @Inject constructor(
         viewModelScope.launch { setHomeFilterUseCase(next) }       // 저장은 뒤따름
     }
 
-    fun onSetIgnored(id: Long, ignored: Boolean) {
-        viewModelScope.launch { ignoreTransactionUseCase(id, ignored) }
+    fun onSetHidden(id: Long, hidden: Boolean) {
+        viewModelScope.launch { hideTransactionUseCase(id, hidden) }
     }
+
+    /** 무시 등록 + 과거 내역 소급 삭제 (출처/계좌 기준) */
+    fun onIgnoreSource(tx: Transaction) {
+        viewModelScope.launch { addIgnoredAccountUseCase(tx) }
+    }
+
+    /** 무시 시 삭제될 기존 내역 건수 (다이얼로그 표시용) */
+    suspend fun countIgnorable(tx: Transaction): Int = countIgnorableTransactionsUseCase(tx)
 
     fun onDelete(id: Long) {
         viewModelScope.launch { deleteTransactionUseCase(id) }

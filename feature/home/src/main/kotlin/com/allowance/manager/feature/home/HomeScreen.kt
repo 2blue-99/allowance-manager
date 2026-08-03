@@ -82,7 +82,7 @@ import com.allowance.manager.core.designsystem.component.AmButton
 import com.allowance.manager.core.designsystem.component.AmCard
 import com.allowance.manager.core.designsystem.component.AmChip
 import com.allowance.manager.core.designsystem.component.AmDialog
-import com.allowance.manager.core.designsystem.component.AmOutlinedButton
+import com.allowance.manager.core.designsystem.component.AmSecondaryButton
 import com.allowance.manager.core.designsystem.component.AmProgressBar
 import com.allowance.manager.core.designsystem.component.AmThousandsTransformation
 import com.allowance.manager.core.designsystem.component.AmTextField
@@ -111,14 +111,18 @@ import kotlin.math.roundToInt
 
 @Composable
 fun HomeRoute(
+    guideTargets: SnapshotStateMap<String, Rect>,
     viewModel: HomeViewModel = hiltViewModel(),
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val showGuide by viewModel.showGuide.collectAsStateWithLifecycle()
     HomeScreen(
         uiState = uiState,
+        guideTargets = guideTargets,
         onFilterChip = viewModel::onFilterChip,
-        onSetIgnored = viewModel::onSetIgnored,
+        onSetHidden = viewModel::onSetHidden,
+        onIgnoreSource = viewModel::onIgnoreSource,
+        countIgnorable = viewModel::countIgnorable,
         onDelete = viewModel::onDelete,
         onPromoteToMain = viewModel::onPromoteToMain,
         onSaveTransaction = viewModel::onSaveTransaction,
@@ -131,8 +135,12 @@ fun HomeRoute(
 @Composable
 fun HomeScreen(
     uiState: HomeUiState,
+    // 바텀 네비(월별/통계)까지 가리키려면 좌표 저장소를 상위(AppNavHost)에서 공유받는다
+    guideTargets: SnapshotStateMap<String, Rect> = rememberGuideTargets(),
     onFilterChip: (LedgerFilterChip) -> Unit = {},
-    onSetIgnored: (Long, Boolean) -> Unit = { _, _ -> },
+    onSetHidden: (Long, Boolean) -> Unit = { _, _ -> },
+    onIgnoreSource: (Transaction) -> Unit = {},
+    countIgnorable: suspend (Transaction) -> Int = { 0 },
     onDelete: (Long) -> Unit = {},
     onPromoteToMain: (Transaction) -> Unit = {},
     onSaveTransaction: (Long, String, TransactionCategory?) -> Unit = { _, _, _ -> },
@@ -144,7 +152,15 @@ fun HomeScreen(
     var selected by remember { mutableStateOf<Transaction?>(null) }
     var pendingDelete by remember { mutableStateOf<Transaction?>(null) }
     var showAdd by remember { mutableStateOf(false) }
-    val guideTargets = rememberGuideTargets()
+    // 화면 진입 직후 바로 띄우면 어색 → 0.5초 뒤에 가이드 노출 (이후 SpotlightGuide가 페이드 인)
+    var guideReady by remember { mutableStateOf(false) }
+    LaunchedEffect(showGuide) {
+        guideReady = false
+        if (showGuide) {
+            delay(500)
+            guideReady = true
+        }
+    }
     val snackbarHostState = remember { SnackbarHostState() }
     var pendingToast by remember { mutableStateOf<String?>(null) }
     val haptic = LocalHapticFeedback.current
@@ -164,9 +180,11 @@ fun HomeScreen(
                 uiState = uiState,
                 onFilterChip = onFilterChip,
                 onSelect = { selected = it },
-                onIgnore = { onSetIgnored(it.id, !it.isIgnored) },
+                onToggleHidden = { onSetHidden(it.id, !it.isHidden) },
                 onRequestDelete = { pendingDelete = it },
                 guideTargets = guideTargets,
+                // 예시(디폴트) 아이템은 가이드가 떠 있을 때만 노출 → 가이드 종료 시 사라짐
+                showSample = showGuide,
                 modifier = Modifier.weight(1f),
             )
         }
@@ -175,11 +193,13 @@ fun HomeScreen(
             TransactionDetailSheet(
                 tx = tx,
                 onDismiss = { selected = null },
-                onSetIgnored = onSetIgnored,
+                onSetHidden = onSetHidden,
                 onDelete = onDelete,
                 onPromoteToMain = onPromoteToMain,
                 onSaveTransaction = onSaveTransaction,
                 onSaved = { pendingToast = "저장이 완료되었습니다." },
+                onIgnoreSource = onIgnoreSource,
+                countIgnorable = countIgnorable,
             )
         }
 
@@ -219,7 +239,7 @@ fun HomeScreen(
         )
 
         // 최초 진입 가이드(스포트라이트). 시트가 안 떠 있을 때만.
-        if (showGuide && selected == null && !showAdd) {
+        if (guideReady && showGuide && selected == null && !showAdd) {
             SpotlightGuide(
                 steps = homeGuideSteps(uiState.userType),
                 targets = guideTargets,
@@ -247,8 +267,13 @@ private fun homeGuideSteps(type: UserType): List<GuideStep> = listOf(
     ),
     GuideStep(
         "fab",
-        "추가하고 싶은 입·출금은\n직접 추가할 수 있어요.",
+        "자동으로 잡히지 않는 입·출금은\n직접 추가할 수 있어요.",
         SpotShape.CIRCLE,
+    ),
+    GuideStep(
+        listOf("calendar", "stats"),
+        "월별로 내역을 자세히 보고,\n통계에서 소비 추이와 카테고리별 분석을 확인해\n체계적으로 관리해요.",
+        SpotShape.RECT,
     ),
 )
 
@@ -418,9 +443,10 @@ private fun BottomContent(
     uiState: HomeUiState,
     onFilterChip: (LedgerFilterChip) -> Unit,
     onSelect: (Transaction) -> Unit,
-    onIgnore: (Transaction) -> Unit,
+    onToggleHidden: (Transaction) -> Unit,
     onRequestDelete: (Transaction) -> Unit,
     guideTargets: SnapshotStateMap<String, Rect>,
+    showSample: Boolean,
     modifier: Modifier = Modifier,
 ) {
     // 월별과 동일 구조: 헤더는 clip(sheetTop) 밖, 리스트만 독립 clip Box 안.
@@ -445,20 +471,20 @@ private fun BottomContent(
                     // 신규 유저(빈 리스트): 가이드 3번째 스텝 대상을 EmptyState로 잡아 안내
                     item {
                         Box(Modifier.fillMaxWidth().guideTarget("firstItem", guideTargets)) {
-                            EmptyState(filter = uiState.filter)
+                            EmptyState(filter = uiState.filter, showSample = showSample)
                         }
                     }
                 } else {
                     itemsIndexed(uiState.transactions, key = { _, tx -> tx.id }) { index, tx ->
-                        // 왼쪽으로 밀면 무시·삭제 액션 노출. 첫 항목은 가이드 대상으로 등록.
+                        // 왼쪽으로 밀면 숨김·삭제 액션 노출. 첫 항목은 가이드 대상으로 등록.
                         val rowModifier = if (index == 0) {
                             Modifier.animateItem().guideTarget("firstItem", guideTargets)
                         } else {
                             Modifier.animateItem()
                         }
                         SwipeRevealRow(
-                            ignored = tx.isIgnored,
-                            onIgnore = { onIgnore(tx) },
+                            hidden = tx.isHidden,
+                            onToggleHidden = { onToggleHidden(tx) },
                             onDelete = { onRequestDelete(tx) },
                             modifier = rowModifier,
                         ) {
@@ -472,10 +498,25 @@ private fun BottomContent(
 }
 
 @Composable
-private fun EmptyState(filter: LedgerFilter) {
-    // 전체(=신규 유저, 데이터 자체가 없음): 예시 샘플 + 안내
+private fun EmptyState(filter: LedgerFilter, showSample: Boolean) {
+    // 전체(=신규 유저, 데이터 자체가 없음)
     if (filter.isAll) {
-        SampleHint()
+        // 예시(디폴트) 아이템은 가이드가 떠 있을 때만. 가이드 종료 후엔 담백한 안내로.
+        if (showSample) {
+            SampleHint()
+        } else {
+            AmCard(modifier = Modifier.fillMaxWidth(), contentPadding = PaddingValues(vertical = 28.dp)) {
+                Box(modifier = Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
+                    Text(
+                        "아직 내역이 없어요.\n결제 알림이 오면 자동으로 기록돼요.",
+                        style = AmType.caption,
+                        color = AmColors.TextSecondary,
+                        textAlign = TextAlign.Center,
+                        lineHeight = 18.sp,
+                    )
+                }
+            }
+        }
         return
     }
     // 필터로 인해 비어 있는 경우: 안내 문구만
@@ -550,7 +591,8 @@ private fun AddTransactionSheet(
     var type by remember { mutableStateOf(TransactionType.EXPENSE) }
     var amountText by remember { mutableStateOf("") }
     var source by remember { mutableStateOf("") }
-    var category by remember { mutableStateOf<TransactionCategory?>(null) }
+    // 디폴트 카테고리 = 기타
+    var category by remember { mutableStateOf<TransactionCategory?>(TransactionCategory.ETC) }
     var memo by remember { mutableStateOf("") }
     val amount = amountText.toLongOrNull() ?: 0L
     val canAdd = amount > 0 && source.isNotBlank()
@@ -627,7 +669,7 @@ private fun AddTransactionSheet(
                 modifier = Modifier.fillMaxWidth().padding(horizontal = 20.dp).padding(vertical = 10.dp),
                 horizontalArrangement = Arrangement.spacedBy(12.dp),
             ) {
-                AmOutlinedButton("취소", onClick = { close() }, modifier = Modifier.weight(1f))
+                AmSecondaryButton("취소", onClick = { close() }, modifier = Modifier.weight(1f))
                 AmButton(
                     "추가",
                     onClick = { onAdd(type, amount, source, category, memo); close() },

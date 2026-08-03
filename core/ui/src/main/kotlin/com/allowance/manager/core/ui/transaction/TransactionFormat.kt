@@ -25,7 +25,7 @@ fun signedAmount(tx: Transaction): String {
     }
 }
 
-/** 금액 색상. 흐림(무시·미등록) 우선, 그 외 수입·환불=초록, 지출=빨강. */
+/** 금액 색상. 흐림(숨김·미등록) 우선, 그 외 수입·환불=초록, 지출=빨강. */
 fun amountColor(tx: Transaction, dim: Boolean): Color = when {
     dim -> AmColors.TextSecondary
     tx.type == TransactionType.INCOME || tx.amount < 0 -> AmColors.Emerald

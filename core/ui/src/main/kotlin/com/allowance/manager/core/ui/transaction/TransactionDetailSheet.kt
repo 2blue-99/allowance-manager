@@ -1,6 +1,7 @@
 package com.allowance.manager.core.ui.transaction
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
@@ -28,6 +29,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
@@ -41,7 +43,7 @@ import com.allowance.manager.core.designsystem.component.AmButton
 import com.allowance.manager.core.designsystem.component.AmCard
 import com.allowance.manager.core.designsystem.component.AmChip
 import com.allowance.manager.core.designsystem.component.AmDialog
-import com.allowance.manager.core.designsystem.component.AmOutlinedButton
+import com.allowance.manager.core.designsystem.component.AmSecondaryButton
 import com.allowance.manager.core.designsystem.component.AmTextField
 import com.allowance.manager.core.designsystem.component.AmToggle
 import com.allowance.manager.core.designsystem.theme.AmColors
@@ -56,7 +58,7 @@ import kotlinx.coroutines.launch
 /**
  * 내역 상세·편집 바텀시트. 홈·월별 등 내역을 탭했을 때 공통으로 띄운다.
  *
- * - 합계 제외(무시)·메인 계좌 등록 토글은 로컬 상태로만 두고 '저장'에서 실제 반영
+ * - 숨김(합계 제외)·메인 계좌 등록 토글은 로컬 상태로만 두고 '저장'에서 실제 반영
  * - 분류/메모 수정도 저장 시 upsert
  * - 실제로 바뀐 항목이 있을 때만 [onSaved] 콜백 호출 (스낵바 등)
  */
@@ -65,11 +67,14 @@ import kotlinx.coroutines.launch
 fun TransactionDetailSheet(
     tx: Transaction,
     onDismiss: () -> Unit,
-    onSetIgnored: (Long, Boolean) -> Unit,
+    onSetHidden: (Long, Boolean) -> Unit,
     onDelete: (Long) -> Unit,
     onPromoteToMain: (Transaction) -> Unit,
     onSaveTransaction: (Long, String, TransactionCategory?) -> Unit,
     onSaved: () -> Unit = {},
+    // 무시(출처/계좌 차단): 등록 + 과거 내역 소급 삭제. 비메인·자동감지 내역에만 노출.
+    onIgnoreSource: (Transaction) -> Unit = {},
+    countIgnorable: suspend (Transaction) -> Int = { 0 },
 ) {
     // 항상 풀로 올라오게(부분 확장 금지)
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
@@ -78,9 +83,11 @@ fun TransactionDetailSheet(
     // 편집 로컬 상태(취소 시 버려짐, 저장 시 upsert)
     var memo by remember(tx.id) { mutableStateOf(tx.memo.orEmpty()) }
     var category by remember(tx.id) { mutableStateOf(tx.category) }
-    var ignored by remember(tx.id) { mutableStateOf(tx.isIgnored) }
+    var hidden by remember(tx.id) { mutableStateOf(tx.isHidden) }
     var promote by remember(tx.id) { mutableStateOf(tx.isMain) }
     var showDeleteConfirm by remember(tx.id) { mutableStateOf(false) }
+    var showIgnoreConfirm by remember(tx.id) { mutableStateOf(false) }
+    var ignoreCount by remember(tx.id) { mutableIntStateOf(0) }
 
     // 슬라이드 아웃 후 닫기
     fun close() {
@@ -137,10 +144,10 @@ fun TransactionDetailSheet(
                 ) {
                     Column(modifier = Modifier.fillMaxWidth()) {
                         SheetToggleRow(
-                            title = "이번 달 합계에서 제외",
+                            title = "이번 달 합계에서 숨기기",
                             // 로컬 토글만 바꾸고 실제 반영은 저장 시
-                            checked = ignored,
-                            onCheckedChange = { ignored = it },
+                            checked = hidden,
+                            onCheckedChange = { hidden = it },
                         )
                         Box(
                             modifier = Modifier
@@ -160,6 +167,15 @@ fun TransactionDetailSheet(
                     }
                 }
 
+                // 무시(출처/계좌 차단) — 비메인·자동감지 내역에만. 숨김과 달리 알림 자체를 안 받음.
+                if (!tx.isMain && !tx.isManual) {
+                    Spacer(Modifier.height(14.dp))
+                    IgnoreSourceButton(
+                        label = if (!tx.extractedAccount.isNullOrBlank()) "해당 계좌 알림 무시하기" else "해당 출처 알림 무시하기",
+                        onClick = { scope.launch { ignoreCount = countIgnorable(tx); showIgnoreConfirm = true } },
+                    )
+                }
+
                 Spacer(Modifier.height(24.dp))
                 SheetLabel("분류")
                 Spacer(Modifier.height(10.dp))
@@ -167,7 +183,8 @@ fun TransactionDetailSheet(
                     TransactionCategory.entries.forEach { cat ->
                         AmChip(
                             label = "${cat.emoji} ${cat.label}",
-                            selected = category == cat,
+                            // 미지정은 기타로 취급 → 기타 칩이 기본 선택으로 보임
+                            selected = (category ?: TransactionCategory.ETC) == cat,
                         ) { category = if (category == cat) null else cat }
                     }
                 }
@@ -194,20 +211,20 @@ fun TransactionDetailSheet(
                 modifier = Modifier.fillMaxWidth().padding(horizontal = 20.dp).padding(vertical = 10.dp),
                 horizontalArrangement = Arrangement.spacedBy(12.dp),
             ) {
-                AmOutlinedButton("취소", onClick = { close() }, modifier = Modifier.weight(1f))
+                AmSecondaryButton("취소", onClick = { close() }, modifier = Modifier.weight(1f))
                 AmButton(
                     "저장",
                     onClick = {
                         // 실제로 바뀐 항목만 반영하고, 변경이 있을 때만 저장 알림
                         val memoChanged = memo.trim().ifBlank { null } != tx.memo
                         val categoryChanged = category != tx.category
-                        val ignoredChanged = ignored != tx.isIgnored
+                        val hiddenChanged = hidden != tx.isHidden
                         // 계좌번호 없어도 출처(앱) 기준으로 등록 가능 → extractedAccount 조건 제거
                         val promoteNow = promote && !tx.isMain
                         if (memoChanged || categoryChanged) onSaveTransaction(tx.id, memo, category)
-                        if (ignoredChanged) onSetIgnored(tx.id, ignored)
+                        if (hiddenChanged) onSetHidden(tx.id, hidden)
                         if (promoteNow) onPromoteToMain(tx)
-                        if (memoChanged || categoryChanged || ignoredChanged || promoteNow) onSaved()
+                        if (memoChanged || categoryChanged || hiddenChanged || promoteNow) onSaved()
                         close()
                     },
                     modifier = Modifier.weight(1f),
@@ -227,6 +244,50 @@ fun TransactionDetailSheet(
         ) {
             Text("삭제하면 되돌릴 수 없어요.", style = AmType.body, color = AmColors.TextSecondary)
         }
+    }
+
+    // 무시 확인 (되돌릴 수 없는 동작 → 확인 후 즉시 실행. 저장 버튼과 무관)
+    if (showIgnoreConfirm) {
+        val target = tx.extractedAccount?.takeIf { it.isNotBlank() } ?: tx.sourceName
+        AmDialog(
+            title = "이 알림을 무시할까요?",
+            onDismiss = { showIgnoreConfirm = false },
+            onConfirm = { showIgnoreConfirm = false; onIgnoreSource(tx); close() },
+            confirmText = "무시",
+            confirmColor = AmColors.Red,
+        ) {
+            Text(
+                "${target}에서 오는 알림을 앞으로 받지 않고, 기존 내역 ${ignoreCount}건도 모두 삭제돼요.",
+                style = AmType.body,
+                color = AmColors.TextSecondary,
+            )
+            Spacer(Modifier.height(10.dp))
+            Text(
+                "무시 해제는 설정에서 할 수 있어요.",
+                style = AmType.caption,
+                color = AmColors.TextTertiary,
+            )
+        }
+    }
+}
+
+/** 무시(출처/계좌 차단) 진입 버튼. 경고톤. 탭 → 확인 다이얼로그. */
+@Composable
+private fun IgnoreSourceButton(label: String, onClick: () -> Unit) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(AmShape.card)
+            .background(AmColors.RedBg)
+            .border(1.dp, AmColors.Red.copy(alpha = 0.28f), AmShape.card)
+            .clickable(onClick = onClick)
+            .padding(horizontal = 16.dp, vertical = 15.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Text("🚫", fontSize = 17.sp)
+        Spacer(Modifier.width(11.dp))
+        Text(label, style = AmType.bodyStrong, color = AmColors.Red, modifier = Modifier.weight(1f))
+        Text("›", style = AmType.bodyStrong, color = AmColors.Red.copy(alpha = 0.5f))
     }
 }
 
