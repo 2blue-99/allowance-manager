@@ -53,3 +53,16 @@ class SetHomeGuideShownUseCase @Inject constructor(
 ) {
     suspend operator fun invoke(shown: Boolean) = dataStoreRepository.setHomeGuideShown(shown)
 }
+
+/** 새(미등록) 계좌 감지 배지 — 전체 칩 빨간 점 표시 여부 */
+class GetHomeNewAccountBadgeUseCase @Inject constructor(
+    private val dataStoreRepository: DataStoreRepository,
+) {
+    operator fun invoke(): Flow<Boolean> = dataStoreRepository.getHomeNewAccountBadge()
+}
+
+class SetHomeNewAccountBadgeUseCase @Inject constructor(
+    private val dataStoreRepository: DataStoreRepository,
+) {
+    suspend operator fun invoke(show: Boolean) = dataStoreRepository.setHomeNewAccountBadge(show)
+}

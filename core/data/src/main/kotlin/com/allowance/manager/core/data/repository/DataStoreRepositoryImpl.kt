@@ -43,4 +43,7 @@ class DataStoreRepositoryImpl @Inject constructor(
 
     override fun getHomeGuideShown(): Flow<Boolean> = preferencesDataSource.getHomeGuideShown()
     override suspend fun setHomeGuideShown(shown: Boolean) = preferencesDataSource.setHomeGuideShown(shown)
+
+    override fun getHomeNewAccountBadge(): Flow<Boolean> = preferencesDataSource.getHomeNewAccountBadge()
+    override suspend fun setHomeNewAccountBadge(show: Boolean) = preferencesDataSource.setHomeNewAccountBadge(show)
 }

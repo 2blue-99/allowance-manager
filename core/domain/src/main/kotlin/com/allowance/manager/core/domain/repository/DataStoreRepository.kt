@@ -34,4 +34,8 @@ interface DataStoreRepository {
     /** 홈 최초 진입 가이드(스포트라이트) 노출 완료 여부 */
     fun getHomeGuideShown(): Flow<Boolean>
     suspend fun setHomeGuideShown(shown: Boolean)
+
+    /** 새(미등록) 계좌 감지 배지 — 전체 칩 빨간 점. 전체를 보면 해제 */
+    fun getHomeNewAccountBadge(): Flow<Boolean>
+    suspend fun setHomeNewAccountBadge(show: Boolean)
 }

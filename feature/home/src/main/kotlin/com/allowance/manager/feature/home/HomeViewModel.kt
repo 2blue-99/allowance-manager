@@ -12,8 +12,10 @@ import com.allowance.manager.core.domain.model.toggle
 import com.allowance.manager.core.domain.model.UserType
 import com.allowance.manager.core.domain.usecase.setting.GetHomeFilterUseCase
 import com.allowance.manager.core.domain.usecase.setting.GetHomeGuideShownUseCase
+import com.allowance.manager.core.domain.usecase.setting.GetHomeNewAccountBadgeUseCase
 import com.allowance.manager.core.domain.usecase.setting.SetHomeFilterUseCase
 import com.allowance.manager.core.domain.usecase.setting.SetHomeGuideShownUseCase
+import com.allowance.manager.core.domain.usecase.setting.SetHomeNewAccountBadgeUseCase
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
@@ -55,6 +57,7 @@ data class HomeUiState(
     val transactions: List<Transaction> = emptyList(),
     val filter: LedgerFilter = LedgerFilter.Home,  // 내역 필터 (메인/숨김/전체)
     val userType: UserType = UserType.Default,   // 사용자 유형 → 예산 호칭(용돈/생활비/예산)
+    val showAllBadge: Boolean = false,           // 새(미등록) 계좌 감지 → 전체 칩 빨간 점
     val isLoading: Boolean = true,
 )
 
@@ -75,6 +78,8 @@ class HomeViewModel @Inject constructor(
     private val addManualTransactionUseCase: AddManualTransactionUseCase,
     getHomeGuideShownUseCase: GetHomeGuideShownUseCase,
     private val setHomeGuideShownUseCase: SetHomeGuideShownUseCase,
+    private val getHomeNewAccountBadgeUseCase: GetHomeNewAccountBadgeUseCase,
+    private val setHomeNewAccountBadgeUseCase: SetHomeNewAccountBadgeUseCase,
     private val analytics: AnalyticsHelper,
 ) : BaseViewModel() {
 
@@ -97,14 +102,22 @@ class HomeViewModel @Inject constructor(
         // 저장된 필터로 1회 초기화(이후엔 로컬이 소스)
         viewModelScope.launch { filterState.value = getHomeFilterUseCase().first() }
 
+        // 전체를 보는 중이면(배지 && 전체선택) '새 계좌' 배지 자동 해제 (B안)
+        viewModelScope.launch {
+            combine(getHomeNewAccountBadgeUseCase(), filterState) { badge, filter -> badge && filter.isAll }
+                .collect { if (it) setHomeNewAccountBadgeUseCase(false) }
+        }
+
         viewModelScope.launch {
             combine(
                 observeBudgetStatusUseCase(),
                 observeCurrentTransactionsUseCase(),
                 observeAccountsUseCase(),
-                filterState,
+                combine(filterState, getHomeNewAccountBadgeUseCase()) { f, b -> f to b },
                 getUserTypeUseCase(),
-            ) { status, transactions, _, filter, userType ->
+            ) { status, transactions, _, filterBadge, userType ->
+                val filter = filterBadge.first
+                val newAccountBadge = filterBadge.second
                 // 멀티 토글 필터: 전체(둘 다 꺼짐) / 메인 / 숨김 / 메인+숨김
                 val visible = transactions.filter { filter.matches(it) }
 
@@ -137,6 +150,8 @@ class HomeViewModel @Inject constructor(
                     transactions = visible,
                     filter = filter,
                     userType = userType,
+                    // 배지 true + 전체가 아닐 때만 표시(전체를 보면 위 콜렉터가 자동 해제)
+                    showAllBadge = newAccountBadge && !filter.isAll,
                     isLoading = false,
                 )
             }.collect { _uiState.value = it }

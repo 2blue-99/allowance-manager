@@ -1,14 +1,20 @@
 package com.allowance.manager.core.ui.transaction
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.unit.dp
 import com.allowance.manager.core.designsystem.component.AmChip
 import com.allowance.manager.core.designsystem.theme.AmColors
@@ -25,6 +31,7 @@ fun LedgerFilterChips(
     filter: LedgerFilter,
     onChip: (LedgerFilterChip) -> Unit,
     modifier: Modifier = Modifier,
+    allBadge: Boolean = false,   // 전체 칩에 빨간 점(새 계좌 감지)
 ) {
     Row(modifier = modifier, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
         LedgerFilterChip.entries.forEach { chip ->
@@ -33,7 +40,21 @@ fun LedgerFilterChips(
                 LedgerFilterChip.HIDDEN -> filter.showHidden
                 LedgerFilterChip.ALL -> filter.isAll
             }
-            AmChip(label = chip.label, selected = selected) { onChip(chip) }
+            if (chip == LedgerFilterChip.ALL && allBadge) {
+                Box {
+                    AmChip(label = chip.label, selected = selected) { onChip(chip) }
+                    Box(
+                        modifier = Modifier
+                            .align(Alignment.TopEnd)
+                            .offset(x = 2.dp, y = (-2).dp)
+                            .size(7.dp)
+                            .clip(CircleShape)
+                            .background(AmColors.Red),
+                    )
+                }
+            } else {
+                AmChip(label = chip.label, selected = selected) { onChip(chip) }
+            }
         }
     }
 }
@@ -50,6 +71,7 @@ fun LedgerListHeader(
     filter: LedgerFilter = LedgerFilter.Home,
     onFilterChip: (LedgerFilterChip) -> Unit = {},
     showChips: Boolean = true,
+    allBadge: Boolean = false,
     trailing: (@Composable () -> Unit)? = null,
 ) {
     Row(
@@ -59,7 +81,7 @@ fun LedgerListHeader(
     ) {
         Text(title, style = AmType.labelStrong, color = AmColors.TextPrimary)
         Spacer(Modifier.weight(1f))
-        if (showChips) LedgerFilterChips(filter = filter, onChip = onFilterChip)
+        if (showChips) LedgerFilterChips(filter = filter, onChip = onFilterChip, allBadge = allBadge)
         trailing?.invoke()
     }
 }

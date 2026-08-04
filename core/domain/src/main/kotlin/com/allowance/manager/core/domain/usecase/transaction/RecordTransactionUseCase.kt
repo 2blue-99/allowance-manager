@@ -1,8 +1,10 @@
 package com.allowance.manager.core.domain.usecase.transaction
 
+import com.allowance.manager.core.domain.model.MaskedAccount
 import com.allowance.manager.core.domain.model.ParsedTransaction
 import com.allowance.manager.core.domain.model.Transaction
 import com.allowance.manager.core.domain.repository.AccountRepository
+import com.allowance.manager.core.domain.repository.DataStoreRepository
 import com.allowance.manager.core.domain.repository.IgnoredAccountRepository
 import com.allowance.manager.core.domain.repository.TransactionRepository
 import javax.inject.Inject
@@ -11,11 +13,13 @@ import javax.inject.Inject
  * 알림 파싱 결과를 가계부에 저장.
  * - 무시 계좌(IgnoredAccount)에 매칭되면 저장하지 않고 드롭 → null 반환.
  * - 알림에서 뽑은 마스킹 계좌가 등록된 enabled 계좌와 자리별로 일치하면 메인(accountId)으로 매칭.
+ * - 비메인 + DB에 처음 등장한 계좌/출처면 "새 계좌 감지" 배지(전체 칩 빨간 점)를 켠다.
  */
 class RecordTransactionUseCase @Inject constructor(
     private val transactionRepository: TransactionRepository,
     private val accountRepository: AccountRepository,
     private val ignoredAccountRepository: IgnoredAccountRepository,
+    private val dataStoreRepository: DataStoreRepository,
 ) {
     /** 저장된 내역 id, 무시 계좌 매칭으로 드롭되면 null */
     suspend operator fun invoke(parsed: ParsedTransaction): Long? {
@@ -28,6 +32,15 @@ class RecordTransactionUseCase @Inject constructor(
         val accountId = accountRepository.getEnabled()
             .firstOrNull { it.matchesTransaction(parsed.extractedAccount, parsed.packageName) }
             ?.id
+
+        // 비메인(미등록)이고, 이 계좌/출처의 기존 내역이 하나도 없으면 = 처음 보는 새 계좌 → 배지 ON
+        if (accountId == null) {
+            val pattern = parsed.extractedAccount
+                ?.let { MaskedAccount.normalize(it) }
+                ?.takeIf { it.isNotBlank() }
+            val priorCount = transactionRepository.countMatchingForIgnore(pattern, parsed.packageName)
+            if (priorCount == 0) dataStoreRepository.setHomeNewAccountBadge(true)
+        }
 
         return transactionRepository.record(
             Transaction(

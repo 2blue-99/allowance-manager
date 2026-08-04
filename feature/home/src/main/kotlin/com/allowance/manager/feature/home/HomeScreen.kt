@@ -457,6 +457,7 @@ private fun BottomContent(
         LedgerListHeader(
             filter = uiState.filter,
             onFilterChip = onFilterChip,
+            allBadge = uiState.showAllBadge,
             modifier = Modifier.padding(horizontal = AmSpacing.xl, vertical = AmSpacing.md),
         )
         Box(
