@@ -45,12 +45,15 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.allowance.manager.core.designsystem.component.AmChevron
 import com.allowance.manager.core.designsystem.component.AmChip
+import com.allowance.manager.core.analytics.AmAnalytics
 import com.allowance.manager.core.analytics.LocalAnalyticsHelper
 import com.allowance.manager.core.designsystem.component.AmDialog
 import com.allowance.manager.core.designsystem.component.AmScreenHeader
+import com.allowance.manager.core.designsystem.component.AmSelectableOptionCard
 import com.allowance.manager.core.designsystem.component.AmSettingGroup
 import com.allowance.manager.core.designsystem.component.AmSettingItem
 import com.allowance.manager.core.designsystem.component.AmTextField
+import com.allowance.manager.core.designsystem.component.AmThousandsTransformation
 import com.allowance.manager.core.designsystem.theme.AmColors
 import com.allowance.manager.core.designsystem.theme.AmShape
 import com.allowance.manager.core.designsystem.theme.AmSpacing
@@ -101,7 +104,7 @@ fun SettingRoute(
         onSupport = {
             (context as? Activity)?.let { activity ->
                 donationManager.donate(activity) { result ->
-                    analytics.logEvent("donate_result", mapOf("result" to result.name.lowercase()))
+                    analytics.logEvent(AmAnalytics.Event.DONATE_RESULT, mapOf(AmAnalytics.Param.RESULT to result.name.lowercase()))
                     if (result == DonationManager.Result.SUCCESS) showThanks = true
                 }
             }
@@ -117,7 +120,7 @@ fun SettingRoute(
             onConfirm = { showThanks = false },
             confirmText = "닫기",
             dismissText = "",
-            analyticsTag = "donate_thanks",
+            analyticsTag = AmAnalytics.Dialog.DONATE_THANKS,
         ) {
             // TODO: 감사 문구는 추후 확정 (주인이 전달 예정)
             Text(
@@ -179,7 +182,7 @@ fun SettingScreen(
         LazyColumn {
             item {
                 // 후원 — 카테고리 없이 맨 위, 강조 카드
-                SupportCard(onClick = { analytics.logEvent("setting_donate_click"); onSupport() })
+                SupportCard(onClick = { analytics.logEvent(AmAnalytics.Event.SETTING_DONATE_CLICK); onSupport() })
             }
 
             item {
@@ -221,12 +224,12 @@ fun SettingScreen(
                             }
                         },
                         {
-                            AmSettingItem(title = "계좌 관리", subtitle = "메인 계좌 등록·수정", onClick = { analytics.logEvent("setting_account_manage_click"); onNavigateToAccount() }) {
+                            AmSettingItem(title = "계좌 관리", subtitle = "메인 계좌 등록·수정", onClick = { analytics.logEvent(AmAnalytics.Event.SETTING_ACCOUNT_MANAGE_CLICK); onNavigateToAccount() }) {
                                 AmChevron()
                             }
                         },
                         {
-                            AmSettingItem(title = "무시 계좌 관리", subtitle = "무시한 출처·계좌 조회·해제", onClick = { analytics.logEvent("setting_ignored_manage_click"); onNavigateToIgnored() }) {
+                            AmSettingItem(title = "무시 계좌 관리", subtitle = "무시한 출처·계좌 조회·해제", onClick = { analytics.logEvent(AmAnalytics.Event.SETTING_IGNORED_MANAGE_CLICK); onNavigateToIgnored() }) {
                                 AmChevron()
                             }
                         },
@@ -239,12 +242,12 @@ fun SettingScreen(
                     label = "정보 · 지원",
                     items = listOf(
                         {
-                            AmSettingItem(title = "건의하기", subtitle = "devcoderblue@gmail.com", onClick = { analytics.logEvent("setting_feedback_click"); onFeedback() }) {
+                            AmSettingItem(title = "건의하기", subtitle = "devcoderblue@gmail.com", onClick = { analytics.logEvent(AmAnalytics.Event.SETTING_FEEDBACK_CLICK); onFeedback() }) {
                                 AmChevron()
                             }
                         },
                         {
-                            AmSettingItem(title = "평가하기", subtitle = "플레이스토어에서 별점 남기기", onClick = { analytics.logEvent("setting_rate_click"); onRate() }) {
+                            AmSettingItem(title = "평가하기", subtitle = "플레이스토어에서 별점 남기기", onClick = { analytics.logEvent(AmAnalytics.Event.SETTING_RATE_CLICK); onRate() }) {
                                 AmChevron()
                             }
                         },
@@ -346,6 +349,13 @@ private fun SupportCard(onClick: () -> Unit) {
     }
 }
 
+// 유형별 대표 이모지 — 다이얼로그 옵션 카드 좌측 아이콘
+private fun UserType.emoji(): String = when (this) {
+    UserType.STUDENT -> "👛"
+    UserType.YOUTH -> "🛒"
+    UserType.COMMON -> "🧮"
+}
+
 @Composable
 private fun UserTypeDialog(current: UserType, onSave: (UserType) -> Unit, onDismiss: () -> Unit) {
     var selected by remember { mutableStateOf(current) }
@@ -353,16 +363,18 @@ private fun UserTypeDialog(current: UserType, onSave: (UserType) -> Unit, onDism
         title = "유형 선택",
         onDismiss = onDismiss,
         onConfirm = { onSave(selected) },
-        analyticsTag = "usertype",
-        analyticsParams = mapOf("type" to selected.name.lowercase()),
+        analyticsTag = AmAnalytics.Dialog.USERTYPE,
+        analyticsParams = mapOf(AmAnalytics.Param.TYPE to selected.name.lowercase()),
     ) {
-        Column(verticalArrangement = Arrangement.spacedBy(AmSpacing.md)) {
+        Column(verticalArrangement = Arrangement.spacedBy(AmSpacing.sm)) {
             UserType.entries.forEach { type ->
-                Column {
-                    AmChip(label = type.label, selected = selected == type) { selected = type }
-                    Spacer(Modifier.height(AmSpacing.xs))
-                    Text(type.hint, fontSize = 12.sp, color = AmColors.TextSecondary)
-                }
+                AmSelectableOptionCard(
+                    title = type.label,
+                    subtitle = type.hint,
+                    selected = selected == type,
+                    onClick = { selected = type },
+                    leading = { Text(type.emoji(), fontSize = 18.sp) },
+                )
             }
         }
     }
@@ -377,13 +389,14 @@ private fun BudgetDialog(current: Long, onSave: (Long) -> Unit, onDismiss: () ->
         onDismiss = onDismiss,
         onConfirm = { onSave(amount) },
         confirmEnabled = amount > 0,
-        analyticsTag = "budget",
+        analyticsTag = AmAnalytics.Dialog.BUDGET,
     ) {
         AmTextField(
             value = input,
             onValueChange = { v -> input = v.filter { it.isDigit() } },
             label = "월 예산 (원)",
             keyboardType = KeyboardType.Number,
+            visualTransformation = AmThousandsTransformation(),
         )
     }
 }
@@ -395,8 +408,8 @@ private fun PaydayDialog(current: Int, onSave: (Int) -> Unit, onDismiss: () -> U
         title = "월급일",
         onDismiss = onDismiss,
         onConfirm = { onSave(payday) },
-        analyticsTag = "payday",
-        analyticsParams = mapOf("payday" to payday),
+        analyticsTag = AmAnalytics.Dialog.PAYDAY,
+        analyticsParams = mapOf(AmAnalytics.Param.PAYDAY to payday),
     ) {
         Column(verticalArrangement = Arrangement.spacedBy(AmSpacing.md)) {
             // 온보딩과 동일한 칩 구성 (15/20/25/말일)

@@ -24,6 +24,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.allowance.manager.core.analytics.AmAnalytics
 import com.allowance.manager.core.designsystem.component.AmCard
 import com.allowance.manager.core.designsystem.component.AmDialog
 import com.allowance.manager.core.designsystem.component.AmScreenHeader
@@ -91,8 +92,8 @@ fun IgnoredAccountScreen(
             onDismiss = { pendingRemove = null },
             onConfirm = { onRemove(account.id); pendingRemove = null },
             confirmText = "해제",
-            confirmColor = AmColors.Red,
-            analyticsTag = "ignore_remove",
+            confirmColor = AmColors.Emerald,
+            analyticsTag = AmAnalytics.Dialog.IGNORE_REMOVE,
         ) {
             Text(
                 "${account.sourceName}에서 오는 알림을 다시 받아요. 이미 삭제된 과거 내역은 복구되지 않아요.",
@@ -119,7 +120,7 @@ private fun IgnoredAccountRow(
                     color = AmColors.TextSecondary,
                 )
             }
-            AmTextButton("해제", onClick = onRemove, color = AmColors.Red, fontSize = 13.sp)
+            AmTextButton("해제", onClick = onRemove, color = AmColors.Emerald, fontSize = 13.sp)
         }
     }
 }

@@ -35,6 +35,14 @@ object AmMotion {
     fun slideForwardExit(durationMs: Int = DurationMs): ExitTransition =
         slideOutHorizontally(tween(durationMs)) { -it } + fadeOut(tween(durationMs))
 
+    /** NavHost popEnter: 왼쪽에서 슬라이드 인 + 페이드 (뒤로가기로 이전 화면 복귀) */
+    fun slideBackwardEnter(durationMs: Int = DurationMs): EnterTransition =
+        slideInHorizontally(tween(durationMs)) { -it } + fadeIn(tween(durationMs))
+
+    /** NavHost popExit: 오른쪽으로 슬라이드 아웃 + 페이드 (뒤로가기로 현재 화면 이탈) */
+    fun slideBackwardExit(durationMs: Int = DurationMs): ExitTransition =
+        slideOutHorizontally(tween(durationMs)) { it } + fadeOut(tween(durationMs))
+
     /** AnimatedContent: 가로 슬라이드 + 페이드 (앞으로 진행 — 새 화면은 오른쪽에서, 기존은 왼쪽으로) */
     fun slideForward(durationMs: Int = DurationMs): ContentTransform =
         (slideInHorizontally(tween(durationMs)) { it } + fadeEnter(durationMs)) togetherWith

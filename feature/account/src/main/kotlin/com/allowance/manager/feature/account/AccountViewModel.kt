@@ -6,6 +6,7 @@ import com.allowance.manager.core.domain.usecase.account.AddAccountUseCase
 import com.allowance.manager.core.domain.usecase.account.DeleteAccountUseCase
 import com.allowance.manager.core.domain.usecase.account.ObserveAccountsUseCase
 import com.allowance.manager.core.domain.usecase.account.UpdateAccountUseCase
+import com.allowance.manager.core.analytics.AmAnalytics
 import com.allowance.manager.core.analytics.AnalyticsHelper
 import com.allowance.manager.core.common.BaseViewModel
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -18,7 +19,6 @@ import javax.inject.Inject
 
 data class AccountUiState(
     val accounts: List<Account> = emptyList(),
-    val editing: Account? = null,       // 수정 다이얼로그 대상 (null = 닫힘)
 )
 
 @HiltViewModel
@@ -43,7 +43,7 @@ class AccountViewModel @Inject constructor(
 
     fun onAdd(bankName: String, pattern: String) {
         if (pattern.isBlank()) return
-        analytics.logEvent("account_add")
+        analytics.logEvent(AmAnalytics.Event.ACCOUNT_ADD)
         viewModelScope.launch {
             addAccountUseCase(
                 Account(
@@ -57,27 +57,12 @@ class AccountViewModel @Inject constructor(
     }
 
     fun onToggleEnabled(account: Account, enabled: Boolean) {
-        analytics.logEvent("account_enabled_toggle", mapOf("enabled" to enabled))
+        analytics.logEvent(AmAnalytics.Event.ACCOUNT_ENABLED_TOGGLE, mapOf(AmAnalytics.Param.ENABLED to enabled))
         viewModelScope.launch { updateAccountUseCase(account.copy(enabled = enabled)) }
     }
 
     fun onDelete(account: Account) {
-        analytics.logEvent("account_delete")
+        analytics.logEvent(AmAnalytics.Event.ACCOUNT_DELETE)
         viewModelScope.launch { deleteAccountUseCase(account) }
-    }
-
-    fun onStartEdit(account: Account) = _uiState.update { it.copy(editing = account) }
-    fun onCancelEdit() = _uiState.update { it.copy(editing = null) }
-
-    fun onEditChange(bankName: String, pattern: String) = _uiState.update {
-        it.copy(editing = it.editing?.copy(bankName = bankName, accountPattern = pattern))
-    }
-
-    fun onSaveEdit() {
-        val editing = _uiState.value.editing ?: return
-        viewModelScope.launch {
-            updateAccountUseCase(editing)
-            _uiState.update { it.copy(editing = null) }
-        }
     }
 }
