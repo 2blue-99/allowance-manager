@@ -10,6 +10,7 @@ import com.allowance.manager.core.domain.usecase.budget.SetPaydayUseCase
 import com.allowance.manager.core.domain.usecase.budget.SetUserTypeUseCase
 import com.allowance.manager.core.domain.usecase.setting.GetStatusBarEnabledUseCase
 import com.allowance.manager.core.domain.usecase.setting.SetStatusBarEnabledUseCase
+import com.allowance.manager.core.analytics.AnalyticsHelper
 import com.allowance.manager.core.common.BaseViewModel
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.SharingStarted
@@ -36,6 +37,7 @@ class SettingViewModel @Inject constructor(
     private val setPaydayUseCase: SetPaydayUseCase,
     private val setStatusBarEnabledUseCase: SetStatusBarEnabledUseCase,
     private val setUserTypeUseCase: SetUserTypeUseCase,
+    private val analytics: AnalyticsHelper,
 ) : BaseViewModel() {
 
     val uiState: StateFlow<SettingUiState> = combine(
@@ -48,18 +50,31 @@ class SettingViewModel @Inject constructor(
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), SettingUiState())
 
     fun setBudget(amount: Long) {
+        analytics.setUserProperty("budget_range", budgetRange(amount))
         viewModelScope.launch { setMonthlyBudgetUseCase(amount) }
     }
 
     fun setPayday(day: Int) {
+        analytics.setUserProperty("payday", day.toString())
         viewModelScope.launch { setPaydayUseCase(day) }
     }
 
     fun setStatusBarEnabled(enabled: Boolean) {
+        analytics.logEvent("setting_statusbar_toggle", mapOf("enabled" to enabled))
+        analytics.setUserProperty("statusbar_enabled", enabled.toString())
         viewModelScope.launch { setStatusBarEnabledUseCase(enabled) }
     }
 
     fun setUserType(type: UserType) {
+        analytics.setUserProperty("user_type", type.name.lowercase())
         viewModelScope.launch { setUserTypeUseCase(type) }
     }
+}
+
+/** 생활비 원본 금액 → 세그먼트용 구간(민감도 완화). */
+private fun budgetRange(won: Long): String = when {
+    won < 300_000 -> "<30만"
+    won < 500_000 -> "30~50만"
+    won < 1_000_000 -> "50~100만"
+    else -> "100만+"
 }

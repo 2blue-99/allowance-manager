@@ -186,6 +186,7 @@ private fun EditAccountDialog(
         onDismiss = onCancel,
         onConfirm = onSave,
         confirmEnabled = account.accountPattern.isNotBlank(),
+        analyticsTag = "account_edit",
     ) {
         Column(verticalArrangement = Arrangement.spacedBy(AmSpacing.sm)) {
             AmTextField(

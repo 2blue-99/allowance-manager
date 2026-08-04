@@ -1,6 +1,7 @@
 package com.allowance.manager.feature.setting
 
 import androidx.lifecycle.viewModelScope
+import com.allowance.manager.core.analytics.AnalyticsHelper
 import com.allowance.manager.core.common.BaseViewModel
 import com.allowance.manager.core.domain.model.IgnoredAccount
 import com.allowance.manager.core.domain.usecase.ignore.ObserveIgnoredAccountsUseCase
@@ -22,6 +23,7 @@ data class IgnoredAccountUiState(
 class IgnoredAccountViewModel @Inject constructor(
     observeIgnoredAccountsUseCase: ObserveIgnoredAccountsUseCase,
     private val removeIgnoredAccountUseCase: RemoveIgnoredAccountUseCase,
+    private val analytics: AnalyticsHelper,
 ) : BaseViewModel() {
 
     val uiState: StateFlow<IgnoredAccountUiState> = observeIgnoredAccountsUseCase()

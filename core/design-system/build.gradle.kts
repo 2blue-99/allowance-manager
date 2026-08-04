@@ -24,6 +24,9 @@ android {
 }
 
 dependencies {
+    // 다이얼로그 계측(dialog_open/confirm/cancel)용 로거
+    implementation(project(":core:analytics"))
+
     implementation(platform(libs.androidx.compose.bom))
     implementation(libs.androidx.compose.ui)
     implementation(libs.androidx.compose.ui.tooling.preview)

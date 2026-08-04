@@ -11,6 +11,8 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import com.allowance.manager.core.analytics.LocalAnalyticsHelper
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
@@ -37,9 +39,22 @@ fun AmDialog(
     dismissText: String = "취소",
     confirmEnabled: Boolean = true,
     confirmColor: Color = AmColors.Emerald,
+    // 분석 태그(예: "delete","budget"). 지정 시 dialog_open/confirm/cancel 이벤트 자동 발사.
+    analyticsTag: String? = null,
+    analyticsParams: Map<String, Any?> = emptyMap(),
     content: @Composable ColumnScope.() -> Unit,
 ) {
-    Dialog(onDismissRequest = onDismiss) {
+    val analytics = LocalAnalyticsHelper.current
+    if (analyticsTag != null) {
+        LaunchedEffect(analyticsTag) {
+            analytics.logEvent("dialog_open", mapOf("dialog" to analyticsTag) + analyticsParams)
+        }
+    }
+    fun cancel() {
+        if (analyticsTag != null) analytics.logEvent("dialog_cancel", mapOf("dialog" to analyticsTag))
+        onDismiss()
+    }
+    Dialog(onDismissRequest = { cancel() }) {
         Column(
             modifier = modifier
                 .fillMaxWidth()
@@ -48,20 +63,27 @@ fun AmDialog(
                 .padding(AmSpacing.xl),
         ) {
             Text(title, style = AmType.dialogTitle, color = AmColors.TextPrimary)
-            Spacer(Modifier.height(22.dp))   // 타이틀 아래 간격 (A안: 기존 16 → 22)
+            Spacer(Modifier.height(AmSpacing.xxl))
             content()
-            Spacer(Modifier.height(AmSpacing.xl))
+            Spacer(Modifier.height(AmSpacing.xxl))
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.spacedBy(AmSpacing.md),
             ) {
                 // dismissText가 비면 취소 버튼 숨김 (단일 버튼 다이얼로그 지원)
                 if (dismissText.isNotBlank()) {
-                    AmSecondaryButton(text = dismissText, onClick = onDismiss, modifier = Modifier.weight(1f))
+                    AmSecondaryButton(text = dismissText, onClick = { cancel() }, modifier = Modifier.weight(1f))
                 }
                 AmButton(
                     text = confirmText,
-                    onClick = { if (confirmEnabled) onConfirm() },
+                    onClick = {
+                        if (confirmEnabled) {
+                            if (analyticsTag != null) {
+                                analytics.logEvent("dialog_confirm", mapOf("dialog" to analyticsTag) + analyticsParams)
+                            }
+                            onConfirm()
+                        }
+                    },
                     enabled = confirmEnabled,
                     containerColor = confirmColor,
                     modifier = Modifier.weight(1f),

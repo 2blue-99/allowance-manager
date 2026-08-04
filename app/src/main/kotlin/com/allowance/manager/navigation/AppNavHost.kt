@@ -34,10 +34,12 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import com.allowance.manager.core.analytics.AnalyticsHelper
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
@@ -93,9 +95,17 @@ private val bottomTabs = listOf(
 )
 
 @Composable
-fun AppNavHost(navController: NavHostController, startDestination: StartDestination) {
+fun AppNavHost(
+    navController: NavHostController,
+    startDestination: StartDestination,
+    analytics: AnalyticsHelper,
+) {
     val backStackEntry by navController.currentBackStackEntryAsState()
     val currentDestination = backStackEntry?.destination
+    // 화면 진입 screen_view — 목적지 바뀔 때마다 중앙에서 발사(피처 수정 불필요)
+    LaunchedEffect(currentDestination) {
+        currentDestination.screenName()?.let { analytics.logScreenView(it) }
+    }
     // 홈 가이드 좌표 저장소 — 홈 콘텐츠 + 바텀 네비(월별/통계)가 공유
     val guideTargets = rememberGuideTargets()
     // 더보기(설정)도 탭처럼 취급 → 진입해도 바텀바 유지
@@ -144,7 +154,10 @@ fun AppNavHost(navController: NavHostController, startDestination: StartDestinat
                                 icon = tab.icon,
                                 label = tab.label,
                                 modifier = if (tab.guideKey != null) Modifier.guideTarget(tab.guideKey, guideTargets) else Modifier,
-                                onClick = { navController.navigateToTab(tab.route) },
+                                onClick = {
+                                    analytics.logEvent("nav_tab_select", mapOf("tab" to tab.label))
+                                    navController.navigateToTab(tab.route)
+                                },
                             )
                         }
                         // 더보기(설정)도 다른 탭과 동일한 전환 방식 → 탭 간 이동 일관성 유지
@@ -152,7 +165,10 @@ fun AppNavHost(navController: NavHostController, startDestination: StartDestinat
                             selected = currentDestination.isOn(SettingRoute::class),
                             icon = Icons.Filled.MoreHoriz,
                             label = "더보기",
-                            onClick = { navController.navigateToTab(SettingRoute) },
+                            onClick = {
+                                analytics.logEvent("nav_tab_select", mapOf("tab" to "더보기"))
+                                navController.navigateToTab(SettingRoute)
+                            },
                         )
                     }
                     // 시스템 내비게이터(제스처 바) 영역만큼 흰 여백 확보
@@ -280,6 +296,20 @@ private fun RowScope.BottomBarItem(
 
 private fun NavDestination?.isOn(route: KClass<*>): Boolean =
     this?.hierarchy?.any { it.hasRoute(route) } == true
+
+/** 현재 목적지 → screen_view 이름. 분석 제외 화면(디버그 등)은 null. */
+private fun NavDestination?.screenName(): String? = when {
+    this == null -> null
+    isOn(HomeRoute::class) -> "home"
+    isOn(CalendarRoute::class) -> "calendar"
+    isOn(StatsRoute::class) -> "stats"
+    isOn(SettingRoute::class) -> "setting"
+    isOn(AccountSettingRoute::class) -> "account_setting"
+    isOn(IgnoredAccountRoute::class) -> "ignored_account"
+    isOn(IntroRoute::class) -> "intro"
+    isOn(OnboardingRoute::class) -> "onboarding"
+    else -> null
+}
 
 private fun NavHostController.navigateToTab(route: Any) {
     navigate(route) {

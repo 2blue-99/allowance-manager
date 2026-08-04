@@ -6,6 +6,7 @@ import com.allowance.manager.core.domain.usecase.account.AddAccountUseCase
 import com.allowance.manager.core.domain.usecase.account.DeleteAccountUseCase
 import com.allowance.manager.core.domain.usecase.account.ObserveAccountsUseCase
 import com.allowance.manager.core.domain.usecase.account.UpdateAccountUseCase
+import com.allowance.manager.core.analytics.AnalyticsHelper
 import com.allowance.manager.core.common.BaseViewModel
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -26,6 +27,7 @@ class AccountViewModel @Inject constructor(
     private val addAccountUseCase: AddAccountUseCase,
     private val updateAccountUseCase: UpdateAccountUseCase,
     private val deleteAccountUseCase: DeleteAccountUseCase,
+    private val analytics: AnalyticsHelper,
 ) : BaseViewModel() {
 
     private val _uiState = MutableStateFlow(AccountUiState())
@@ -41,6 +43,7 @@ class AccountViewModel @Inject constructor(
 
     fun onAdd(bankName: String, pattern: String) {
         if (pattern.isBlank()) return
+        analytics.logEvent("account_add")
         viewModelScope.launch {
             addAccountUseCase(
                 Account(
@@ -54,10 +57,12 @@ class AccountViewModel @Inject constructor(
     }
 
     fun onToggleEnabled(account: Account, enabled: Boolean) {
+        analytics.logEvent("account_enabled_toggle", mapOf("enabled" to enabled))
         viewModelScope.launch { updateAccountUseCase(account.copy(enabled = enabled)) }
     }
 
     fun onDelete(account: Account) {
+        analytics.logEvent("account_delete")
         viewModelScope.launch { deleteAccountUseCase(account) }
     }
 

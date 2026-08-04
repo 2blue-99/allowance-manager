@@ -8,6 +8,7 @@ import com.allowance.manager.core.domain.usecase.budget.SetUserTypeUseCase
 import com.allowance.manager.core.domain.usecase.budget.SetMonthlyBudgetUseCase
 import com.allowance.manager.core.domain.usecase.budget.SetPaydayUseCase
 import com.allowance.manager.core.domain.usecase.onboarding.SetOnboardingDoneUseCase
+import com.allowance.manager.core.analytics.AnalyticsHelper
 import com.allowance.manager.core.common.BaseViewModel
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -40,6 +41,7 @@ class OnboardingViewModel @Inject constructor(
     private val addAccountUseCase: AddAccountUseCase,
     private val setUserTypeUseCase: SetUserTypeUseCase,
     private val setOnboardingDoneUseCase: SetOnboardingDoneUseCase,
+    private val analytics: AnalyticsHelper,
 ) : BaseViewModel() {
 
     private val _uiState = MutableStateFlow(OnboardingUiState())
@@ -60,6 +62,16 @@ class OnboardingViewModel @Inject constructor(
         val state = _uiState.value
         if (!state.canFinish) return
         val payday = state.payday ?: return
+        // 온보딩 세이브 시 값 기록 + 이후 전체 이벤트 세그먼트용 User Property 세팅
+        analytics.logEvent(
+            "onboarding_complete",
+            mapOf("payday" to payday, "budget" to state.budget, "bank" to state.bankName),
+        )
+        analytics.setUserProperty("user_type", state.userType.name.lowercase())
+        analytics.setUserProperty("main_bank", state.bankName)
+        analytics.setUserProperty("has_main_account", "true")
+        analytics.setUserProperty("budget_range", budgetRange(state.budget))
+        analytics.setUserProperty("payday", payday.toString())
         viewModelScope.launch {
             if (state.accountPattern.isNotBlank()) {
                 addAccountUseCase(
@@ -78,4 +90,12 @@ class OnboardingViewModel @Inject constructor(
             _uiState.update { it.copy(isFinished = true) }
         }
     }
+}
+
+/** 생활비 원본 금액 → 세그먼트용 구간(민감도 완화). */
+private fun budgetRange(won: Long): String = when {
+    won < 300_000 -> "<30만"
+    won < 500_000 -> "30~50만"
+    won < 1_000_000 -> "50~100만"
+    else -> "100만+"
 }

@@ -5,6 +5,7 @@ plugins {
     alias(libs.plugins.hilt)
     alias(libs.plugins.ksp)
     alias(libs.plugins.google.services)
+    alias(libs.plugins.firebase.crashlytics)
     alias(libs.plugins.compose.screenshot)
 }
 
@@ -55,6 +56,7 @@ dependencies {
     implementation(project(":feature:setting"))
     implementation(project(":feature:account"))
     implementation(project(":feature:widget"))
+    implementation(project(":core:analytics"))
     implementation(project(":core:domain"))
     implementation(project(":core:data"))
     implementation(project(":core:local"))
@@ -65,6 +67,7 @@ dependencies {
 
     implementation(platform(libs.firebase.bom))
     implementation(libs.firebase.analytics)
+    implementation(libs.firebase.crashlytics)
     implementation(libs.firebase.messaging)
 
     implementation(libs.androidx.core.ktx)

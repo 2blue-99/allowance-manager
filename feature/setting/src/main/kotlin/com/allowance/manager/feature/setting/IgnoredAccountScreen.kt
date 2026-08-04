@@ -92,6 +92,7 @@ fun IgnoredAccountScreen(
             onConfirm = { onRemove(account.id); pendingRemove = null },
             confirmText = "해제",
             confirmColor = AmColors.Red,
+            analyticsTag = "ignore_remove",
         ) {
             Text(
                 "${account.sourceName}에서 오는 알림을 다시 받아요. 이미 삭제된 과거 내역은 복구되지 않아요.",

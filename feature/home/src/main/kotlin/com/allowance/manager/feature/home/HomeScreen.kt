@@ -83,6 +83,7 @@ import com.allowance.manager.core.designsystem.component.AmCard
 import com.allowance.manager.core.designsystem.component.AmChip
 import com.allowance.manager.core.designsystem.component.AmDialog
 import com.allowance.manager.core.designsystem.component.AmSecondaryButton
+import com.allowance.manager.core.analytics.LocalAnalyticsHelper
 import com.allowance.manager.core.designsystem.component.AmProgressBar
 import com.allowance.manager.core.designsystem.component.AmThousandsTransformation
 import com.allowance.manager.core.designsystem.component.AmTextField
@@ -149,6 +150,7 @@ fun HomeScreen(
     onGuideFinished: () -> Unit = {},
     modifier: Modifier = Modifier,
 ) {
+    val analytics = LocalAnalyticsHelper.current
     var selected by remember { mutableStateOf<Transaction?>(null) }
     var pendingDelete by remember { mutableStateOf<Transaction?>(null) }
     var showAdd by remember { mutableStateOf(false) }
@@ -179,7 +181,7 @@ fun HomeScreen(
             BottomContent(
                 uiState = uiState,
                 onFilterChip = onFilterChip,
-                onSelect = { selected = it },
+                onSelect = { analytics.logEvent("home_tx_item_click"); selected = it },
                 onToggleHidden = { onSetHidden(it.id, !it.isHidden) },
                 onRequestDelete = { pendingDelete = it },
                 guideTargets = guideTargets,
@@ -218,7 +220,7 @@ fun HomeScreen(
 
         // 좌하단 추가 FAB
         FloatingActionButton(
-            onClick = { showAdd = true },
+            onClick = { analytics.logEvent("home_add_fab_click"); showAdd = true },
             modifier = Modifier.align(Alignment.BottomEnd).padding(20.dp).guideTarget("fab", guideTargets),
             containerColor = AmColors.Emerald,
             contentColor = Color.White,

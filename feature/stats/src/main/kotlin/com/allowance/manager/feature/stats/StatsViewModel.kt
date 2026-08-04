@@ -1,6 +1,7 @@
 package com.allowance.manager.feature.stats
 
 import androidx.lifecycle.viewModelScope
+import com.allowance.manager.core.analytics.AnalyticsHelper
 import com.allowance.manager.core.common.BaseViewModel
 import com.allowance.manager.core.domain.model.MonthlyBudget
 import com.allowance.manager.core.domain.model.Transaction
@@ -70,6 +71,7 @@ class StatsViewModel @Inject constructor(
     observeBudgetHistoryUseCase: ObserveBudgetHistoryUseCase,
     private val observeMonthTransactionsUseCase: ObserveMonthTransactionsUseCase,
     private val getFirstTransactionMonthUseCase: GetFirstTransactionMonthUseCase,
+    private val analytics: AnalyticsHelper,
 ) : BaseViewModel() {
 
     private val windowEnd = MutableStateFlow(YearMonth.now())   // 창의 오른쪽 끝(최신)
@@ -163,10 +165,12 @@ class StatsViewModel @Inject constructor(
     }
 
     fun onSelectMonth(month: YearMonth) {
+        analytics.logEvent("stats_month_select")
         selected.value = month
     }
 
     fun onOlder() {
+        analytics.logEvent("stats_window_move", mapOf("direction" to "older"))
         val min = minMonth.value
         var end = windowEnd.value.minusMonths(PAGE_STEP.toLong())
         // 창의 왼쪽 끝이 첫 거래 달보다 과거로 못 가게 clamp
@@ -178,6 +182,7 @@ class StatsViewModel @Inject constructor(
     }
 
     fun onNewer() {
+        analytics.logEvent("stats_window_move", mapOf("direction" to "newer"))
         val now = YearMonth.now()
         val end = minOf(windowEnd.value.plusMonths(PAGE_STEP.toLong()), now)
         windowEnd.value = end

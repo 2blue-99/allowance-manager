@@ -15,7 +15,10 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
 import androidx.navigation.compose.rememberNavController
+import androidx.compose.runtime.CompositionLocalProvider
+import com.allowance.manager.core.analytics.AnalyticsHelper
 import com.allowance.manager.core.designsystem.component.AmDialog
+import com.allowance.manager.core.analytics.LocalAnalyticsHelper
 import com.allowance.manager.core.designsystem.theme.AllowanceManagerTheme
 import com.allowance.manager.core.designsystem.theme.AmColors
 import com.allowance.manager.core.designsystem.theme.AmType
@@ -29,6 +32,9 @@ import timber.log.Timber
 class MainActivity : ComponentActivity() {
 
     private val viewModel: MainViewModel by viewModels()
+
+    @javax.inject.Inject
+    lateinit var analyticsHelper: AnalyticsHelper
 
     override fun onCreate(savedInstanceState: Bundle?) {
         val splashScreen = installSplashScreen()
@@ -54,10 +60,15 @@ class MainActivity : ComponentActivity() {
 
                 // 판정이 끝나면(스플래시 해제) 결정된 시작지점에서 NavHost 구성
                 startDestination?.let { start ->
+                    CompositionLocalProvider(LocalAnalyticsHelper provides analyticsHelper) {
                     val navController = rememberNavController()
                     val uiState by viewModel.uiState.collectAsState()
 
-                    AppNavHost(navController = navController, startDestination = start)
+                    AppNavHost(
+                        navController = navController,
+                        startDestination = start,
+                        analytics = analyticsHelper,
+                    )
 
                     if (uiState.showForceUpdateDialog) {
                         AmDialog(
@@ -74,9 +85,11 @@ class MainActivity : ComponentActivity() {
                             },
                             confirmText = "업데이트",
                             dismissText = "닫기",
+                            analyticsTag = "force_update",
                         ) {
                             Text(uiState.updateNote, style = AmType.body, color = AmColors.TextSecondary)
                         }
+                    }
                     }
                 }
             }

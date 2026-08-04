@@ -3,6 +3,7 @@ package com.allowance.manager.service
 import android.app.Notification
 import android.service.notification.NotificationListenerService
 import android.service.notification.StatusBarNotification
+import com.allowance.manager.core.analytics.AnalyticsHelper
 import com.allowance.manager.core.domain.model.ParsedTransaction
 import com.allowance.manager.core.domain.usecase.transaction.RecordTransactionUseCase
 import dagger.hilt.EntryPoint
@@ -22,6 +23,7 @@ class AllowanceNotificationListenerService : NotificationListenerService() {
     @InstallIn(SingletonComponent::class)
     interface ServiceEntryPoint {
         fun recordTransactionUseCase(): RecordTransactionUseCase
+        fun analyticsHelper(): AnalyticsHelper
     }
 
     private val entryPoint by lazy {
@@ -29,6 +31,8 @@ class AllowanceNotificationListenerService : NotificationListenerService() {
     }
 
     private val recordTransactionUseCase get() = entryPoint.recordTransactionUseCase()
+
+    private val analyticsHelper get() = entryPoint.analyticsHelper()
 
     private val serviceScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
 
@@ -41,11 +45,13 @@ class AllowanceNotificationListenerService : NotificationListenerService() {
 
     override fun onListenerConnected() {
         super.onListenerConnected()
+        analyticsHelper.logEvent("noti_permission_granted")
         log("리스너 연결됨 (알림 접근 권한 OK) — 이제 알림을 수신합니다")
     }
 
     override fun onListenerDisconnected() {
         super.onListenerDisconnected()
+        analyticsHelper.logEvent("noti_permission_revoked")
         log("리스너 연결 해제됨 (권한 꺼짐 or 재바인딩 필요)")
     }
 
@@ -94,7 +100,13 @@ class AllowanceNotificationListenerService : NotificationListenerService() {
                         rawText = result.content,
                     )
                 )
-                if (id == null) log("→ 무시 계좌 매칭 → 드롭(저장 안 함)") else log("→ 저장 완료")
+                if (id == null) {
+                    analyticsHelper.logEvent("tx_auto_ignored")
+                    log("→ 무시 계좌 매칭 → 드롭(저장 안 함)")
+                } else {
+                    analyticsHelper.logEvent("tx_auto_recorded", mapOf("type" to result.type.name.lowercase()))
+                    log("→ 저장 완료")
+                }
             }.onFailure { Timber.tag(TAG).e(it, "거래 저장 실패") }
         }
     }

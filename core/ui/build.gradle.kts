@@ -32,6 +32,8 @@ dependencies {
     api(project(":core:common"))
     // 도메인 모델(Transaction 등)을 다루는 공용 컴포넌트를 위해 재노출
     api(project(":core:domain"))
+    // 분석 로거(AnalyticsHelper·LocalAnalyticsHelper) 재노출 → core:ui 쓰는 피처가 바로 사용
+    api(project(":core:analytics"))
 
     implementation(platform(libs.androidx.compose.bom))
     implementation(libs.androidx.compose.ui)
