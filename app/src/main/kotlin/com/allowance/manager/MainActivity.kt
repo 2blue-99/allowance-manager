@@ -16,6 +16,7 @@ import androidx.compose.runtime.getValue
 import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
 import androidx.navigation.compose.rememberNavController
 import androidx.compose.runtime.CompositionLocalProvider
+import com.allowance.manager.core.analytics.AmAnalytics
 import com.allowance.manager.core.analytics.AnalyticsHelper
 import com.allowance.manager.core.designsystem.component.AmDialog
 import com.allowance.manager.core.analytics.LocalAnalyticsHelper
@@ -85,7 +86,7 @@ class MainActivity : ComponentActivity() {
                             },
                             confirmText = "업데이트",
                             dismissText = "닫기",
-                            analyticsTag = "force_update",
+                            analyticsTag = AmAnalytics.Dialog.FORCE_UPDATE,
                         ) {
                             Text(uiState.updateNote, style = AmType.body, color = AmColors.TextSecondary)
                         }

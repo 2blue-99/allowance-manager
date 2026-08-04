@@ -39,6 +39,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import com.allowance.manager.core.analytics.AmAnalytics
 import com.allowance.manager.core.analytics.AnalyticsHelper
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -155,7 +156,7 @@ fun AppNavHost(
                                 label = tab.label,
                                 modifier = if (tab.guideKey != null) Modifier.guideTarget(tab.guideKey, guideTargets) else Modifier,
                                 onClick = {
-                                    analytics.logEvent("nav_tab_select", mapOf("tab" to tab.label))
+                                    analytics.logEvent(AmAnalytics.Event.NAV_TAB_SELECT, mapOf(AmAnalytics.Param.TAB to tab.label))
                                     navController.navigateToTab(tab.route)
                                 },
                             )
@@ -166,7 +167,7 @@ fun AppNavHost(
                             icon = Icons.Filled.MoreHoriz,
                             label = "더보기",
                             onClick = {
-                                analytics.logEvent("nav_tab_select", mapOf("tab" to "더보기"))
+                                analytics.logEvent(AmAnalytics.Event.NAV_TAB_SELECT, mapOf(AmAnalytics.Param.TAB to "더보기"))
                                 navController.navigateToTab(SettingRoute)
                             },
                         )

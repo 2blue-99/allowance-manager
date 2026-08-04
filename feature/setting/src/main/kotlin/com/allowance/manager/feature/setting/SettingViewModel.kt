@@ -10,6 +10,7 @@ import com.allowance.manager.core.domain.usecase.budget.SetPaydayUseCase
 import com.allowance.manager.core.domain.usecase.budget.SetUserTypeUseCase
 import com.allowance.manager.core.domain.usecase.setting.GetStatusBarEnabledUseCase
 import com.allowance.manager.core.domain.usecase.setting.SetStatusBarEnabledUseCase
+import com.allowance.manager.core.analytics.AmAnalytics
 import com.allowance.manager.core.analytics.AnalyticsHelper
 import com.allowance.manager.core.common.BaseViewModel
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -50,23 +51,23 @@ class SettingViewModel @Inject constructor(
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), SettingUiState())
 
     fun setBudget(amount: Long) {
-        analytics.setUserProperty("budget_range", budgetRange(amount))
+        analytics.setUserProperty(AmAnalytics.UserProp.BUDGET_RANGE, budgetRange(amount))
         viewModelScope.launch { setMonthlyBudgetUseCase(amount) }
     }
 
     fun setPayday(day: Int) {
-        analytics.setUserProperty("payday", day.toString())
+        analytics.setUserProperty(AmAnalytics.UserProp.PAYDAY, day.toString())
         viewModelScope.launch { setPaydayUseCase(day) }
     }
 
     fun setStatusBarEnabled(enabled: Boolean) {
-        analytics.logEvent("setting_statusbar_toggle", mapOf("enabled" to enabled))
-        analytics.setUserProperty("statusbar_enabled", enabled.toString())
+        analytics.logEvent(AmAnalytics.Event.SETTING_STATUSBAR_TOGGLE, mapOf(AmAnalytics.Param.ENABLED to enabled))
+        analytics.setUserProperty(AmAnalytics.UserProp.STATUSBAR_ENABLED, enabled.toString())
         viewModelScope.launch { setStatusBarEnabledUseCase(enabled) }
     }
 
     fun setUserType(type: UserType) {
-        analytics.setUserProperty("user_type", type.name.lowercase())
+        analytics.setUserProperty(AmAnalytics.UserProp.USER_TYPE, type.name.lowercase())
         viewModelScope.launch { setUserTypeUseCase(type) }
     }
 }

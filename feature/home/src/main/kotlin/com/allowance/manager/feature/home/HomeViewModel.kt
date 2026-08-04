@@ -30,6 +30,7 @@ import com.allowance.manager.core.domain.usecase.transaction.PromoteToMainUseCas
 import com.allowance.manager.core.domain.usecase.transaction.UpdateTransactionUseCase
 import com.allowance.manager.core.domain.model.TransactionCategory
 import com.allowance.manager.core.domain.model.TransactionType
+import com.allowance.manager.core.analytics.AmAnalytics
 import com.allowance.manager.core.analytics.AnalyticsHelper
 import com.allowance.manager.core.common.BaseViewModel
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -160,14 +161,14 @@ class HomeViewModel @Inject constructor(
 
     /** 칩 탭 — 전체는 배타(둘 다 해제), 메인·숨김은 각각 독립 토글 */
     fun onFilterChip(chip: LedgerFilterChip) {
-        analytics.logEvent("home_filter_select", mapOf("filter" to chip.name.lowercase()))
+        analytics.logEvent(AmAnalytics.Event.HOME_FILTER_SELECT, mapOf(AmAnalytics.Param.FILTER to chip.name.lowercase()))
         val next = filterState.value.toggle(chip)
         filterState.value = next                                   // 즉시 반영
         viewModelScope.launch { setHomeFilterUseCase(next) }       // 저장은 뒤따름
     }
 
     fun onSetHidden(id: Long, hidden: Boolean) {
-        analytics.logEvent("home_tx_swipe_hide", mapOf("hidden" to hidden))
+        analytics.logEvent(AmAnalytics.Event.HOME_TX_SWIPE_HIDE, mapOf(AmAnalytics.Param.HIDDEN to hidden))
         viewModelScope.launch { hideTransactionUseCase(id, hidden) }
     }
 
@@ -180,7 +181,7 @@ class HomeViewModel @Inject constructor(
     suspend fun countIgnorable(tx: Transaction): Int = countIgnorableTransactionsUseCase(tx)
 
     fun onDelete(id: Long) {
-        analytics.logEvent("home_tx_swipe_delete")
+        analytics.logEvent(AmAnalytics.Event.HOME_TX_SWIPE_DELETE)
         viewModelScope.launch { deleteTransactionUseCase(id) }
     }
 
@@ -198,8 +199,11 @@ class HomeViewModel @Inject constructor(
         memo: String,
     ) {
         analytics.logEvent(
-            "tx_add_save",
-            mapOf("category" to (category ?: TransactionCategory.ETC).name, "type" to type.name.lowercase()),
+            AmAnalytics.Event.TX_ADD_SAVE,
+            mapOf(
+                AmAnalytics.Param.CATEGORY to (category ?: TransactionCategory.ETC).name,
+                AmAnalytics.Param.TYPE to type.name.lowercase(),
+            ),
         )
         viewModelScope.launch { addManualTransactionUseCase(type, amount, sourceName, category, memo) }
     }

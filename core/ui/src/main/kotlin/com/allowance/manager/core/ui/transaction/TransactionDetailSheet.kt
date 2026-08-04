@@ -50,6 +50,7 @@ import com.allowance.manager.core.designsystem.theme.AmColors
 import com.allowance.manager.core.designsystem.theme.AmShape
 import com.allowance.manager.core.designsystem.theme.AmSpacing
 import com.allowance.manager.core.designsystem.theme.AmType
+import com.allowance.manager.core.analytics.AmAnalytics
 import com.allowance.manager.core.analytics.LocalAnalyticsHelper
 import com.allowance.manager.core.domain.model.Transaction
 import com.allowance.manager.core.domain.model.TransactionCategory
@@ -218,13 +219,13 @@ fun TransactionDetailSheet(
                     "저장",
                     onClick = {
                         analytics.logEvent(
-                            "tx_save",
+                            AmAnalytics.Event.TX_SAVE,
                             mapOf(
-                                "category" to (category ?: TransactionCategory.ETC).name,
-                                "type" to tx.type.name.lowercase(),
-                                "is_main" to promote,
-                                "is_hidden" to hidden,
-                                "is_manual" to tx.isManual,
+                                AmAnalytics.Param.CATEGORY to (category ?: TransactionCategory.ETC).name,
+                                AmAnalytics.Param.TYPE to tx.type.name.lowercase(),
+                                AmAnalytics.Param.IS_MAIN to promote,
+                                AmAnalytics.Param.IS_HIDDEN to hidden,
+                                AmAnalytics.Param.IS_MANUAL to tx.isManual,
                             ),
                         )
                         // 실제로 바뀐 항목만 반영하고, 변경이 있을 때만 저장 알림
@@ -267,8 +268,8 @@ fun TransactionDetailSheet(
             onConfirm = { showIgnoreConfirm = false; onIgnoreSource(tx); close() },
             confirmText = "무시",
             confirmColor = AmColors.Red,
-            analyticsTag = "ignore",
-            analyticsParams = mapOf("by" to if (!tx.extractedAccount.isNullOrBlank()) "account" else "source"),
+            analyticsTag = AmAnalytics.Dialog.IGNORE,
+            analyticsParams = mapOf(AmAnalytics.Param.BY to if (!tx.extractedAccount.isNullOrBlank()) "account" else "source"),
         ) {
             Text(
                 "${target}에서 오는 알림을 앞으로 받지 않고, 기존 내역 ${ignoreCount}건도 모두 삭제돼요.",

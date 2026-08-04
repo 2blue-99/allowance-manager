@@ -83,6 +83,7 @@ import com.allowance.manager.core.designsystem.component.AmCard
 import com.allowance.manager.core.designsystem.component.AmChip
 import com.allowance.manager.core.designsystem.component.AmDialog
 import com.allowance.manager.core.designsystem.component.AmSecondaryButton
+import com.allowance.manager.core.analytics.AmAnalytics
 import com.allowance.manager.core.analytics.LocalAnalyticsHelper
 import com.allowance.manager.core.designsystem.component.AmProgressBar
 import com.allowance.manager.core.designsystem.component.AmThousandsTransformation
@@ -181,7 +182,7 @@ fun HomeScreen(
             BottomContent(
                 uiState = uiState,
                 onFilterChip = onFilterChip,
-                onSelect = { analytics.logEvent("home_tx_item_click"); selected = it },
+                onSelect = { analytics.logEvent(AmAnalytics.Event.HOME_TX_ITEM_CLICK); selected = it },
                 onToggleHidden = { onSetHidden(it.id, !it.isHidden) },
                 onRequestDelete = { pendingDelete = it },
                 guideTargets = guideTargets,
@@ -220,7 +221,7 @@ fun HomeScreen(
 
         // 좌하단 추가 FAB
         FloatingActionButton(
-            onClick = { analytics.logEvent("home_add_fab_click"); showAdd = true },
+            onClick = { analytics.logEvent(AmAnalytics.Event.HOME_ADD_FAB_CLICK); showAdd = true },
             modifier = Modifier.align(Alignment.BottomEnd).padding(20.dp).guideTarget("fab", guideTargets),
             containerColor = AmColors.Emerald,
             contentColor = Color.White,

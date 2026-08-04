@@ -3,6 +3,7 @@ package com.allowance.manager.service
 import android.app.Notification
 import android.service.notification.NotificationListenerService
 import android.service.notification.StatusBarNotification
+import com.allowance.manager.core.analytics.AmAnalytics
 import com.allowance.manager.core.analytics.AnalyticsHelper
 import com.allowance.manager.core.domain.model.ParsedTransaction
 import com.allowance.manager.core.domain.usecase.transaction.RecordTransactionUseCase
@@ -45,13 +46,13 @@ class AllowanceNotificationListenerService : NotificationListenerService() {
 
     override fun onListenerConnected() {
         super.onListenerConnected()
-        analyticsHelper.logEvent("noti_permission_granted")
+        analyticsHelper.logEvent(AmAnalytics.Event.NOTI_PERMISSION_GRANTED)
         log("리스너 연결됨 (알림 접근 권한 OK) — 이제 알림을 수신합니다")
     }
 
     override fun onListenerDisconnected() {
         super.onListenerDisconnected()
-        analyticsHelper.logEvent("noti_permission_revoked")
+        analyticsHelper.logEvent(AmAnalytics.Event.NOTI_PERMISSION_REVOKED)
         log("리스너 연결 해제됨 (권한 꺼짐 or 재바인딩 필요)")
     }
 
@@ -101,10 +102,10 @@ class AllowanceNotificationListenerService : NotificationListenerService() {
                     )
                 )
                 if (id == null) {
-                    analyticsHelper.logEvent("tx_auto_ignored")
+                    analyticsHelper.logEvent(AmAnalytics.Event.TX_AUTO_IGNORED)
                     log("→ 무시 계좌 매칭 → 드롭(저장 안 함)")
                 } else {
-                    analyticsHelper.logEvent("tx_auto_recorded", mapOf("type" to result.type.name.lowercase()))
+                    analyticsHelper.logEvent(AmAnalytics.Event.TX_AUTO_RECORDED, mapOf(AmAnalytics.Param.TYPE to result.type.name.lowercase()))
                     log("→ 저장 완료")
                 }
             }.onFailure { Timber.tag(TAG).e(it, "거래 저장 실패") }

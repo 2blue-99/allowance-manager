@@ -8,6 +8,7 @@ import com.allowance.manager.core.domain.usecase.budget.SetUserTypeUseCase
 import com.allowance.manager.core.domain.usecase.budget.SetMonthlyBudgetUseCase
 import com.allowance.manager.core.domain.usecase.budget.SetPaydayUseCase
 import com.allowance.manager.core.domain.usecase.onboarding.SetOnboardingDoneUseCase
+import com.allowance.manager.core.analytics.AmAnalytics
 import com.allowance.manager.core.analytics.AnalyticsHelper
 import com.allowance.manager.core.common.BaseViewModel
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -64,14 +65,18 @@ class OnboardingViewModel @Inject constructor(
         val payday = state.payday ?: return
         // 온보딩 세이브 시 값 기록 + 이후 전체 이벤트 세그먼트용 User Property 세팅
         analytics.logEvent(
-            "onboarding_complete",
-            mapOf("payday" to payday, "budget" to state.budget, "bank" to state.bankName),
+            AmAnalytics.Event.ONBOARDING_COMPLETE,
+            mapOf(
+                AmAnalytics.Param.PAYDAY to payday,
+                AmAnalytics.Param.BUDGET to state.budget,
+                AmAnalytics.Param.BANK to state.bankName,
+            ),
         )
-        analytics.setUserProperty("user_type", state.userType.name.lowercase())
-        analytics.setUserProperty("main_bank", state.bankName)
-        analytics.setUserProperty("has_main_account", "true")
-        analytics.setUserProperty("budget_range", budgetRange(state.budget))
-        analytics.setUserProperty("payday", payday.toString())
+        analytics.setUserProperty(AmAnalytics.UserProp.USER_TYPE, state.userType.name.lowercase())
+        analytics.setUserProperty(AmAnalytics.UserProp.MAIN_BANK, state.bankName)
+        analytics.setUserProperty(AmAnalytics.UserProp.HAS_MAIN_ACCOUNT, "true")
+        analytics.setUserProperty(AmAnalytics.UserProp.BUDGET_RANGE, budgetRange(state.budget))
+        analytics.setUserProperty(AmAnalytics.UserProp.PAYDAY, payday.toString())
         viewModelScope.launch {
             if (state.accountPattern.isNotBlank()) {
                 addAccountUseCase(

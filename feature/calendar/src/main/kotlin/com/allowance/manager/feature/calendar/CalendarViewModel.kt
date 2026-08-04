@@ -1,6 +1,7 @@
 package com.allowance.manager.feature.calendar
 
 import androidx.lifecycle.viewModelScope
+import com.allowance.manager.core.analytics.AmAnalytics
 import com.allowance.manager.core.analytics.AnalyticsHelper
 import com.allowance.manager.core.common.BaseViewModel
 import com.allowance.manager.core.domain.model.Transaction
@@ -121,17 +122,17 @@ class CalendarViewModel @Inject constructor(
     }
 
     fun onPrevMonth() {
-        analytics.logEvent("calendar_month_change", mapOf("direction" to "prev"))
+        analytics.logEvent(AmAnalytics.Event.CALENDAR_MONTH_CHANGE, mapOf(AmAnalytics.Param.DIRECTION to "prev"))
         if (uiState.value.canGoPrev) month.value = month.value.minusMonths(1)
     }
 
     fun onNextMonth() {
-        analytics.logEvent("calendar_month_change", mapOf("direction" to "next"))
+        analytics.logEvent(AmAnalytics.Event.CALENDAR_MONTH_CHANGE, mapOf(AmAnalytics.Param.DIRECTION to "next"))
         if (uiState.value.canGoNext) month.value = month.value.plusMonths(1)
     }
 
     fun onSelectMonth(target: YearMonth) {
-        analytics.logEvent("calendar_month_change", mapOf("direction" to "picker"))
+        analytics.logEvent(AmAnalytics.Event.CALENDAR_MONTH_CHANGE, mapOf(AmAnalytics.Param.DIRECTION to "picker"))
         val max = YearMonth.now()
         val min = minMonth.value
         val clamped = when {
@@ -144,7 +145,7 @@ class CalendarViewModel @Inject constructor(
 
     fun onToggleSearch() {
         val next = !searchActive.value
-        analytics.logEvent("calendar_search_toggle", mapOf("active" to next))
+        analytics.logEvent(AmAnalytics.Event.CALENDAR_SEARCH_TOGGLE, mapOf(AmAnalytics.Param.ACTIVE to next))
         searchActive.value = next
         // 검색 해제 시 검색어·필터 초기화 → 원복
         if (!next) {
@@ -158,7 +159,7 @@ class CalendarViewModel @Inject constructor(
     }
 
     fun onToggleCategory(category: TransactionCategory) {
-        analytics.logEvent("calendar_category_filter", mapOf("category" to category.name))
+        analytics.logEvent(AmAnalytics.Event.CALENDAR_CATEGORY_FILTER, mapOf(AmAnalytics.Param.CATEGORY to category.name))
         categoryFilter.value = categoryFilter.value.let {
             if (category in it) it - category else it + category
         }
@@ -171,7 +172,7 @@ class CalendarViewModel @Inject constructor(
 
     // ── 내역 액션 (상세 시트 공용) ──
     fun onSetHidden(id: Long, hidden: Boolean) {
-        analytics.logEvent("calendar_tx_swipe_hide", mapOf("hidden" to hidden))
+        analytics.logEvent(AmAnalytics.Event.CALENDAR_TX_SWIPE_HIDE, mapOf(AmAnalytics.Param.HIDDEN to hidden))
         viewModelScope.launch { hideTransactionUseCase(id, hidden) }
     }
 
@@ -182,7 +183,7 @@ class CalendarViewModel @Inject constructor(
     suspend fun countIgnorable(tx: Transaction): Int = countIgnorableTransactionsUseCase(tx)
 
     fun onDelete(id: Long) {
-        analytics.logEvent("calendar_tx_swipe_delete")
+        analytics.logEvent(AmAnalytics.Event.CALENDAR_TX_SWIPE_DELETE)
         viewModelScope.launch { deleteTransactionUseCase(id) }
     }
 

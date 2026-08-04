@@ -12,6 +12,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import com.allowance.manager.core.analytics.AmAnalytics
 import com.allowance.manager.core.analytics.LocalAnalyticsHelper
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -47,11 +48,11 @@ fun AmDialog(
     val analytics = LocalAnalyticsHelper.current
     if (analyticsTag != null) {
         LaunchedEffect(analyticsTag) {
-            analytics.logEvent("dialog_open", mapOf("dialog" to analyticsTag) + analyticsParams)
+            analytics.logEvent(AmAnalytics.Event.DIALOG_OPEN, mapOf(AmAnalytics.Param.DIALOG to analyticsTag) + analyticsParams)
         }
     }
     fun cancel() {
-        if (analyticsTag != null) analytics.logEvent("dialog_cancel", mapOf("dialog" to analyticsTag))
+        if (analyticsTag != null) analytics.logEvent(AmAnalytics.Event.DIALOG_CANCEL, mapOf(AmAnalytics.Param.DIALOG to analyticsTag))
         onDismiss()
     }
     Dialog(onDismissRequest = { cancel() }) {
@@ -79,7 +80,7 @@ fun AmDialog(
                     onClick = {
                         if (confirmEnabled) {
                             if (analyticsTag != null) {
-                                analytics.logEvent("dialog_confirm", mapOf("dialog" to analyticsTag) + analyticsParams)
+                                analytics.logEvent(AmAnalytics.Event.DIALOG_CONFIRM, mapOf(AmAnalytics.Param.DIALOG to analyticsTag) + analyticsParams)
                             }
                             onConfirm()
                         }
