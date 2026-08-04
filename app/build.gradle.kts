@@ -22,6 +22,11 @@ android {
     }
 
     buildTypes {
+        debug {
+            // debug는 별도 패키지(com.allowance.manager.dev) → release와 한 폰에 동시 설치 가능,
+            // 개발용 Firebase 프로젝트(allowance-manager-dev)로 분리 수집
+            applicationIdSuffix = ".dev"
+        }
         release {
             isMinifyEnabled = false
             proguardFiles(

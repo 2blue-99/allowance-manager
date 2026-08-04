@@ -20,9 +20,11 @@ class FirebaseAnalyticsHelper @Inject constructor(
     private val crashlytics = FirebaseCrashlytics.getInstance()
 
     init {
-        val enabled = !BuildConfig.DEBUG
-        analytics.setAnalyticsCollectionEnabled(enabled)
-        crashlytics.isCrashlyticsCollectionEnabled = enabled
+        // Analytics는 디버그에서도 수집 → DebugView로 실시간 확인 가능
+        // (디버그 모드 기기의 이벤트는 운영 리포트에서 제외됨)
+        analytics.setAnalyticsCollectionEnabled(true)
+        // Crashlytics는 디버그에서 끔 (개발 중 크래시가 대시보드를 오염시키지 않게)
+        crashlytics.isCrashlyticsCollectionEnabled = !BuildConfig.DEBUG
     }
 
     override fun logScreenView(screenName: String) {
