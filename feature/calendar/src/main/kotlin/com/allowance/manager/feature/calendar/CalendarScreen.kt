@@ -53,6 +53,8 @@ import com.allowance.manager.core.designsystem.theme.AmType
 import com.allowance.manager.core.domain.model.Transaction
 import com.allowance.manager.core.domain.model.TransactionCategory
 import com.allowance.manager.core.domain.util.amountToComma
+import com.allowance.manager.core.ui.month.MonthNavBar
+import com.allowance.manager.core.ui.month.MonthPickerDialog
 import com.allowance.manager.core.ui.transaction.LedgerListHeader
 import com.allowance.manager.core.ui.transaction.SwipeRevealRow
 import com.allowance.manager.core.ui.transaction.TransactionDetailSheet
@@ -121,6 +123,9 @@ fun CalendarScreen(
             onPrev = onPrevMonth,
             onNext = onNextMonth,
             onPickMonth = { showMonthPicker = true },
+            modifier = Modifier.padding(horizontal = AmSpacing.lg, vertical = 10.dp),
+            prevDesc = "이전 달",
+            nextDesc = "다음 달",
         )
 
         Column(modifier = Modifier.padding(horizontal = AmSpacing.xl)) {
@@ -185,78 +190,9 @@ fun CalendarScreen(
             current = uiState.month,
             minMonth = uiState.minMonth,
             maxMonth = YearMonth.now(),
+            dataMonths = uiState.dataMonths,
             onSelect = { onSelectMonth(it); showMonthPicker = false },
             onDismiss = { showMonthPicker = false },
-        )
-    }
-}
-
-// ── 월 네비게이션 바 (‹ 2026년 7월 ▾ ›) ──
-@Composable
-private fun MonthNavBar(
-    month: YearMonth,
-    canGoPrev: Boolean,
-    canGoNext: Boolean,
-    onPrev: () -> Unit,
-    onNext: () -> Unit,
-    onPickMonth: () -> Unit,
-) {
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(horizontal = AmSpacing.lg, vertical = 10.dp),
-        horizontalArrangement = Arrangement.SpaceBetween,
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        NavArrow(icon = Icons.Filled.ChevronLeft, enabled = canGoPrev, contentDescription = "이전 달", onClick = onPrev)
-        Row(
-            modifier = Modifier
-                .clip(AmShape.pill)
-                .clickable(
-                    interactionSource = remember { MutableInteractionSource() },
-                    indication = null,
-                    onClick = onPickMonth,
-                )
-                .padding(horizontal = 12.dp, vertical = 6.dp),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            Text("${month.year}년 ${month.monthValue}월", style = AmType.header, color = AmColors.TextPrimary)
-            Icon(
-                Icons.Filled.KeyboardArrowDown,
-                contentDescription = "월 선택",
-                tint = AmColors.TextSecondary,
-                modifier = Modifier.size(22.dp),
-            )
-        }
-        NavArrow(icon = Icons.Filled.ChevronRight, enabled = canGoNext, contentDescription = "다음 달", onClick = onNext)
-    }
-}
-
-@Composable
-private fun NavArrow(
-    icon: androidx.compose.ui.graphics.vector.ImageVector,
-    enabled: Boolean,
-    contentDescription: String,
-    onClick: () -> Unit,
-) {
-    Box(
-        modifier = Modifier
-            .size(40.dp)
-            .clip(AmShape.pill)
-            .then(
-                if (enabled) Modifier.clickable(
-                    interactionSource = remember { MutableInteractionSource() },
-                    indication = null,
-                    onClick = onClick,
-                ) else Modifier,
-            ),
-        contentAlignment = Alignment.Center,
-    ) {
-        Icon(
-            icon,
-            contentDescription = contentDescription,
-            tint = if (enabled) AmColors.TextPrimary else AmColors.BarTrack,
-            modifier = Modifier.size(26.dp),
         )
     }
 }
@@ -402,90 +338,3 @@ private fun EmptyState(searchActive: Boolean) {
     }
 }
 
-// ── 월 선택 피커 (안드로이드 기본은 일 단위뿐 → 커스텀) ──
-@Composable
-private fun MonthPickerDialog(
-    current: YearMonth,
-    minMonth: YearMonth?,
-    maxMonth: YearMonth,
-    onSelect: (YearMonth) -> Unit,
-    onDismiss: () -> Unit,
-) {
-    var year by remember { mutableStateOf(current.year) }
-    val minYear = minMonth?.year ?: (maxMonth.year - 10)
-    val canPrevYear = year > minYear
-    val canNextYear = year < maxMonth.year
-
-    Dialog(onDismissRequest = onDismiss) {
-        Column(
-            modifier = Modifier
-                .clip(AmShape.cardLarge)
-                .background(AmColors.CardBg)
-                .padding(20.dp),
-        ) {
-            // 연도 네비게이션
-            Row(
-                modifier = Modifier.fillMaxWidth().padding(bottom = 16.dp),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                NavArrow(Icons.Filled.ChevronLeft, canPrevYear, "이전 해") { if (canPrevYear) year-- }
-                Text("${year}년", style = AmType.title, color = AmColors.TextPrimary)
-                NavArrow(Icons.Filled.ChevronRight, canNextYear, "다음 해") { if (canNextYear) year++ }
-            }
-            // 3열 x 4행 월 그리드
-            (0 until 4).forEach { row ->
-                Row(modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp)) {
-                    (0 until 3).forEach { col ->
-                        val m = row * 3 + col + 1
-                        val ym = YearMonth.of(year, m)
-                        val enabled = ym >= (minMonth ?: ym) && ym <= maxMonth
-                        MonthCell(
-                            label = "${m}월",
-                            selected = ym == current,
-                            enabled = enabled,
-                            modifier = Modifier.weight(1f),
-                            onClick = { onSelect(ym) },
-                        )
-                    }
-                }
-            }
-        }
-    }
-}
-
-@Composable
-private fun MonthCell(
-    label: String,
-    selected: Boolean,
-    enabled: Boolean,
-    modifier: Modifier = Modifier,
-    onClick: () -> Unit,
-) {
-    val bg = when {
-        selected -> AmColors.Emerald
-        else -> Color.Transparent
-    }
-    val fg = when {
-        !enabled -> AmColors.BarTrack
-        selected -> Color.White
-        else -> AmColors.TextPrimary
-    }
-    Box(
-        modifier = modifier
-            .padding(horizontal = 4.dp)
-            .height(46.dp)
-            .clip(AmShape.card)
-            .background(bg)
-            .then(
-                if (enabled) Modifier.clickable(
-                    interactionSource = remember { MutableInteractionSource() },
-                    indication = null,
-                    onClick = onClick,
-                ) else Modifier,
-            ),
-        contentAlignment = Alignment.Center,
-    ) {
-        Text(label, style = AmType.bodyStrong, color = fg)
-    }
-}

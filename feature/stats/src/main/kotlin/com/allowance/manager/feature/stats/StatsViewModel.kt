@@ -13,6 +13,7 @@ import com.allowance.manager.core.domain.usecase.budget.GetUserTypeUseCase
 import com.allowance.manager.core.domain.usecase.budget.ObserveBudgetHistoryUseCase
 import com.allowance.manager.core.domain.usecase.calendar.GetFirstTransactionMonthUseCase
 import com.allowance.manager.core.domain.usecase.calendar.ObserveMonthTransactionsUseCase
+import com.allowance.manager.core.domain.usecase.calendar.ObserveTransactionMonthsUseCase
 import com.allowance.manager.core.domain.usecase.stats.GetMonthlyExpenseTotalsUseCase
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -26,7 +27,7 @@ import java.time.YearMonth
 import javax.inject.Inject
 
 private const val WINDOW_SIZE = 6   // 화면에 보이는 개월 수
-private const val PAGE_STEP = 3     // 좌우 이동 단위
+private const val PAGE_STEP = 6     // 좌우 이동 단위 = 한 화면(6개월)씩 통째로 넘김
 
 data class MonthBar(
     val yearMonth: YearMonth,
@@ -61,6 +62,9 @@ data class StatsUiState(
     val canNewer: Boolean = false,
     val isLoading: Boolean = true,
     val userType: UserType = UserType.Default,
+    val headerMonth: YearMonth = YearMonth.now(),   // 헤더 표시·피커 기준 = 6개월 창의 최신월(windowEnd)
+    val minMonth: YearMonth? = null,                // 피커 하한 = 가장 과거 내역의 달
+    val dataMonths: Set<YearMonth> = emptySet(),    // 거래 있는 달 (월 피커 활성화용)
 ) {
     val rangeLabel: String
         get() = window.firstOrNull()?.let { first ->
@@ -74,6 +78,7 @@ class StatsViewModel @Inject constructor(
     getMonthlyExpenseTotalsUseCase: GetMonthlyExpenseTotalsUseCase,
     observeBudgetHistoryUseCase: ObserveBudgetHistoryUseCase,
     getUserTypeUseCase: GetUserTypeUseCase,
+    observeTransactionMonthsUseCase: ObserveTransactionMonthsUseCase,
     private val observeMonthTransactionsUseCase: ObserveMonthTransactionsUseCase,
     private val getFirstTransactionMonthUseCase: GetFirstTransactionMonthUseCase,
     private val analytics: AnalyticsHelper,
@@ -92,6 +97,9 @@ class StatsViewModel @Inject constructor(
     // 월별 지출 합계 맵 (달력 월, 무시 제외)
     private val expenseByMonth = getMonthlyExpenseTotalsUseCase()
 
+    // 거래 있는 달 (월 피커 활성화용)
+    private val dataMonthsFlow = observeTransactionMonthsUseCase()
+
     init {
         viewModelScope.launch { minMonth.value = getFirstTransactionMonthUseCase() }
 
@@ -105,8 +113,8 @@ class StatsViewModel @Inject constructor(
             ) { end, sel, min, totals, history ->
                 Partial(end, sel, min, totals.associate { it.yearMonth to it.total }, history)
             }
-            combine(partialFlow, selectedTransactions, getUserTypeUseCase()) { p, tx, userType ->
-                render(p, tx, userType)
+            combine(partialFlow, selectedTransactions, getUserTypeUseCase(), dataMonthsFlow) { p, tx, userType, dm ->
+                render(p, tx, userType, dm)
             }.collect { _uiState.value = it }
         }
     }
@@ -123,7 +131,7 @@ class StatsViewModel @Inject constructor(
     private fun budgetFor(month: YearMonth, history: List<MonthlyBudget>): Long =
         history.lastOrNull { !it.effectiveMonth.isAfter(month) }?.amount ?: 0L
 
-    private fun render(p: Partial, selectedTx: List<Transaction>, userType: UserType): StatsUiState {
+    private fun render(p: Partial, selectedTx: List<Transaction>, userType: UserType, dataMonths: List<YearMonth>): StatsUiState {
         val months = (0 until WINDOW_SIZE).map { p.windowEnd.minusMonths((WINDOW_SIZE - 1 - it).toLong()) }
         val window = months.map { ym ->
             val expense = p.expenseByMonth[ym] ?: 0L
@@ -168,6 +176,9 @@ class StatsViewModel @Inject constructor(
             canNewer = p.windowEnd.isBefore(YearMonth.now()),
             isLoading = false,
             userType = userType,
+            headerMonth = p.windowEnd,
+            minMonth = minMonth,
+            dataMonths = dataMonths.toSet(),
         )
     }
 
@@ -185,7 +196,8 @@ class StatsViewModel @Inject constructor(
             end = min.plusMonths((WINDOW_SIZE - 1).toLong())
         }
         windowEnd.value = end
-        clampSelectedIntoWindow(end)
+        // 창 이동 시 선택월을 새 창의 최신월로 맞춤 → 헤더와 항상 일치, 왕복해도 동일 달 복귀
+        selected.value = end
     }
 
     fun onNewer() {
@@ -193,13 +205,23 @@ class StatsViewModel @Inject constructor(
         val now = YearMonth.now()
         val end = minOf(windowEnd.value.plusMonths(PAGE_STEP.toLong()), now)
         windowEnd.value = end
-        clampSelectedIntoWindow(end)
+        // 창 이동 시 선택월을 새 창의 최신월로 맞춤 → 헤더와 항상 일치, 왕복해도 동일 달 복귀
+        selected.value = end
     }
 
-    /** 창을 옮긴 뒤 선택 달이 창 밖이면 창의 최신 달로 옮겨 항상 보이게 한다. */
-    private fun clampSelectedIntoWindow(end: YearMonth) {
-        val start = end.minusMonths((WINDOW_SIZE - 1).toLong())
-        val sel = selected.value
-        if (sel.isBefore(start) || sel.isAfter(end)) selected.value = end
+    /** 월 피커로 창 점프 — 창의 최신월(windowEnd)을 고른 달로. [minMonth, 이번달] 및 창 크기로 clamp. */
+    fun onPickMonth(target: YearMonth) {
+        analytics.logEvent(AmAnalytics.Event.STATS_WINDOW_MOVE, mapOf(AmAnalytics.Param.DIRECTION to "picker"))
+        val now = YearMonth.now()
+        val min = minMonth.value
+        var end = if (target.isAfter(now)) now else target
+        // 창의 첫 달이 가장 과거 내역 달보다 과거로 가지 않게 clamp
+        if (min != null && end.minusMonths((WINDOW_SIZE - 1).toLong()).isBefore(min)) {
+            end = min.plusMonths((WINDOW_SIZE - 1).toLong())
+        }
+        windowEnd.value = end
+        // 창 이동 시 선택월을 새 창의 최신월로 맞춤 → 헤더와 항상 일치, 왕복해도 동일 달 복귀
+        selected.value = end
     }
+
 }

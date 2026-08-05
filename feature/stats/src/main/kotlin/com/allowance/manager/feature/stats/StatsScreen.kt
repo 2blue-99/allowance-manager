@@ -1,6 +1,8 @@
 package com.allowance.manager.feature.stats
 
 import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
@@ -31,8 +33,11 @@ import androidx.compose.material.icons.filled.ChevronRight
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -52,6 +57,8 @@ import com.allowance.manager.core.designsystem.theme.AmShape
 import com.allowance.manager.core.designsystem.theme.AmSpacing
 import com.allowance.manager.core.designsystem.theme.AmType
 import com.allowance.manager.core.domain.util.amountToComma
+import com.allowance.manager.core.ui.month.MonthNavBar
+import com.allowance.manager.core.ui.month.MonthPickerDialog
 import com.allowance.manager.core.ui.transaction.categoryColor
 import com.allowance.manager.core.ui.transaction.categoryLabel
 import java.time.YearMonth
@@ -67,6 +74,7 @@ fun StatsRoute(
         onSelectMonth = viewModel::onSelectMonth,
         onOlder = viewModel::onOlder,
         onNewer = viewModel::onNewer,
+        onPickMonth = viewModel::onPickMonth,
         onOpenMonth = onOpenMonth,
     )
 }
@@ -77,8 +85,12 @@ fun StatsScreen(
     onSelectMonth: (YearMonth) -> Unit = {},
     onOlder: () -> Unit = {},
     onNewer: () -> Unit = {},
+    onPickMonth: (YearMonth) -> Unit = {},
     onOpenMonth: (YearMonth) -> Unit = {},
 ) {
+    // 월 피커 노출 여부 — 순수 UI 상태라 화면이 보유
+    var showMonthPicker by remember { mutableStateOf(false) }
+
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -91,6 +103,7 @@ fun StatsScreen(
             onSelectMonth = onSelectMonth,
             onOlder = onOlder,
             onNewer = onNewer,
+            onOpenMonthPicker = { showMonthPicker = true },
         )
         Spacer(Modifier.height(AmSpacing.md))
         // 선택 월이 바뀌면 요약·파이를 통째로 페이드 인/아웃 (같은 달 데이터 갱신엔 애니메이션 없음)
@@ -113,6 +126,17 @@ fun StatsScreen(
         }
         Spacer(Modifier.height(AmSpacing.md))
     }
+
+    if (showMonthPicker) {
+        MonthPickerDialog(
+            current = uiState.headerMonth,
+            minMonth = uiState.minMonth,
+            maxMonth = YearMonth.now(),
+            dataMonths = uiState.dataMonths,
+            onSelect = { onPickMonth(it); showMonthPicker = false },
+            onDismiss = { showMonthPicker = false },
+        )
+    }
 }
 
 /** 선택 월의 요약·분류 스냅샷 — 월 변경 시 이전/새 데이터를 각각 잡아 페이드 크로스 처리 */
@@ -129,18 +153,21 @@ private fun ChartCard(
     onSelectMonth: (YearMonth) -> Unit,
     onOlder: () -> Unit,
     onNewer: () -> Unit,
+    onOpenMonthPicker: () -> Unit,
 ) {
     AmCard(modifier = Modifier.fillMaxWidth()) {
         Column {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                NavArrow(Icons.Filled.ChevronLeft, uiState.canOlder, "이전 3개월", onOlder)
-                Text(uiState.rangeLabel, style = AmType.labelStrong, color = AmColors.TextPrimary)
-                NavArrow(Icons.Filled.ChevronRight, uiState.canNewer, "다음 3개월", onNewer)
-            }
+            // 월별 화면과 동일한 월 네비게이션(‹ 월 ▾ ›). 통계는 화살표가 6개월 창을 3개월씩 이동.
+            MonthNavBar(
+                month = uiState.headerMonth,
+                canGoPrev = uiState.canOlder,
+                canGoNext = uiState.canNewer,
+                onPrev = onOlder,
+                onNext = onNewer,
+                onPickMonth = onOpenMonthPicker,
+                prevDesc = "이전 3개월",
+                nextDesc = "다음 3개월",
+            )
 
             Spacer(Modifier.height(18.dp))
             BarChart(bars = uiState.window, onSelectMonth = onSelectMonth)
@@ -167,11 +194,20 @@ private fun BarChart(bars: List<MonthBar>, onSelectMonth: (YearMonth) -> Unit) {
         .let { (it * 1.15f) }
     val barMaxHeight = CHART_HEIGHT - CHART_TOP_RESERVE
 
+    // 노출/구간 이동 시 막대가 0부터 차오르는 애니메이션. 보이는 6개월이 바뀌면 다시 재생.
+    // windowKey로 키드 remember → 창이 바뀌면 Animatable을 0부터 새로 생성. (이전 값 1f가 남아
+    // 새 막대가 full 높이로 번쩍이는 첫 프레임 깜빡임 방지)
+    val windowKey = bars.firstOrNull()?.yearMonth to bars.lastOrNull()?.yearMonth
+    val grow = remember(windowKey) { Animatable(0f) }
+    LaunchedEffect(windowKey) {
+        grow.animateTo(1f, animationSpec = tween(durationMillis = 600, easing = FastOutSlowInEasing))
+    }
+
     Box(modifier = Modifier.fillMaxWidth().height(CHART_HEIGHT)) {
         // 막대 (Composable)
         Row(modifier = Modifier.fillMaxSize(), verticalAlignment = Alignment.Bottom) {
             bars.forEach { bar ->
-                val fraction = (bar.expense / maxValue).coerceIn(0f, 1f)
+                val fraction = (bar.expense / maxValue).coerceIn(0f, 1f) * grow.value
                 Column(
                     modifier = Modifier
                         .weight(1f)
@@ -262,7 +298,7 @@ private fun SummaryCard(month: YearMonth, summary: MonthSummary, label: String, 
                 Text("${month.monthValue}월 요약", style = AmType.labelStrong, color = AmColors.TextPrimary)
                 if (summary.isOver) {
                     Text(
-                        "  ·  $label 초과 ${summary.over.amountToComma()}원",
+                        "  ·  초과 ${summary.over.amountToComma()}원",
                         style = AmType.captionStrong,
                         color = AmColors.Red,
                     )
@@ -382,25 +418,6 @@ private fun CategoryRow(slice: CategorySlice) {
 }
 
 // ── 공통 소품 ──
-@Composable
-private fun NavArrow(icon: ImageVector, enabled: Boolean, cd: String, onClick: () -> Unit) {
-    Box(
-        modifier = Modifier
-            .size(34.dp)
-            .clip(AmShape.pill)
-            .then(
-                if (enabled) Modifier.clickable(
-                    interactionSource = remember { MutableInteractionSource() },
-                    indication = null,
-                    onClick = onClick,
-                ) else Modifier,
-            ),
-        contentAlignment = Alignment.Center,
-    ) {
-        Icon(icon, contentDescription = cd, tint = if (enabled) AmColors.TextPrimary else AmColors.BarTrack, modifier = Modifier.size(24.dp))
-    }
-}
-
 @Composable
 private fun LegendDot(color: Color, label: String) {
     Row(verticalAlignment = Alignment.CenterVertically) {

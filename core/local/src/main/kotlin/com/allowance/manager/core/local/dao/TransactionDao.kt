@@ -44,6 +44,18 @@ interface TransactionDao {
     )
     fun observeSpentBetween(start: Long, end: Long): Flow<Long>
 
+    /** 기간 수입 합계 = 메인 · 숨김 아님 · INCOME */
+    @Query(
+        """
+        SELECT COALESCE(SUM(amount), 0) FROM transactions
+        WHERE type = 'INCOME'
+          AND (account_id IS NOT NULL OR is_manual = 1)
+          AND is_hidden = 0
+          AND created_at BETWEEN :start AND :end
+        """
+    )
+    fun observeIncomeBetween(start: Long, end: Long): Flow<Long>
+
     /**
      * 아직 메인 계좌에 매칭되지 않은 내역 (승격 소급 적용 후보).
      * 마스킹 계좌 대조는 SQL로 표현할 수 없어 도메인(MaskedAccount)에서 판정한다.
@@ -111,4 +123,13 @@ interface TransactionDao {
         """
     )
     fun observeMonthlyExpenseTotals(): Flow<List<MonthlyTotalRow>>
+
+    /** 거래가 하나라도 있는 모든 달 ("yyyy-MM", 기기 로컬 타임존). 월 피커에서 데이터 있는 달만 활성화용. */
+    @Query(
+        """
+        SELECT DISTINCT strftime('%Y-%m', created_at / 1000, 'unixepoch', 'localtime') AS ym
+        FROM transactions
+        """
+    )
+    fun observeTransactionMonths(): Flow<List<String>>
 }

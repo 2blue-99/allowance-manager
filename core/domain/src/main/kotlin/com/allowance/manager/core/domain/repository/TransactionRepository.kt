@@ -3,6 +3,7 @@ package com.allowance.manager.core.domain.repository
 import com.allowance.manager.core.domain.model.MonthlyExpense
 import com.allowance.manager.core.domain.model.Transaction
 import kotlinx.coroutines.flow.Flow
+import java.time.YearMonth
 
 interface TransactionRepository {
     suspend fun record(transaction: Transaction): Long
@@ -19,8 +20,14 @@ interface TransactionRepository {
     /** 이번달 지출 합계 (메인·숨김아님·EXPENSE, 환불 음수 자동 차감) */
     fun observeSpentBetween(start: Long, end: Long): Flow<Long>
 
+    /** 기간 수입 합계 (메인·숨김아님·INCOME) */
+    fun observeIncomeBetween(start: Long, end: Long): Flow<Long>
+
     /** 월별 지출 합계 (통계용) */
     fun observeMonthlyExpenseTotals(): Flow<List<MonthlyExpense>>
+
+    /** 거래가 하나라도 있는 달 목록 (월 피커에서 데이터 있는 달만 활성화). */
+    fun observeTransactionMonths(): Flow<List<YearMonth>>
 
     /** 숨김 토글 (합계 제외/복원, 내역은 보관) */
     suspend fun setHidden(id: Long, hidden: Boolean)

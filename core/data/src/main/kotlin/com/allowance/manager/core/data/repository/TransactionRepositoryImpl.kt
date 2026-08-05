@@ -44,12 +44,20 @@ class TransactionRepositoryImpl @Inject constructor(
     override fun observeSpentBetween(start: Long, end: Long): Flow<Long> =
         transactionDao.observeSpentBetween(start, end)
 
+    override fun observeIncomeBetween(start: Long, end: Long): Flow<Long> =
+        transactionDao.observeIncomeBetween(start, end)
+
     override fun observeMonthlyExpenseTotals(): Flow<List<MonthlyExpense>> =
         transactionDao.observeMonthlyExpenseTotals().map { rows ->
             rows.mapNotNull { row ->
                 runCatching { YearMonth.parse(row.ym) }.getOrNull()
                     ?.let { MonthlyExpense(yearMonth = it, total = row.total) }
             }
+        }
+
+    override fun observeTransactionMonths(): Flow<List<YearMonth>> =
+        transactionDao.observeTransactionMonths().map { rows ->
+            rows.mapNotNull { runCatching { YearMonth.parse(it) }.getOrNull() }
         }
 
     override suspend fun setHidden(id: Long, hidden: Boolean) {

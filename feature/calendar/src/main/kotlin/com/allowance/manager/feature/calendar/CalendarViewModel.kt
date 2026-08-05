@@ -9,6 +9,7 @@ import com.allowance.manager.core.domain.model.TransactionCategory
 import com.allowance.manager.core.domain.model.TransactionType
 import com.allowance.manager.core.domain.usecase.calendar.GetFirstTransactionMonthUseCase
 import com.allowance.manager.core.domain.usecase.calendar.ObserveMonthTransactionsUseCase
+import com.allowance.manager.core.domain.usecase.calendar.ObserveTransactionMonthsUseCase
 import com.allowance.manager.core.domain.usecase.ignore.AddIgnoredAccountUseCase
 import com.allowance.manager.core.domain.usecase.ignore.CountIgnorableTransactionsUseCase
 import com.allowance.manager.core.domain.usecase.transaction.DeleteTransactionUseCase
@@ -35,6 +36,7 @@ data class CalendarUiState(
     val query: String = "",
     val categoryFilter: Set<TransactionCategory> = emptySet(),
     val minMonth: YearMonth? = null,                    // 이보다 과거로는 이동 불가 (첫 내역의 달)
+    val dataMonths: Set<YearMonth> = emptySet(),        // 거래 있는 달 (월 피커 활성화용)
     val isLoading: Boolean = true,
 ) {
     /** 다음 달(미래) 이동 가능 여부 — 이번 달까지만 */
@@ -54,6 +56,7 @@ private data class FilterParams(
 class CalendarViewModel @Inject constructor(
     private val observeMonthTransactionsUseCase: ObserveMonthTransactionsUseCase,
     private val getFirstTransactionMonthUseCase: GetFirstTransactionMonthUseCase,
+    observeTransactionMonthsUseCase: ObserveTransactionMonthsUseCase,
     private val hideTransactionUseCase: HideTransactionUseCase,
     private val addIgnoredAccountUseCase: AddIgnoredAccountUseCase,
     private val countIgnorableTransactionsUseCase: CountIgnorableTransactionsUseCase,
@@ -79,13 +82,16 @@ class CalendarViewModel @Inject constructor(
         FilterParams(q, c, a)
     }
 
+    // 거래 있는 달 (월 피커 활성화용)
+    private val dataMonthsFlow = observeTransactionMonthsUseCase()
+
     init {
         // 첫 내역의 달(이전-달 이동 하한) 1회 조회
         viewModelScope.launch { minMonth.value = getFirstTransactionMonthUseCase() }
 
         viewModelScope.launch {
-            combine(month, monthTransactions, minMonth, filterParams) { m, raw, min, fp ->
-                render(m, raw, min, fp)
+            combine(month, monthTransactions, minMonth, filterParams, dataMonthsFlow) { m, raw, min, fp, dm ->
+                render(m, raw, min, fp, dm)
             }.collect { _uiState.value = it }
         }
     }
@@ -96,6 +102,7 @@ class CalendarViewModel @Inject constructor(
         raw: List<Transaction>,
         minMonth: YearMonth?,
         fp: FilterParams,
+        dataMonths: List<YearMonth>,
     ): CalendarUiState {
         val filtered = raw.filter { tx ->
             val matchCategory = fp.categories.isEmpty() || tx.category in fp.categories
@@ -117,6 +124,7 @@ class CalendarViewModel @Inject constructor(
             query = fp.query,
             categoryFilter = fp.categories,
             minMonth = minMonth,
+            dataMonths = dataMonths.toSet(),
             isLoading = false,
         )
     }
