@@ -91,10 +91,15 @@ fun AccountSettingScreen(
 
             Spacer(Modifier.height(AmSpacing.lg))
 
+            // 입력창을 상단에 고정 — 키보드가 하단에서 올라와도 가려지지 않도록
+            AddAccountForm(onAdd = onAdd)
+
+            Spacer(Modifier.height(AmSpacing.lg))
+
             if (uiState.accounts.isEmpty()) {
                 Box(modifier = Modifier.weight(1f).fillMaxWidth(), contentAlignment = Alignment.Center) {
                     Text(
-                        "아직 등록된 계좌가 없어요.\n아래에서 추가하거나,\n홈에서 감지된 거래를 메인으로 등록하세요.",
+                        "아직 등록된 계좌가 없어요.\n위에서 추가하거나,\n홈에서 감지된 거래를 메인으로 등록하세요.",
                         fontSize = 12.sp,
                         color = AmColors.TextSecondary,
                         textAlign = TextAlign.Center,
@@ -117,9 +122,6 @@ fun AccountSettingScreen(
                     }
                 }
             }
-
-            Spacer(Modifier.height(AmSpacing.sm))
-            AddAccountForm(onAdd = onAdd)
         }
 
         SnackbarHost(
