@@ -10,6 +10,8 @@ import androidx.glance.appwidget.GlanceAppWidget
 import androidx.glance.appwidget.action.ActionCallback
 import androidx.glance.appwidget.action.actionRunCallback
 import androidx.glance.appwidget.provideContent
+import com.allowance.manager.core.domain.model.UserType
+import com.allowance.manager.core.domain.usecase.budget.GetUserTypeUseCase
 import com.allowance.manager.core.domain.usecase.budget.ObserveBudgetStatusUseCase
 import dagger.hilt.EntryPoint
 import dagger.hilt.InstallIn
@@ -23,20 +25,24 @@ class BalanceWidget : GlanceAppWidget() {
     @InstallIn(SingletonComponent::class)
     interface WidgetEntryPoint {
         fun observeBudgetStatusUseCase(): ObserveBudgetStatusUseCase
+        fun getUserTypeUseCase(): GetUserTypeUseCase
     }
 
     override suspend fun provideGlance(context: Context, id: GlanceId) {
         val entryPoint = EntryPointAccessors.fromApplication(context, WidgetEntryPoint::class.java)
         val observeBudgetStatusUseCase = entryPoint.observeBudgetStatusUseCase()
+        val getUserTypeUseCase = entryPoint.getUserTypeUseCase()
 
         provideContent {
             val pair by observeBudgetStatusUseCase()
                 .map { it.spent to it.budget }
                 .collectAsState(0L to 0L)
+            val userType by getUserTypeUseCase().collectAsState(UserType.Default)
             GlanceTheme {
                 BalanceWidgetContent(
                     spent = pair.first,
                     budget = pair.second,
+                    label = userType.label,
                     onRefresh = { actionRunCallback<RefreshAction>() },
                 )
             }

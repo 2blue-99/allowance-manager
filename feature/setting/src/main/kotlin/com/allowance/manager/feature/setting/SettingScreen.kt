@@ -187,7 +187,7 @@ fun SettingScreen(
 
             item {
                 AmSettingGroup(
-                    label = "예산 설정",
+                    label = "${uiState.userType.label} 설정",
                     items = listOf(
                         {
                             AmSettingItem(title = "유형", subtitle = "이 금액을 부르는 호칭 (용돈/생활비/예산)", onClick = { showTypeDialog = true }) {
@@ -204,7 +204,7 @@ fun SettingScreen(
                             }
                         },
                         {
-                            AmSettingItem(title = "월급일", onClick = { showPaydayDialog = true }) {
+                            AmSettingItem(title = uiState.userType.paydayLabel, onClick = { showPaydayDialog = true }) {
                                 Text(paydayLabel(uiState.payday), fontSize = 13.sp, fontWeight = FontWeight.Bold, color = AmColors.Emerald)
                                 Spacer(Modifier.width(AmSpacing.xs))
                                 AmChevron()
@@ -290,6 +290,7 @@ fun SettingScreen(
     if (showBudgetDialog) {
         BudgetDialog(
             current = uiState.budget,
+            label = uiState.userType.label,
             onSave = { onBudgetChange(it); showBudgetDialog = false },
             onDismiss = { showBudgetDialog = false },
         )
@@ -297,6 +298,7 @@ fun SettingScreen(
     if (showPaydayDialog) {
         PaydayDialog(
             current = uiState.payday,
+            title = uiState.userType.paydayLabel,
             onSave = { onPaydayChange(it); showPaydayDialog = false },
             onDismiss = { showPaydayDialog = false },
         )
@@ -381,11 +383,11 @@ private fun UserTypeDialog(current: UserType, onSave: (UserType) -> Unit, onDism
 }
 
 @Composable
-private fun BudgetDialog(current: Long, onSave: (Long) -> Unit, onDismiss: () -> Unit) {
+private fun BudgetDialog(current: Long, label: String, onSave: (Long) -> Unit, onDismiss: () -> Unit) {
     var input by remember { mutableStateOf(if (current > 0) current.toString() else "") }
     val amount = input.toLongOrNull() ?: 0L
     AmDialog(
-        title = "월 예산",
+        title = "월 $label",
         onDismiss = onDismiss,
         onConfirm = { onSave(amount) },
         confirmEnabled = amount > 0,
@@ -394,7 +396,7 @@ private fun BudgetDialog(current: Long, onSave: (Long) -> Unit, onDismiss: () ->
         AmTextField(
             value = input,
             onValueChange = { v -> input = v.filter { it.isDigit() } },
-            label = "월 예산 (원)",
+            label = "월 $label (원)",
             keyboardType = KeyboardType.Number,
             visualTransformation = AmThousandsTransformation(),
         )
@@ -402,10 +404,10 @@ private fun BudgetDialog(current: Long, onSave: (Long) -> Unit, onDismiss: () ->
 }
 
 @Composable
-private fun PaydayDialog(current: Int, onSave: (Int) -> Unit, onDismiss: () -> Unit) {
+private fun PaydayDialog(current: Int, title: String, onSave: (Int) -> Unit, onDismiss: () -> Unit) {
     var payday by remember { mutableIntStateOf(current) }
     AmDialog(
-        title = "월급일",
+        title = title,
         onDismiss = onDismiss,
         onConfirm = { onSave(payday) },
         analyticsTag = AmAnalytics.Dialog.PAYDAY,

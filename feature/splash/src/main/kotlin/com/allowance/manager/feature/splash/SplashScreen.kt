@@ -62,11 +62,5 @@ fun SplashScreen() {
             fontWeight = FontWeight.ExtraBold,
             color = AmColors.TextPrimary,
         )
-        Spacer(Modifier.height(AmSpacing.xs))
-        Text(
-            text = "알림으로 자동 기록되는 용돈 관리",
-            fontSize = 13.sp,
-            color = AmColors.TextSecondary,
-        )
     }
 }

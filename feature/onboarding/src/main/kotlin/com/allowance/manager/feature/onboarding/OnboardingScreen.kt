@@ -177,7 +177,7 @@ private fun PersonalOnboardingScreen(
     ) {
         Text("어떤 단어가 좋으신가요?", fontSize = 30.sp, fontWeight = FontWeight.ExtraBold, color = TextPrimary)
         Spacer(Modifier.height(8.dp))
-        Text("이 앱은 용돈·생활비 관리에 특화돼 있어요.\n편한 호칭을 골라주세요.", fontSize = 16.sp, color = TextSecondary)
+        Text("앱에서 사용할 편한 호칭을 골라주세요.", fontSize = 16.sp, color = TextSecondary)
         Spacer(Modifier.height(36.dp))
 
         Column(verticalArrangement = Arrangement.spacedBy(AmSpacing.md)) {
@@ -350,6 +350,7 @@ fun OnboardingInfoScreen(
             // 첫번째 : 월급일 — 항상 노출
             PaydaySection(
                 payday = uiState.payday,
+                paydayLabel = uiState.userType.paydayLabel,
                 onPaydayChange = onPaydayChange,
                 onCommit = { focusManager.clearFocus(); paydayDone = true },
             )
@@ -454,10 +455,11 @@ private fun BudgetSection(
 @Composable
 private fun PaydaySection(
     payday: Int?,
+    paydayLabel: String,
     onPaydayChange: (Int) -> Unit,
     onCommit: () -> Unit,
 ) {
-    Section("월급일이 언제인가요?") {
+    Section("${paydayLabel}이 언제인가요?") {
         Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
 
             AmLineTextField(

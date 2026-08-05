@@ -8,6 +8,8 @@ import com.allowance.manager.core.domain.model.MonthlyBudget
 import com.allowance.manager.core.domain.model.Transaction
 import com.allowance.manager.core.domain.model.TransactionCategory
 import com.allowance.manager.core.domain.model.TransactionType
+import com.allowance.manager.core.domain.model.UserType
+import com.allowance.manager.core.domain.usecase.budget.GetUserTypeUseCase
 import com.allowance.manager.core.domain.usecase.budget.ObserveBudgetHistoryUseCase
 import com.allowance.manager.core.domain.usecase.calendar.GetFirstTransactionMonthUseCase
 import com.allowance.manager.core.domain.usecase.calendar.ObserveMonthTransactionsUseCase
@@ -58,6 +60,7 @@ data class StatsUiState(
     val canOlder: Boolean = false,
     val canNewer: Boolean = false,
     val isLoading: Boolean = true,
+    val userType: UserType = UserType.Default,
 ) {
     val rangeLabel: String
         get() = window.firstOrNull()?.let { first ->
@@ -70,6 +73,7 @@ data class StatsUiState(
 class StatsViewModel @Inject constructor(
     getMonthlyExpenseTotalsUseCase: GetMonthlyExpenseTotalsUseCase,
     observeBudgetHistoryUseCase: ObserveBudgetHistoryUseCase,
+    getUserTypeUseCase: GetUserTypeUseCase,
     private val observeMonthTransactionsUseCase: ObserveMonthTransactionsUseCase,
     private val getFirstTransactionMonthUseCase: GetFirstTransactionMonthUseCase,
     private val analytics: AnalyticsHelper,
@@ -92,7 +96,7 @@ class StatsViewModel @Inject constructor(
         viewModelScope.launch { minMonth.value = getFirstTransactionMonthUseCase() }
 
         viewModelScope.launch {
-            combine(
+            val partialFlow = combine(
                 windowEnd,
                 selected,
                 minMonth,
@@ -100,8 +104,9 @@ class StatsViewModel @Inject constructor(
                 observeBudgetHistoryUseCase(),
             ) { end, sel, min, totals, history ->
                 Partial(end, sel, min, totals.associate { it.yearMonth to it.total }, history)
-            }.combine(selectedTransactions) { p, tx ->
-                render(p, tx)
+            }
+            combine(partialFlow, selectedTransactions, getUserTypeUseCase()) { p, tx, userType ->
+                render(p, tx, userType)
             }.collect { _uiState.value = it }
         }
     }
@@ -118,7 +123,7 @@ class StatsViewModel @Inject constructor(
     private fun budgetFor(month: YearMonth, history: List<MonthlyBudget>): Long =
         history.lastOrNull { !it.effectiveMonth.isAfter(month) }?.amount ?: 0L
 
-    private fun render(p: Partial, selectedTx: List<Transaction>): StatsUiState {
+    private fun render(p: Partial, selectedTx: List<Transaction>, userType: UserType): StatsUiState {
         val months = (0 until WINDOW_SIZE).map { p.windowEnd.minusMonths((WINDOW_SIZE - 1 - it).toLong()) }
         val window = months.map { ym ->
             val expense = p.expenseByMonth[ym] ?: 0L
@@ -162,6 +167,7 @@ class StatsViewModel @Inject constructor(
             canOlder = minMonth == null || months.first().isAfter(minMonth),
             canNewer = p.windowEnd.isBefore(YearMonth.now()),
             isLoading = false,
+            userType = userType,
         )
     }
 

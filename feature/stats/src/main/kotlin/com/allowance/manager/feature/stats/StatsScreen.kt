@@ -104,6 +104,7 @@ fun StatsScreen(
                 SummaryCard(
                     month = detail.month,
                     summary = detail.summary,
+                    label = uiState.userType.label,
                     onOpenMonth = { onOpenMonth(detail.month) },
                 )
                 Spacer(Modifier.height(AmSpacing.md))
@@ -146,9 +147,9 @@ private fun ChartCard(
 
             Spacer(Modifier.height(10.dp))
             Row(horizontalArrangement = Arrangement.spacedBy(13.dp)) {
-                LegendDot(AmColors.Emerald, "용돈 이하")
-                LegendDot(AmColors.Red, "용돈 초과")
-                LegendDash("용돈(월별)")
+                LegendDot(AmColors.Emerald, "${uiState.userType.label} 이하")
+                LegendDot(AmColors.Red, "${uiState.userType.label} 초과")
+                LegendDash("${uiState.userType.label}(월별)")
             }
         }
     }
@@ -254,14 +255,14 @@ private fun BarChart(bars: List<MonthBar>, onSelectMonth: (YearMonth) -> Unit) {
 
 // ── 선택 달 요약 (용돈/지출/수입) ──
 @Composable
-private fun SummaryCard(month: YearMonth, summary: MonthSummary, onOpenMonth: () -> Unit) {
+private fun SummaryCard(month: YearMonth, summary: MonthSummary, label: String, onOpenMonth: () -> Unit) {
     AmCard(modifier = Modifier.fillMaxWidth()) {
         Column {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Text("${month.monthValue}월 요약", style = AmType.labelStrong, color = AmColors.TextPrimary)
                 if (summary.isOver) {
                     Text(
-                        "  ·  용돈 초과 ${summary.over.amountToComma()}원",
+                        "  ·  $label 초과 ${summary.over.amountToComma()}원",
                         style = AmType.captionStrong,
                         color = AmColors.Red,
                     )
@@ -269,7 +270,7 @@ private fun SummaryCard(month: YearMonth, summary: MonthSummary, onOpenMonth: ()
             }
             Spacer(Modifier.height(12.dp))
             Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-                SummaryCell("용돈", "${summary.budget.amountToComma()}원", AmColors.TextPrimary, Modifier.weight(1f))
+                SummaryCell(label, "${summary.budget.amountToComma()}원", AmColors.TextPrimary, Modifier.weight(1f))
                 Box(Modifier.width(1.dp).height(34.dp).background(AmColors.Divider))
                 SummaryCell(
                     "지출",

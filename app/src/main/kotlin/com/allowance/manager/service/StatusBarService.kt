@@ -10,6 +10,8 @@ import android.content.Intent
 import android.os.Build
 import androidx.core.app.NotificationCompat
 import com.allowance.manager.MainActivity
+import com.allowance.manager.core.domain.model.UserType
+import com.allowance.manager.core.domain.usecase.budget.GetUserTypeUseCase
 import com.allowance.manager.core.domain.usecase.budget.ObserveBudgetStatusUseCase
 import com.allowance.manager.core.domain.usecase.setting.GetStatusBarEnabledUseCase
 import com.allowance.manager.core.domain.util.amountToComma
@@ -31,6 +33,7 @@ class StatusBarService : Service() {
 
     @Inject lateinit var observeBudgetStatusUseCase: ObserveBudgetStatusUseCase
     @Inject lateinit var getStatusBarEnabledUseCase: GetStatusBarEnabledUseCase
+    @Inject lateinit var getUserTypeUseCase: GetUserTypeUseCase
 
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main)
 
@@ -39,21 +42,22 @@ class StatusBarService : Service() {
     override fun onCreate() {
         super.onCreate()
         createChannel()
-        startForeground(NOTIF_ID, buildNotification(0L, 0L, isOver = false))
+        startForeground(NOTIF_ID, buildNotification(0L, 0L, isOver = false, label = UserType.Default.label))
 
         scope.launch {
             combine(
                 observeBudgetStatusUseCase(),
                 getStatusBarEnabledUseCase(),
-            ) { status, enabled -> status to enabled }
-                .collect { (status, enabled) ->
+                getUserTypeUseCase(),
+            ) { status, enabled, userType -> Triple(status, enabled, userType) }
+                .collect { (status, enabled, userType) ->
                     if (!enabled) {
                         stopSelf()
                         return@collect
                     }
                     notificationManager().notify(
                         NOTIF_ID,
-                        buildNotification(status.spent, status.budget, status.isOver),
+                        buildNotification(status.spent, status.budget, status.isOver, userType.label),
                     )
                 }
         }
@@ -66,7 +70,7 @@ class StatusBarService : Service() {
         super.onDestroy()
     }
 
-    private fun buildNotification(spent: Long, budget: Long, isOver: Boolean): Notification {
+    private fun buildNotification(spent: Long, budget: Long, isOver: Boolean, label: String): Notification {
         val content = if (budget > 0) {
             "이번달 지출 ${spent.amountToComma()}원 / ${budget.amountToComma()}원"
         } else {
@@ -80,7 +84,7 @@ class StatusBarService : Service() {
         )
         return NotificationCompat.Builder(this, CHANNEL_ID)
             .setSmallIcon(android.R.drawable.ic_menu_info_details)
-            .setContentTitle(if (isOver) "이번달 예산 초과" else "가계부")
+            .setContentTitle(if (isOver) "이번달 $label 초과" else "가계부")
             .setContentText(content)
             .setOngoing(true)
             .setOnlyAlertOnce(true)
@@ -99,7 +103,7 @@ class StatusBarService : Service() {
                 "이번달 지출 현황",
                 NotificationManager.IMPORTANCE_LOW,
             ).apply {
-                description = "상태바에 이번달 지출/예산을 상시 표시"
+                description = "상태바에 이번달 지출 현황을 상시 표시"
                 setShowBadge(false)
             }
             notificationManager().createNotificationChannel(channel)

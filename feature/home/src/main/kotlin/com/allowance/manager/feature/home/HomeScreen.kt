@@ -371,7 +371,7 @@ private fun BudgetCard(uiState: HomeUiState) {
                     color = fillColor,
                 )
                 Text(
-                    "예산 ${uiState.budget.amountToComma()}원",
+                    "${uiState.userType.label} ${uiState.budget.amountToComma()}원",
                     style = AmType.caption,
                     color = Color.White.copy(alpha = 0.4f),
                 )
@@ -423,7 +423,7 @@ private fun StatsRow(uiState: HomeUiState) {
                 if (uiState.overPace) AmColors.Red else AmColors.TextPrimary,
             )
             Box(Modifier.width(1.dp).height(36.dp).background(AmColors.Divider))
-            StatCell(dday, "월급일까지", Modifier.weight(1f), AmColors.Emerald)
+            StatCell(dday, "${uiState.userType.paydayShort}까지", Modifier.weight(1f), AmColors.Emerald)
         }
     }
 }

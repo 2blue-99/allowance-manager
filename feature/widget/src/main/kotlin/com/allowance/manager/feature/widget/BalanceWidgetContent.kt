@@ -43,7 +43,7 @@ private val ColorFlash = AmColors.EmeraldBg
 private val ColorOver = AmColors.Red
 
 @Composable
-fun BalanceWidgetContent(spent: Long, budget: Long, onRefresh: () -> Unit) {
+fun BalanceWidgetContent(spent: Long, budget: Long, label: String, onRefresh: () -> Unit) {
     val formattedSpent = NumberFormat.getNumberInstance(Locale.KOREA).format(spent)
     val formattedBudget = NumberFormat.getNumberInstance(Locale.KOREA).format(budget)
     val percent = if (budget > 0) ((spent.toDouble() / budget) * 100).toInt() else 0
@@ -92,7 +92,7 @@ fun BalanceWidgetContent(spent: Long, budget: Long, onRefresh: () -> Unit) {
             Spacer(modifier = GlanceModifier.defaultWeight())
 
             Text(
-                text = if (budget > 0) "예산 ${formattedBudget}원 · $percent%" else "예산 미설정",
+                text = if (budget > 0) "$label ${formattedBudget}원 · $percent%" else "$label 미설정",
                 style = TextStyle(color = ColorProvider(ColorSecondary), fontSize = 11.sp),
             )
         }
@@ -106,5 +106,5 @@ private fun actionStartActivityIntent(intent: Intent) =
 @Preview(widthDp = 220, heightDp = 100)
 @Composable
 private fun BalanceWidgetPreview() {
-    BalanceWidgetContent(spent = 186_500, budget = 300_000, onRefresh = {})
+    BalanceWidgetContent(spent = 186_500, budget = 300_000, label = "예산", onRefresh = {})
 }
