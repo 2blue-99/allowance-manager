@@ -64,7 +64,14 @@ fun TransactionRow(tx: Transaction, onClick: () -> Unit) {
                     modifier = Modifier.size(34.dp).clip(RoundedCornerShape(8.dp)).background(if (dim) AmColors.Divider else AmColors.EmeraldBg),
                     contentAlignment = Alignment.Center,
                 ) {
-                    Text(tx.category?.emoji ?: if (isIncome) "💰" else "💳", fontSize = 15.sp)
+                    Text(
+                        tx.category?.emoji ?: when {
+                            tx.type == TransactionType.TRANSFER -> "💸"
+                            isIncome -> "💰"
+                            else -> "💳"
+                        },
+                        fontSize = 15.sp,
+                    )
                 }
                 Column(modifier = Modifier.weight(1f)) {
                     Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(5.dp)) {

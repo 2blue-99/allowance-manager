@@ -15,19 +15,21 @@ import kotlin.math.abs
 /** 메모 최대 글자 수 */
 const val MEMO_MAX = 500
 
-/** 부호 포함 금액 문자열. 수입·환불은 '+', 지출은 '-'. */
+/** 부호 포함 금액 문자열. 수입·환불은 '+', 지출은 '-', 이체는 부호 없음(중립). */
 fun signedAmount(tx: Transaction): String {
     val magnitude = abs(tx.amount).amountToComma()
     return when {
+        tx.type == TransactionType.TRANSFER -> "${magnitude}원"   // 이체 = 중립(부호 없음)
         tx.type == TransactionType.INCOME -> "+${magnitude}원"
         tx.amount < 0 -> "+${magnitude}원"   // 취소·환불
         else -> "-${magnitude}원"
     }
 }
 
-/** 금액 색상. 흐림(숨김·미등록) 우선, 그 외 수입·환불=초록, 지출=빨강. */
+/** 금액 색상. 흐림(숨김·미등록) 우선, 이체=중립 회색, 수입·환불=초록, 지출=빨강. */
 fun amountColor(tx: Transaction, dim: Boolean): Color = when {
     dim -> AmColors.TextSecondary
+    tx.type == TransactionType.TRANSFER -> AmColors.TextSecondary   // 이체 = 중립
     tx.type == TransactionType.INCOME || tx.amount < 0 -> AmColors.Emerald
     else -> AmColors.Red
 }

@@ -17,6 +17,5 @@ enum class TransactionCategory(val label: String, val emoji: String) {
     EVENT("경조사·선물", "🎁"),
     HOUSING("주거·통신", "🏠"),
     INCOME("수입", "💰"),
-    TRANSFER("이체", "💸"),
     ETC("기타", "📌"),
 }

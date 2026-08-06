@@ -18,7 +18,6 @@ fun categoryColor(category: TransactionCategory?): Color = when (category) {
     TransactionCategory.EVENT -> AmColors.CatEvent
     TransactionCategory.HOUSING -> AmColors.CatHousing
     TransactionCategory.INCOME -> AmColors.CatIncome
-    TransactionCategory.TRANSFER -> AmColors.CatTransfer
     TransactionCategory.ETC -> AmColors.CatEtc
     null -> AmColors.CatEtc   // 디폴트 = 기타
 }
