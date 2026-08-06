@@ -99,8 +99,9 @@ import com.allowance.manager.core.ui.guide.guideTarget
 import com.allowance.manager.core.ui.guide.rememberGuideTargets
 import com.allowance.manager.core.ui.transaction.LedgerListHeader
 import com.allowance.manager.core.ui.transaction.SwipeRevealRow
-import com.allowance.manager.core.ui.transaction.TransactionDetailSheet
+import com.allowance.manager.core.ui.transaction.TransactionFormSheet
 import com.allowance.manager.core.ui.transaction.TransactionRow
+import com.allowance.manager.core.ui.transaction.TxFormMode
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withTimeoutOrNull
@@ -145,7 +146,7 @@ fun HomeScreen(
     countIgnorable: suspend (Transaction) -> Int = { 0 },
     onDelete: (Long) -> Unit = {},
     onPromoteToMain: (Transaction) -> Unit = {},
-    onSaveTransaction: (Long, String, TransactionCategory?) -> Unit = { _, _, _ -> },
+    onSaveTransaction: (Long, TransactionType, Long, String, String, TransactionCategory?) -> Unit = { _, _, _, _, _, _ -> },
     onAddTransaction: (TransactionType, Long, String, TransactionCategory?, String) -> Unit = { _, _, _, _, _ -> },
     showGuide: Boolean = false,
     onGuideFinished: () -> Unit = {},
@@ -193,8 +194,8 @@ fun HomeScreen(
         }
 
         selected?.let { tx ->
-            TransactionDetailSheet(
-                tx = tx,
+            TransactionFormSheet(
+                mode = TxFormMode.Edit(tx),
                 onDismiss = { selected = null },
                 onSetHidden = onSetHidden,
                 onDelete = onDelete,
@@ -230,7 +231,8 @@ fun HomeScreen(
         }
 
         if (showAdd) {
-            AddTransactionSheet(
+            TransactionFormSheet(
+                mode = TxFormMode.Add,
                 onDismiss = { showAdd = false },
                 onAdd = { t, a, s, c, m -> onAddTransaction(t, a, s, c, m); pendingToast = "내역이 추가되었습니다." },
             )
@@ -578,112 +580,3 @@ private fun SampleHint() {
     }
 }
 
-@Composable
-private fun SheetLabel(text: String) {
-    Text(text, style = AmType.label, color = AmColors.TextSecondary)
-}
-
-// 수동 내역 추가 시트 (좌하단 FAB에서 풀 모달로 오픈)
-@OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
-@Composable
-private fun AddTransactionSheet(
-    onDismiss: () -> Unit,
-    onAdd: (TransactionType, Long, String, TransactionCategory?, String) -> Unit,
-) {
-    val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
-    val scope = rememberCoroutineScope()
-    var type by remember { mutableStateOf(TransactionType.EXPENSE) }
-    var amountText by remember { mutableStateOf("") }
-    var source by remember { mutableStateOf("") }
-    // 디폴트 카테고리 = 기타
-    var category by remember { mutableStateOf<TransactionCategory?>(TransactionCategory.ETC) }
-    var memo by remember { mutableStateOf("") }
-    val amount = amountText.toLongOrNull() ?: 0L
-    val canAdd = amount > 0 && source.isNotBlank()
-
-    fun close() {
-        scope.launch { sheetState.hide() }.invokeOnCompletion { if (!sheetState.isVisible) onDismiss() }
-    }
-
-    ModalBottomSheet(onDismissRequest = onDismiss, sheetState = sheetState, containerColor = AmColors.CardBg) {
-        Column(modifier = Modifier.fillMaxHeight(0.94f)) {
-            Column(
-                modifier = Modifier
-                    .weight(1f)
-                    .verticalScroll(rememberScrollState())
-                    .padding(horizontal = 20.dp),
-            ) {
-                Text("내역 추가", style = AmType.title, color = AmColors.TextPrimary)
-
-                Spacer(Modifier.height(20.dp))
-                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    AmChip("지출", type == TransactionType.EXPENSE) { type = TransactionType.EXPENSE }
-                    AmChip("수입", type == TransactionType.INCOME) { type = TransactionType.INCOME }
-                }
-
-                Spacer(Modifier.height(20.dp))
-                SheetLabel("금액")
-                Spacer(Modifier.height(10.dp))
-                AmTextField(
-                    value = amountText,
-                    onValueChange = { v -> amountText = v.filter { it.isDigit() } },
-                    label = "금액 (원)",
-                    keyboardType = KeyboardType.Number,
-                    // 저장값은 숫자만, 화면에는 천 단위 콤마로 표시
-                    visualTransformation = AmThousandsTransformation(),
-                    modifier = Modifier.fillMaxWidth(),
-                )
-
-                Spacer(Modifier.height(20.dp))
-                SheetLabel("사용처")
-                Spacer(Modifier.height(10.dp))
-                AmTextField(
-                    value = source,
-                    onValueChange = { source = it },
-                    label = "예: 스타벅스",
-                    modifier = Modifier.fillMaxWidth(),
-                )
-
-                Spacer(Modifier.height(24.dp))
-                SheetLabel("분류")
-                Spacer(Modifier.height(10.dp))
-                FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    TransactionCategory.entries.forEach { cat ->
-                        AmChip("${cat.emoji} ${cat.label}", category == cat) { category = if (category == cat) null else cat }
-                    }
-                }
-
-                Spacer(Modifier.height(24.dp))
-                SheetLabel("메모")
-                Spacer(Modifier.height(10.dp))
-                AmTextField(
-                    value = memo,
-                    onValueChange = { if (it.length <= MEMO_MAX) memo = it },
-                    label = "메모를 남겨보세요",
-                    singleLine = false,
-                    minLines = 3,
-                    // supportingText = "${memo.length}/$MEMO_MAX",  // 글자수 표시는 생략
-                    modifier = Modifier.fillMaxWidth(),
-                )
-
-                Spacer(Modifier.height(24.dp))
-            }
-
-            Row(
-                modifier = Modifier.fillMaxWidth().padding(horizontal = 20.dp).padding(vertical = 10.dp),
-                horizontalArrangement = Arrangement.spacedBy(12.dp),
-            ) {
-                AmSecondaryButton("취소", onClick = { close() }, modifier = Modifier.weight(1f))
-                AmButton(
-                    "추가",
-                    onClick = { onAdd(type, amount, source, category, memo); close() },
-                    modifier = Modifier.weight(1f),
-                    enabled = canAdd,
-                )
-            }
-        }
-    }
-}
-
-// ── helpers ──────────────────────────────────────────
-private const val MEMO_MAX = 500

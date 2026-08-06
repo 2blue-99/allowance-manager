@@ -1,6 +1,6 @@
 package com.allowance.manager.core.domain.model
 
-enum class TransactionType { EXPENSE, INCOME }
+enum class TransactionType { EXPENSE, INCOME, TRANSFER }
 
 /**
  * 입출금 내역 한 건 (가계부).

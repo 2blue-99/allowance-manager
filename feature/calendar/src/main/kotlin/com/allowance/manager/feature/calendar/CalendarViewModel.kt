@@ -195,8 +195,15 @@ class CalendarViewModel @Inject constructor(
         viewModelScope.launch { deleteTransactionUseCase(id) }
     }
 
-    fun onSaveTransaction(id: Long, memo: String, category: TransactionCategory?) {
-        viewModelScope.launch { updateTransactionUseCase(id, memo, category) }
+    fun onSaveTransaction(
+        id: Long,
+        type: TransactionType,
+        amount: Long,
+        sourceName: String,
+        memo: String,
+        category: TransactionCategory?,
+    ) {
+        viewModelScope.launch { updateTransactionUseCase(id, type, amount, sourceName, memo, category) }
     }
 
     fun onPromoteToMain(transaction: Transaction) {

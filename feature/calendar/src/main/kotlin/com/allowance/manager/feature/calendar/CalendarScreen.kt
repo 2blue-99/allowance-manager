@@ -52,13 +52,15 @@ import com.allowance.manager.core.designsystem.theme.AmSpacing
 import com.allowance.manager.core.designsystem.theme.AmType
 import com.allowance.manager.core.domain.model.Transaction
 import com.allowance.manager.core.domain.model.TransactionCategory
+import com.allowance.manager.core.domain.model.TransactionType
 import com.allowance.manager.core.domain.util.amountToComma
 import com.allowance.manager.core.ui.month.MonthNavBar
 import com.allowance.manager.core.ui.month.MonthPickerDialog
 import com.allowance.manager.core.ui.transaction.LedgerListHeader
 import com.allowance.manager.core.ui.transaction.SwipeRevealRow
-import com.allowance.manager.core.ui.transaction.TransactionDetailSheet
+import com.allowance.manager.core.ui.transaction.TransactionFormSheet
 import com.allowance.manager.core.ui.transaction.TransactionRow
+import com.allowance.manager.core.ui.transaction.TxFormMode
 import java.time.YearMonth
 
 @Composable
@@ -103,7 +105,7 @@ fun CalendarScreen(
     onIgnoreSource: (Transaction) -> Unit = {},
     countIgnorable: suspend (Transaction) -> Int = { 0 },
     onDelete: (Long) -> Unit = {},
-    onSaveTransaction: (Long, String, TransactionCategory?) -> Unit = { _, _, _ -> },
+    onSaveTransaction: (Long, TransactionType, Long, String, String, TransactionCategory?) -> Unit = { _, _, _, _, _, _ -> },
     onPromoteToMain: (Transaction) -> Unit = {},
     modifier: Modifier = Modifier,
 ) {
@@ -173,8 +175,8 @@ fun CalendarScreen(
     }
 
     selected?.let { tx ->
-        TransactionDetailSheet(
-            tx = tx,
+        TransactionFormSheet(
+            mode = TxFormMode.Edit(tx),
             onDismiss = { selected = null },
             onSetHidden = onSetHidden,
             onDelete = onDelete,

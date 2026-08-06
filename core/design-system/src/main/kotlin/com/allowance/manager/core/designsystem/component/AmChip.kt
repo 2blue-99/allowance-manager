@@ -11,6 +11,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
@@ -54,6 +55,8 @@ fun AmChip(
                 onClick = onClick,
             )
             .padding(horizontal = AmSpacing.lg, vertical = 9.dp),
+        // 내용폭 칩은 무영향, full-width(weight) 칩에선 라벨이 가운데 정렬됨
+        contentAlignment = Alignment.Center,
     ) {
         Text(
             text = label,

@@ -185,9 +185,16 @@ class HomeViewModel @Inject constructor(
         viewModelScope.launch { deleteTransactionUseCase(id) }
     }
 
-    /** 바텀시트 '저장' — 수정한 메모·분류를 upsert */
-    fun onSaveTransaction(id: Long, memo: String, category: TransactionCategory?) {
-        viewModelScope.launch { updateTransactionUseCase(id, memo, category) }
+    /** 바텀시트 '저장' — 수정한 유형·금액·사용처·메모·분류를 upsert */
+    fun onSaveTransaction(
+        id: Long,
+        type: TransactionType,
+        amount: Long,
+        sourceName: String,
+        memo: String,
+        category: TransactionCategory?,
+    ) {
+        viewModelScope.launch { updateTransactionUseCase(id, type, amount, sourceName, memo, category) }
     }
 
     /** FAB — 수동 내역 추가 */
