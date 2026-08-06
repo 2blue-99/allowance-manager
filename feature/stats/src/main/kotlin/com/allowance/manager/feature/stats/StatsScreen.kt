@@ -303,24 +303,13 @@ private fun SummaryCard(month: YearMonth, summary: MonthSummary, label: String, 
         Column {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Text("${month.monthValue}월 요약", style = AmType.labelStrong, color = AmColors.TextPrimary)
-                if (summary.isOver) {
-                    Text(
-                        "  ·  초과 ${summary.over.amountToComma()}원",
-                        style = AmType.captionStrong,
-                        color = AmColors.Red,
-                    )
-                }
             }
             Spacer(Modifier.height(12.dp))
             Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                // 생활비=검정, 지출=경고색(항상 Red), 수입=메인색(Emerald)
                 SummaryCell(label, "${summary.budget.amountToComma()}원", AmColors.TextPrimary, Modifier.weight(1f))
                 Box(Modifier.width(1.dp).height(34.dp).background(AmColors.Divider))
-                SummaryCell(
-                    "지출",
-                    "${summary.expense.amountToComma()}원",
-                    if (summary.isOver) AmColors.Red else AmColors.Emerald,
-                    Modifier.weight(1f),
-                )
+                SummaryCell("지출", "${summary.expense.amountToComma()}원", AmColors.Red, Modifier.weight(1f))
                 Box(Modifier.width(1.dp).height(34.dp).background(AmColors.Divider))
                 SummaryCell("수입", "${summary.income.amountToComma()}원", AmColors.Emerald, Modifier.weight(1f))
             }
