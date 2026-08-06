@@ -84,7 +84,7 @@ class StatusBarService : Service() {
         )
         return NotificationCompat.Builder(this, CHANNEL_ID)
             .setSmallIcon(android.R.drawable.ic_menu_info_details)
-            .setContentTitle(if (isOver) "이번달 $label 초과" else "가계부")
+            .setContentTitle(if (isOver) "이번달 $label 초과" else "내돈지켜")
             .setContentText(content)
             .setOngoing(true)
             .setOnlyAlertOnce(true)
