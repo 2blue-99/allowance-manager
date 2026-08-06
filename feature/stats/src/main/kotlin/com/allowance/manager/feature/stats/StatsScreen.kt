@@ -214,10 +214,17 @@ private fun BarChart(bars: List<MonthBar>, onSelectMonth: (YearMonth) -> Unit) {
                         .fillMaxHeight()
                         .clip(RoundedCornerShape(10.dp))
                         .then(if (bar.isSelected) Modifier.background(AmColors.ScreenBg) else Modifier)
-                        .clickable(
-                            interactionSource = remember { MutableInteractionSource() },
-                            indication = null,
-                        ) { onSelectMonth(bar.yearMonth) },
+                        .then(
+                            // 존재하지 않는 월(첫 거래월 이전)은 선택 불가
+                            if (bar.exists) {
+                                Modifier.clickable(
+                                    interactionSource = remember { MutableInteractionSource() },
+                                    indication = null,
+                                ) { onSelectMonth(bar.yearMonth) }
+                            } else {
+                                Modifier
+                            },
+                        ),
                     horizontalAlignment = Alignment.CenterHorizontally,
                     verticalArrangement = Arrangement.Bottom,
                 ) {

@@ -93,6 +93,7 @@ private fun sampleBar(back: Long, expense: Long, budget: Long, selected: Boolean
         budget = budget,
         isOver = budget > 0 && expense > budget,
         isSelected = selected,
+        exists = true,
     )
 }
 

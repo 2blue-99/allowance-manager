@@ -36,6 +36,7 @@ data class MonthBar(
     val budget: Long,         // 그 달 용돈(이월) → 계단식 점선 레벨
     val isOver: Boolean,      // 지출 > 용돈 → 빨강, 이하 → 초록
     val isSelected: Boolean,
+    val exists: Boolean,      // 첫 거래월 ~ 이번달 범위 안(=실제 존재하는 월). 이전 달 막대는 선택 불가
 )
 
 data class MonthSummary(
@@ -132,6 +133,9 @@ class StatsViewModel @Inject constructor(
         history.lastOrNull { !it.effectiveMonth.isAfter(month) }?.amount ?: 0L
 
     private fun render(p: Partial, selectedTx: List<Transaction>, userType: UserType, dataMonths: List<YearMonth>): StatsUiState {
+        val now = YearMonth.now()
+        // 존재하는 월의 하한 = 첫 거래월(없으면 이번달). 이보다 과거 or 미래 달은 실제 존재하지 않음.
+        val lowerBound = p.minMonth ?: now
         val months = (0 until WINDOW_SIZE).map { p.windowEnd.minusMonths((WINDOW_SIZE - 1 - it).toLong()) }
         val window = months.map { ym ->
             val expense = p.expenseByMonth[ym] ?: 0L
@@ -143,6 +147,7 @@ class StatsViewModel @Inject constructor(
                 budget = budget,
                 isOver = budget > 0 && expense > budget,
                 isSelected = ym == p.selected,
+                exists = !ym.isBefore(lowerBound) && !ym.isAfter(now),
             )
         }
 
