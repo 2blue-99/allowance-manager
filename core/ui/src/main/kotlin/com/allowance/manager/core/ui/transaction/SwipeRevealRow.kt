@@ -60,11 +60,11 @@ fun SwipeRevealRow(
     val scope = rememberCoroutineScope()
 
     Box(modifier = modifier.clip(AmShape.card)) {
-        // 배경: 오른쪽에 숨김·삭제
+        // 배경: 오른쪽에 제외·삭제
         Row(modifier = Modifier.matchParentSize(), horizontalArrangement = Arrangement.End) {
             SwipeAction(
                 icon = if (hidden) Icons.Outlined.Visibility else Icons.Outlined.VisibilityOff,
-                label = if (hidden) "복원" else "숨김",
+                label = if (hidden) "복원" else "제외",
                 background = AmColors.ChipBg,
                 foreground = AmColors.TextSecondary,
                 width = actionWidth,
