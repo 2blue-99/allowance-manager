@@ -32,29 +32,45 @@ interface TransactionDao {
     @Query("SELECT * FROM transactions WHERE created_at BETWEEN :start AND :end ORDER BY created_at DESC")
     fun observeBetween(start: Long, end: Long): Flow<List<TransactionEntity>>
 
-    /** 이번달(사이클) 지출 합계 = 메인 · 숨김 아님 · EXPENSE (환불 음수 자동 차감) */
+    /** 예산 지출 = scope=BUDGET · EXPENSE (환불 음수 자동 차감). 남은 금액·하루지표용 */
     @Query(
         """
         SELECT COALESCE(SUM(amount), 0) FROM transactions
-        WHERE type = 'EXPENSE'
-          AND (account_id IS NOT NULL OR is_manual = 1)
-          AND is_hidden = 0
+        WHERE type = 'EXPENSE' AND scope = 'BUDGET'
           AND created_at BETWEEN :start AND :end
         """
     )
-    fun observeSpentBetween(start: Long, end: Long): Flow<Long>
+    fun observeBudgetSpentBetween(start: Long, end: Long): Flow<Long>
 
-    /** 기간 수입 합계 = 메인 · 숨김 아님 · INCOME */
+    /** 예산 수입 = scope=BUDGET · INCOME. 남은 금액 가산용 */
     @Query(
         """
         SELECT COALESCE(SUM(amount), 0) FROM transactions
-        WHERE type = 'INCOME'
-          AND (account_id IS NOT NULL OR is_manual = 1)
-          AND is_hidden = 0
+        WHERE type = 'INCOME' AND scope = 'BUDGET'
           AND created_at BETWEEN :start AND :end
         """
     )
-    fun observeIncomeBetween(start: Long, end: Long): Flow<Long>
+    fun observeBudgetIncomeBetween(start: Long, end: Long): Flow<Long>
+
+    /** 가계부 지출 = scope != EXCLUDED · EXPENSE. 가계부 위젯 등 '집계' 합계용 */
+    @Query(
+        """
+        SELECT COALESCE(SUM(amount), 0) FROM transactions
+        WHERE type = 'EXPENSE' AND scope != 'EXCLUDED'
+          AND created_at BETWEEN :start AND :end
+        """
+    )
+    fun observeLedgerSpentBetween(start: Long, end: Long): Flow<Long>
+
+    /** 가계부 수입 = scope != EXCLUDED · INCOME. 홈 수입 카드·가계부 위젯용 */
+    @Query(
+        """
+        SELECT COALESCE(SUM(amount), 0) FROM transactions
+        WHERE type = 'INCOME' AND scope != 'EXCLUDED'
+          AND created_at BETWEEN :start AND :end
+        """
+    )
+    fun observeLedgerIncomeBetween(start: Long, end: Long): Flow<Long>
 
     /**
      * 아직 메인 계좌에 매칭되지 않은 내역 (승격 소급 적용 후보).
@@ -63,8 +79,15 @@ interface TransactionDao {
     @Query("SELECT * FROM transactions WHERE account_id IS NULL")
     suspend fun getUnmatched(): List<TransactionEntity>
 
-    /** 비메인 → 메인 승격: 지정한 내역들에 accountId 소급 적용 */
-    @Query("UPDATE transactions SET account_id = :accountId WHERE id IN (:ids)")
+    /** 비메인 → 메인 승격: accountId 소급 + EXCLUDED 는 BUDGET 로 승격(사용자 지정 상태는 유지) */
+    @Query(
+        """
+        UPDATE transactions
+        SET account_id = :accountId,
+            scope = CASE WHEN scope = 'EXCLUDED' THEN 'BUDGET' ELSE scope END
+        WHERE id IN (:ids)
+        """
+    )
     suspend fun promoteByIds(ids: List<Long>, accountId: Long)
 
     // ── 무시 계좌 소급 삭제·건수 ──
@@ -102,7 +125,9 @@ interface TransactionDao {
      */
     @Query(
         """
-        UPDATE transactions SET account_id = :accountId
+        UPDATE transactions
+        SET account_id = :accountId,
+            scope = CASE WHEN scope = 'EXCLUDED' THEN 'BUDGET' ELSE scope END
         WHERE account_id IS NULL
           AND package_name = :packageName
           AND (extracted_account IS NULL OR extracted_account = '')
@@ -110,15 +135,13 @@ interface TransactionDao {
     )
     suspend fun promoteBySource(packageName: String, accountId: Long)
 
-    /** 월별 지출 합계 (메인·숨김아님·EXPENSE). ym = "yyyy-MM" (기기 로컬 타임존 기준) */
+    /** 월별 예산 지출 합계 (scope=BUDGET·EXPENSE). 통계 6개월 막대(예산 대비)용. ym = "yyyy-MM" (로컬 타임존) */
     @Query(
         """
         SELECT strftime('%Y-%m', created_at / 1000, 'unixepoch', 'localtime') AS ym,
                COALESCE(SUM(amount), 0) AS total
         FROM transactions
-        WHERE type = 'EXPENSE'
-          AND (account_id IS NOT NULL OR is_manual = 1)
-          AND is_hidden = 0
+        WHERE type = 'EXPENSE' AND scope = 'BUDGET'
         GROUP BY ym
         """
     )

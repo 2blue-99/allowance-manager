@@ -27,7 +27,9 @@ import com.allowance.manager.core.domain.usecase.transaction.HideTransactionUseC
 import com.allowance.manager.core.domain.usecase.transaction.ObserveCurrentTransactionsUseCase
 import com.allowance.manager.core.domain.usecase.transaction.AddManualTransactionUseCase
 import com.allowance.manager.core.domain.usecase.transaction.PromoteToMainUseCase
+import com.allowance.manager.core.domain.usecase.transaction.SetTxScopeUseCase
 import com.allowance.manager.core.domain.usecase.transaction.UpdateTransactionUseCase
+import com.allowance.manager.core.domain.model.TxScope
 import com.allowance.manager.core.domain.model.TransactionCategory
 import com.allowance.manager.core.domain.model.TransactionType
 import com.allowance.manager.core.analytics.AmAnalytics
@@ -76,6 +78,7 @@ class HomeViewModel @Inject constructor(
     private val deleteTransactionUseCase: DeleteTransactionUseCase,
     private val promoteToMainUseCase: PromoteToMainUseCase,
     private val updateTransactionUseCase: UpdateTransactionUseCase,
+    private val setTxScopeUseCase: SetTxScopeUseCase,
     private val addManualTransactionUseCase: AddManualTransactionUseCase,
     getHomeGuideShownUseCase: GetHomeGuideShownUseCase,
     private val setHomeGuideShownUseCase: SetHomeGuideShownUseCase,
@@ -131,9 +134,9 @@ class HomeViewModel @Inject constructor(
                 val dailyBudget = if (status.remaining > 0) status.remaining / daysLeft / 100 * 100 else 0L
                 val dailyAverage = status.spent / elapsed / 100 * 100
                 val spentRatio = if (status.budget > 0) (status.spent.toFloat() / status.budget).coerceIn(0f, 1f) else 0f
-                // 이번 달 수입 = 사이클 내 집계대상(메인·수동) · 무시 아님 · INCOME
+                // 이번 달 수입 = 가계부 집계(BUDGET+LEDGER_ONLY) · INCOME (홈 수입 카드용)
                 val income = transactions
-                    .filter { it.isCounted && !it.isHidden && it.type == TransactionType.INCOME }
+                    .filter { it.inLedger && it.type == TransactionType.INCOME }
                     .sumOf { it.amount }
 
                 HomeUiState(
@@ -170,6 +173,11 @@ class HomeViewModel @Inject constructor(
     fun onSetHidden(id: Long, hidden: Boolean) {
         analytics.logEvent(AmAnalytics.Event.HOME_TX_SWIPE_HIDE, mapOf(AmAnalytics.Param.HIDDEN to hidden))
         viewModelScope.launch { hideTransactionUseCase(id, hidden) }
+    }
+
+    /** 상세시트 3분기 — 예산 반영 상태 지정 */
+    fun onSetScope(id: Long, scope: TxScope) {
+        viewModelScope.launch { setTxScopeUseCase(id, scope) }
     }
 
     /** 무시 등록 + 과거 내역 소급 삭제 (출처/계좌 기준) */

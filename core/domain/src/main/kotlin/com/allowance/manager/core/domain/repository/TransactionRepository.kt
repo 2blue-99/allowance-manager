@@ -2,6 +2,7 @@ package com.allowance.manager.core.domain.repository
 
 import com.allowance.manager.core.domain.model.MonthlyExpense
 import com.allowance.manager.core.domain.model.Transaction
+import com.allowance.manager.core.domain.model.TxScope
 import kotlinx.coroutines.flow.Flow
 import java.time.YearMonth
 
@@ -17,11 +18,17 @@ interface TransactionRepository {
     fun observeAll(): Flow<List<Transaction>>
     fun observeBetween(start: Long, end: Long): Flow<List<Transaction>>
 
-    /** 이번달 지출 합계 (메인·숨김아님·EXPENSE, 환불 음수 자동 차감) */
-    fun observeSpentBetween(start: Long, end: Long): Flow<Long>
+    /** 예산 지출 합계 (scope=BUDGET·EXPENSE, 환불 음수 자동 차감) — 남은 금액·하루지표 */
+    fun observeBudgetSpentBetween(start: Long, end: Long): Flow<Long>
 
-    /** 기간 수입 합계 (메인·숨김아님·INCOME) */
-    fun observeIncomeBetween(start: Long, end: Long): Flow<Long>
+    /** 예산 수입 합계 (scope=BUDGET·INCOME) — 남은 금액 가산 */
+    fun observeBudgetIncomeBetween(start: Long, end: Long): Flow<Long>
+
+    /** 가계부 지출 합계 (scope!=EXCLUDED·EXPENSE) — 가계부 위젯 등 집계 */
+    fun observeLedgerSpentBetween(start: Long, end: Long): Flow<Long>
+
+    /** 가계부 수입 합계 (scope!=EXCLUDED·INCOME) — 홈 수입 카드·가계부 위젯 */
+    fun observeLedgerIncomeBetween(start: Long, end: Long): Flow<Long>
 
     /** 월별 지출 합계 (통계용) */
     fun observeMonthlyExpenseTotals(): Flow<List<MonthlyExpense>>
@@ -29,8 +36,11 @@ interface TransactionRepository {
     /** 거래가 하나라도 있는 달 목록 (월 피커에서 데이터 있는 달만 활성화). */
     fun observeTransactionMonths(): Flow<List<YearMonth>>
 
-    /** 숨김 토글 (합계 제외/복원, 내역은 보관) */
+    /** 숨김 토글 (합계 제외/복원, 내역은 보관) — 스와이프 빠른 제외/복원용 */
     suspend fun setHidden(id: Long, hidden: Boolean)
+
+    /** 예산 반영 상태 지정 (BUDGET/LEDGER_ONLY/EXCLUDED) — 상세시트 3분기 컨트롤 */
+    suspend fun setScope(id: Long, scope: TxScope)
 
     /** 같은 계좌 패턴의 비메인 내역을 메인(accountId)으로 승격 */
     suspend fun promoteToMain(pattern: String, accountId: Long)

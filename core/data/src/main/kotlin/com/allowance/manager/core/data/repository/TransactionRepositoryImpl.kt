@@ -5,6 +5,7 @@ import com.allowance.manager.core.domain.model.MonthlyExpense
 import com.allowance.manager.core.domain.model.Transaction
 import com.allowance.manager.core.domain.model.TransactionCategory
 import com.allowance.manager.core.domain.model.TransactionType
+import com.allowance.manager.core.domain.model.TxScope
 import com.allowance.manager.core.domain.repository.TransactionRepository
 import com.allowance.manager.core.local.dao.TransactionDao
 import com.allowance.manager.core.local.entity.TransactionEntity
@@ -41,11 +42,17 @@ class TransactionRepositoryImpl @Inject constructor(
     override fun observeBetween(start: Long, end: Long): Flow<List<Transaction>> =
         transactionDao.observeBetween(start, end).map { list -> list.map { it.toDomain() } }
 
-    override fun observeSpentBetween(start: Long, end: Long): Flow<Long> =
-        transactionDao.observeSpentBetween(start, end)
+    override fun observeBudgetSpentBetween(start: Long, end: Long): Flow<Long> =
+        transactionDao.observeBudgetSpentBetween(start, end)
 
-    override fun observeIncomeBetween(start: Long, end: Long): Flow<Long> =
-        transactionDao.observeIncomeBetween(start, end)
+    override fun observeBudgetIncomeBetween(start: Long, end: Long): Flow<Long> =
+        transactionDao.observeBudgetIncomeBetween(start, end)
+
+    override fun observeLedgerSpentBetween(start: Long, end: Long): Flow<Long> =
+        transactionDao.observeLedgerSpentBetween(start, end)
+
+    override fun observeLedgerIncomeBetween(start: Long, end: Long): Flow<Long> =
+        transactionDao.observeLedgerIncomeBetween(start, end)
 
     override fun observeMonthlyExpenseTotals(): Flow<List<MonthlyExpense>> =
         transactionDao.observeMonthlyExpenseTotals().map { rows ->
@@ -61,7 +68,13 @@ class TransactionRepositoryImpl @Inject constructor(
         }
 
     override suspend fun setHidden(id: Long, hidden: Boolean) {
-        transactionDao.getById(id)?.let { transactionDao.update(it.copy(isHidden = hidden)) }
+        // 전환기: hidden 토글을 scope 로 매핑 (true=EXCLUDED / false=BUDGET). Phase 5에서 setScope 로 대체.
+        val scope = if (hidden) "EXCLUDED" else "BUDGET"
+        transactionDao.getById(id)?.let { transactionDao.update(it.copy(scope = scope)) }
+    }
+
+    override suspend fun setScope(id: Long, scope: TxScope) {
+        transactionDao.getById(id)?.let { transactionDao.update(it.copy(scope = scope.name)) }
     }
 
     // 마스킹 계좌 대조는 SQL로 불가 → 미매칭 내역을 불러와 도메인 규칙으로 판정 후 일괄 승격
@@ -108,7 +121,7 @@ private fun Transaction.toEntity() = TransactionEntity(
     accountId = accountId,
     category = category?.name,
     memo = memo,
-    isHidden = isHidden,
+    scope = scope.name,
     isManual = isManual,
     createdAt = createdAt,
 )
@@ -124,7 +137,7 @@ private fun TransactionEntity.toDomain() = Transaction(
     accountId = accountId,
     category = category?.let { runCatching { TransactionCategory.valueOf(it) }.getOrNull() },
     memo = memo,
-    isHidden = isHidden,
+    scope = runCatching { TxScope.valueOf(scope) }.getOrDefault(TxScope.BUDGET),
     isManual = isManual,
     createdAt = createdAt,
 )

@@ -8,6 +8,7 @@ import com.allowance.manager.core.domain.model.IgnoredAccount
 import com.allowance.manager.core.domain.model.LedgerFilter
 import com.allowance.manager.core.domain.model.Transaction
 import com.allowance.manager.core.domain.model.TransactionType
+import com.allowance.manager.core.domain.model.TxScope
 import com.allowance.manager.feature.account.AccountSettingScreen
 import com.allowance.manager.feature.account.AccountUiState
 import com.allowance.manager.feature.calendar.CalendarScreen
@@ -57,7 +58,7 @@ private fun sampleTransaction(
     extractedAccount = "941602-**-***318",
     accountId = accountId,
     memo = null,
-    isHidden = hidden,
+    scope = if (hidden) TxScope.EXCLUDED else TxScope.BUDGET,
     createdAt = 1_753_000_000_000L,
 )
 

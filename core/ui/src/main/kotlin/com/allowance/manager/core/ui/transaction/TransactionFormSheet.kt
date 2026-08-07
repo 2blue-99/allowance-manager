@@ -57,6 +57,7 @@ import com.allowance.manager.core.designsystem.theme.AmType
 import com.allowance.manager.core.domain.model.Transaction
 import com.allowance.manager.core.domain.model.TransactionCategory
 import com.allowance.manager.core.domain.model.TransactionType
+import com.allowance.manager.core.domain.model.TxScope
 import kotlinx.coroutines.launch
 import kotlin.math.abs
 
@@ -79,11 +80,12 @@ sealed interface TxFormMode {
 fun TransactionFormSheet(
     mode: TxFormMode,
     onDismiss: () -> Unit,
+    budgetName: String = "예산",   // 자산 호칭(용돈/생활비/예산) — 예산 반영 안내문에 사용
     // 추가 모드 콜백
     onAdd: (TransactionType, Long, String, TransactionCategory?, String) -> Unit = { _, _, _, _, _ -> },
     // 수정 모드 콜백 (유형·금액·사용처·메모·분류)
     onSaveTransaction: (Long, TransactionType, Long, String, String, TransactionCategory?) -> Unit = { _, _, _, _, _, _ -> },
-    onSetHidden: (Long, Boolean) -> Unit = { _, _ -> },
+    onSetScope: (Long, TxScope) -> Unit = { _, _ -> },
     onDelete: (Long) -> Unit = {},
     onPromoteToMain: (Transaction) -> Unit = {},
     onSaved: () -> Unit = {},
@@ -106,7 +108,7 @@ fun TransactionFormSheet(
     var source by remember(stateKey) { mutableStateOf(editTx?.sourceName.orEmpty()) }
     var category by remember(stateKey) { mutableStateOf<TransactionCategory?>(editTx?.category ?: TransactionCategory.ETC) }
     var memo by remember(stateKey) { mutableStateOf(editTx?.memo.orEmpty()) }
-    var hidden by remember(stateKey) { mutableStateOf(editTx?.isHidden ?: false) }
+    var txScope by remember(stateKey) { mutableStateOf(editTx?.scope ?: TxScope.BUDGET) }
     var promote by remember(stateKey) { mutableStateOf(editTx?.isMain ?: false) }
     var showDeleteConfirm by remember(stateKey) { mutableStateOf(false) }
     var showIgnoreConfirm by remember(stateKey) { mutableStateOf(false) }
@@ -184,11 +186,7 @@ fun TransactionFormSheet(
                         contentPadding = PaddingValues(horizontal = AmSpacing.lg, vertical = AmSpacing.xs),
                     ) {
                         Column(modifier = Modifier.fillMaxWidth()) {
-                            SheetToggleRow(
-                                title = "이번 달 합계에서 숨기기",
-                                checked = hidden,
-                                onCheckedChange = { hidden = it },
-                            )
+                            SheetScopeSelector(scope = txScope, budgetName = budgetName, onScope = { txScope = it })
                             // 수동 입력 내역은 이미 집계 대상 → '메인 계좌로 등록' 불필요, 감춤
                             if (!editTx.isManual) {
                                 Box(
@@ -308,7 +306,7 @@ fun TransactionFormSheet(
                                     AmAnalytics.Param.CATEGORY to (effectiveCategory ?: TransactionCategory.ETC).name,
                                     AmAnalytics.Param.TYPE to type.name.lowercase(),
                                     AmAnalytics.Param.IS_MAIN to promote,
-                                    AmAnalytics.Param.IS_HIDDEN to hidden,
+                                    AmAnalytics.Param.IS_HIDDEN to (txScope == TxScope.EXCLUDED),
                                     AmAnalytics.Param.IS_MANUAL to editTx.isManual,
                                 ),
                             )
@@ -319,12 +317,12 @@ fun TransactionFormSheet(
                             val amountChanged = amount != abs(editTx.amount)
                             val sourceChanged = source.trim() != editTx.sourceName
                             val coreChanged = memoChanged || categoryChanged || typeChanged || amountChanged || sourceChanged
-                            val hiddenChanged = hidden != editTx.isHidden
+                            val scopeChanged = txScope != editTx.scope
                             val promoteNow = promote && !editTx.isMain
                             if (coreChanged) onSaveTransaction(editTx.id, type, amount, source, memo, effectiveCategory)
-                            if (hiddenChanged) onSetHidden(editTx.id, hidden)
+                            if (scopeChanged) onSetScope(editTx.id, txScope)
                             if (promoteNow) onPromoteToMain(editTx)
-                            if (coreChanged || hiddenChanged || promoteNow) onSaved()
+                            if (coreChanged || scopeChanged || promoteNow) onSaved()
                             close()
                         },
                         modifier = Modifier.weight(1f),
@@ -398,6 +396,28 @@ private fun IgnoreSourceButton(label: String, onClick: () -> Unit) {
 @Composable
 private fun SheetLabel(text: String) {
     Text(text, style = AmType.label, color = AmColors.TextSecondary)
+}
+
+/** 예산 반영 상태 3분기 선택 (BUDGET / LEDGER_ONLY / EXCLUDED) */
+@Composable
+private fun SheetScopeSelector(scope: TxScope, budgetName: String, onScope: (TxScope) -> Unit) {
+    Column(modifier = Modifier.fillMaxWidth().padding(vertical = 6.dp)) {
+        Text("예산 반영", style = AmType.bodyStrong, color = AmColors.TextPrimary)
+        Spacer(Modifier.height(10.dp))
+        Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+            AmChip("예산 반영", scope == TxScope.BUDGET, modifier = Modifier.weight(1f)) { onScope(TxScope.BUDGET) }
+            AmChip("가계부만", scope == TxScope.LEDGER_ONLY, modifier = Modifier.weight(1f)) { onScope(TxScope.LEDGER_ONLY) }
+            AmChip("제외", scope == TxScope.EXCLUDED, modifier = Modifier.weight(1f)) { onScope(TxScope.EXCLUDED) }
+        }
+        Spacer(Modifier.height(8.dp))
+        // 선택한 상태별 안내 — 자산 호칭(용돈/생활비/예산)을 반영
+        val hint = when (scope) {
+            TxScope.BUDGET -> "${budgetName}에 포함됩니다."
+            TxScope.LEDGER_ONLY -> "${budgetName}에는 포함되지 않고, 지출·수입에만 포함됩니다."
+            TxScope.EXCLUDED -> "전체에서 제외됩니다."
+        }
+        Text(hint, style = AmType.caption, color = AmColors.TextSecondary)
+    }
 }
 
 @Composable

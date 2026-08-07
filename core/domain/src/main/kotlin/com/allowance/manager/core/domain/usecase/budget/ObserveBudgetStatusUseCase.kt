@@ -30,8 +30,9 @@ class ObserveBudgetStatusUseCase @Inject constructor(
         ) { budget, payday -> budget to payday }
             .flatMapLatest { (budget, payday) ->
                 val cycle = BudgetCycle.of(payday)
-                transactionRepository
-                    .observeSpentBetween(cycle.startMillis(), cycle.endMillis())
-                    .map { spent -> BudgetStatus(budget = budget, spent = spent, cycle = cycle) }
+                combine(
+                    transactionRepository.observeBudgetSpentBetween(cycle.startMillis(), cycle.endMillis()),
+                    transactionRepository.observeBudgetIncomeBetween(cycle.startMillis(), cycle.endMillis()),
+                ) { spent, income -> BudgetStatus(budget = budget, spent = spent, income = income, cycle = cycle) }
             }
 }

@@ -37,7 +37,6 @@ fun LedgerFilterChips(
         LedgerFilterChip.entries.forEach { chip ->
             val selected = when (chip) {
                 LedgerFilterChip.MAIN -> filter.showMain
-                LedgerFilterChip.HIDDEN -> filter.showHidden
                 LedgerFilterChip.ALL -> filter.isAll
             }
             if (chip == LedgerFilterChip.ALL && allBadge) {

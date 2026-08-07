@@ -97,6 +97,7 @@ import com.allowance.manager.core.ui.guide.SpotShape
 import com.allowance.manager.core.ui.guide.SpotlightGuide
 import com.allowance.manager.core.ui.guide.guideTarget
 import com.allowance.manager.core.ui.guide.rememberGuideTargets
+import com.allowance.manager.core.domain.model.TxScope
 import com.allowance.manager.core.ui.transaction.LedgerListHeader
 import com.allowance.manager.core.ui.transaction.SwipeRevealRow
 import com.allowance.manager.core.ui.transaction.TransactionFormSheet
@@ -124,6 +125,7 @@ fun HomeRoute(
         guideTargets = guideTargets,
         onFilterChip = viewModel::onFilterChip,
         onSetHidden = viewModel::onSetHidden,
+        onSetScope = viewModel::onSetScope,
         onIgnoreSource = viewModel::onIgnoreSource,
         countIgnorable = viewModel::countIgnorable,
         onDelete = viewModel::onDelete,
@@ -142,6 +144,7 @@ fun HomeScreen(
     guideTargets: SnapshotStateMap<String, Rect> = rememberGuideTargets(),
     onFilterChip: (LedgerFilterChip) -> Unit = {},
     onSetHidden: (Long, Boolean) -> Unit = { _, _ -> },
+    onSetScope: (Long, TxScope) -> Unit = { _, _ -> },
     onIgnoreSource: (Transaction) -> Unit = {},
     countIgnorable: suspend (Transaction) -> Int = { 0 },
     onDelete: (Long) -> Unit = {},
@@ -197,7 +200,8 @@ fun HomeScreen(
             TransactionFormSheet(
                 mode = TxFormMode.Edit(tx),
                 onDismiss = { selected = null },
-                onSetHidden = onSetHidden,
+                budgetName = uiState.userType.label,
+                onSetScope = onSetScope,
                 onDelete = onDelete,
                 onPromoteToMain = onPromoteToMain,
                 onSaveTransaction = onSaveTransaction,
@@ -494,7 +498,7 @@ private fun BottomContent(
                             onDelete = { onRequestDelete(tx) },
                             modifier = rowModifier,
                         ) {
-                            TransactionRow(tx = tx, onClick = { onSelect(tx) })
+                            TransactionRow(tx = tx, budgetName = uiState.userType.label, onClick = { onSelect(tx) })
                         }
                     }
                 }
@@ -526,11 +530,7 @@ private fun EmptyState(filter: LedgerFilter, showSample: Boolean) {
         return
     }
     // 필터로 인해 비어 있는 경우: 안내 문구만
-    val message = when {
-        filter.showMain && filter.showHidden -> "표시할 내역이 없어요"
-        filter.showMain -> "메인 내역이 없어요"
-        else -> "숨긴 내역이 없어요"
-    }
+    val message = if (filter.showMain) "메인 내역이 없어요" else "표시할 내역이 없어요"
     AmCard(modifier = Modifier.fillMaxWidth(), contentPadding = PaddingValues(vertical = 28.dp)) {
         Box(modifier = Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
             Text(message, style = AmType.caption, color = AmColors.TextSecondary)

@@ -22,8 +22,8 @@ class ObserveMonthlyLedgerUseCase @Inject constructor(
         val start = month.atDay(1).atStartOfDay(zone).toInstant().toEpochMilli()
         val end = month.plusMonths(1).atDay(1).atStartOfDay(zone).toInstant().toEpochMilli() - 1
         return combine(
-            transactionRepository.observeSpentBetween(start, end),
-            transactionRepository.observeIncomeBetween(start, end),
+            transactionRepository.observeLedgerSpentBetween(start, end),
+            transactionRepository.observeLedgerIncomeBetween(start, end),
         ) { expense, income -> MonthlyLedger(expense = expense, income = income) }
     }
 }

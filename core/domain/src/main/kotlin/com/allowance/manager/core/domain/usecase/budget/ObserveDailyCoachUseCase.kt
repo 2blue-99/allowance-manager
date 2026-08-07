@@ -40,8 +40,8 @@ class ObserveDailyCoachUseCase @Inject constructor(
                 val todayEnd = today.plusDays(1).atStartOfDay(zone).toInstant().toEpochMilli() - 1
 
                 combine(
-                    transactionRepository.observeSpentBetween(cycle.startMillis(zone), cycle.endMillis(zone)),
-                    transactionRepository.observeSpentBetween(todayStart, todayEnd),
+                    transactionRepository.observeBudgetSpentBetween(cycle.startMillis(zone), cycle.endMillis(zone)),
+                    transactionRepository.observeBudgetSpentBetween(todayStart, todayEnd),
                 ) { cycleSpent, todaySpent ->
                     val remaining = budget - cycleSpent
                     // 오늘 포함, 다음 수급일까지 남은 일수 (최소 1)

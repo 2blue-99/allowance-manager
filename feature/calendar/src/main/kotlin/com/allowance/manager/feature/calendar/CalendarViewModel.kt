@@ -7,6 +7,8 @@ import com.allowance.manager.core.common.BaseViewModel
 import com.allowance.manager.core.domain.model.Transaction
 import com.allowance.manager.core.domain.model.TransactionCategory
 import com.allowance.manager.core.domain.model.TransactionType
+import com.allowance.manager.core.domain.model.UserType
+import com.allowance.manager.core.domain.usecase.budget.GetUserTypeUseCase
 import com.allowance.manager.core.domain.usecase.calendar.GetFirstTransactionMonthUseCase
 import com.allowance.manager.core.domain.usecase.calendar.ObserveMonthTransactionsUseCase
 import com.allowance.manager.core.domain.usecase.calendar.ObserveTransactionMonthsUseCase
@@ -15,7 +17,9 @@ import com.allowance.manager.core.domain.usecase.ignore.CountIgnorableTransactio
 import com.allowance.manager.core.domain.usecase.transaction.DeleteTransactionUseCase
 import com.allowance.manager.core.domain.usecase.transaction.HideTransactionUseCase
 import com.allowance.manager.core.domain.usecase.transaction.PromoteToMainUseCase
+import com.allowance.manager.core.domain.usecase.transaction.SetTxScopeUseCase
 import com.allowance.manager.core.domain.usecase.transaction.UpdateTransactionUseCase
+import com.allowance.manager.core.domain.model.TxScope
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -37,6 +41,7 @@ data class CalendarUiState(
     val categoryFilter: Set<TransactionCategory> = emptySet(),
     val minMonth: YearMonth? = null,                    // 이보다 과거로는 이동 불가 (첫 내역의 달)
     val dataMonths: Set<YearMonth> = emptySet(),        // 거래 있는 달 (월 피커 활성화용)
+    val userType: UserType = UserType.Default,          // 자산 호칭(용돈/생활비/예산) — 행·시트 안내문
     val isLoading: Boolean = true,
 ) {
     /** 다음 달(미래) 이동 가능 여부 — 이번 달까지만 */
@@ -57,11 +62,13 @@ class CalendarViewModel @Inject constructor(
     private val observeMonthTransactionsUseCase: ObserveMonthTransactionsUseCase,
     private val getFirstTransactionMonthUseCase: GetFirstTransactionMonthUseCase,
     observeTransactionMonthsUseCase: ObserveTransactionMonthsUseCase,
+    getUserTypeUseCase: GetUserTypeUseCase,
     private val hideTransactionUseCase: HideTransactionUseCase,
     private val addIgnoredAccountUseCase: AddIgnoredAccountUseCase,
     private val countIgnorableTransactionsUseCase: CountIgnorableTransactionsUseCase,
     private val deleteTransactionUseCase: DeleteTransactionUseCase,
     private val updateTransactionUseCase: UpdateTransactionUseCase,
+    private val setTxScopeUseCase: SetTxScopeUseCase,
     private val promoteToMainUseCase: PromoteToMainUseCase,
     private val analytics: AnalyticsHelper,
 ) : BaseViewModel() {
@@ -85,13 +92,16 @@ class CalendarViewModel @Inject constructor(
     // 거래 있는 달 (월 피커 활성화용)
     private val dataMonthsFlow = observeTransactionMonthsUseCase()
 
+    // combine 인자 수 제한(5) 회피 — 데이터월 + 사용자유형을 한 플로우로 묶음
+    private val dataMonthsAndType = combine(dataMonthsFlow, getUserTypeUseCase()) { dm, ut -> dm to ut }
+
     init {
         // 첫 내역의 달(이전-달 이동 하한) 1회 조회
         viewModelScope.launch { minMonth.value = getFirstTransactionMonthUseCase() }
 
         viewModelScope.launch {
-            combine(month, monthTransactions, minMonth, filterParams, dataMonthsFlow) { m, raw, min, fp, dm ->
-                render(m, raw, min, fp, dm)
+            combine(month, monthTransactions, minMonth, filterParams, dataMonthsAndType) { m, raw, min, fp, dmType ->
+                render(m, raw, min, fp, dmType.first, dmType.second)
             }.collect { _uiState.value = it }
         }
     }
@@ -103,6 +113,7 @@ class CalendarViewModel @Inject constructor(
         minMonth: YearMonth?,
         fp: FilterParams,
         dataMonths: List<YearMonth>,
+        userType: UserType,
     ): CalendarUiState {
         val filtered = raw.filter { tx ->
             val matchCategory = fp.categories.isEmpty() || tx.category in fp.categories
@@ -111,8 +122,8 @@ class CalendarViewModel @Inject constructor(
                 (tx.memo?.contains(fp.query, ignoreCase = true) == true)
             matchCategory && matchQuery
         }
-        // 숨김(합계 제외) 항목은 요약에서 뺀다. 리스트에는 그대로 노출.
-        val counted = filtered.filter { !it.isHidden }
+        // 가계부 집계(BUDGET+LEDGER_ONLY)만 요약. EXCLUDED(미등록·제외)는 리스트엔 노출하되 요약에서 뺀다.
+        val counted = filtered.filter { it.inLedger }
         val expense = counted.filter { it.type == TransactionType.EXPENSE }.sumOf { it.amount }
         val income = counted.filter { it.type == TransactionType.INCOME }.sumOf { it.amount }
         return CalendarUiState(
@@ -125,6 +136,7 @@ class CalendarViewModel @Inject constructor(
             categoryFilter = fp.categories,
             minMonth = minMonth,
             dataMonths = dataMonths.toSet(),
+            userType = userType,
             isLoading = false,
         )
     }
@@ -182,6 +194,11 @@ class CalendarViewModel @Inject constructor(
     fun onSetHidden(id: Long, hidden: Boolean) {
         analytics.logEvent(AmAnalytics.Event.CALENDAR_TX_SWIPE_HIDE, mapOf(AmAnalytics.Param.HIDDEN to hidden))
         viewModelScope.launch { hideTransactionUseCase(id, hidden) }
+    }
+
+    /** 상세시트 3분기 — 예산 반영 상태 지정 */
+    fun onSetScope(id: Long, scope: TxScope) {
+        viewModelScope.launch { setTxScopeUseCase(id, scope) }
     }
 
     fun onIgnoreSource(tx: Transaction) {

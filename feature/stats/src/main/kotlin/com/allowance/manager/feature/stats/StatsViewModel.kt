@@ -151,8 +151,8 @@ class StatsViewModel @Inject constructor(
             )
         }
 
-        // 선택 달 요약·카테고리 (집계 대상 = 메인/수동 · 무시 아님)
-        val counted = selectedTx.filter { it.isCounted && !it.isHidden }
+        // 선택 달 요약·카테고리 (가계부 집계 = BUDGET+LEDGER_ONLY, EXCLUDED 제외)
+        val counted = selectedTx.filter { it.inLedger }
         val expenseTx = counted.filter { it.type == TransactionType.EXPENSE }
         val totalExpense = expenseTx.sumOf { it.amount }
         val income = counted.filter { it.type == TransactionType.INCOME }.sumOf { it.amount }

@@ -26,16 +26,19 @@ import com.allowance.manager.core.designsystem.theme.AmColors
 import com.allowance.manager.core.designsystem.theme.AmType
 import com.allowance.manager.core.domain.model.Transaction
 import com.allowance.manager.core.domain.model.TransactionType
+import com.allowance.manager.core.domain.model.TxScope
 
 /**
  * 내역 리스트 한 줄. 아이콘 + 사용처/시간(or 메모) + 부호 금액.
- * 숨김 항목은 회색 카드 + 취소선, 미등록(비메인·비수동)은 흐림 + '미등록' 태그.
+ * 예산 반영 상태(scope)로 시각 구분: BUDGET 정상 / LEDGER_ONLY '예산 외' 태그 /
+ * EXCLUDED 회색 카드 + '미등록'(자동)·'제외'(사용자) 태그. (취소선 없음)
  */
 @Composable
-fun TransactionRow(tx: Transaction, onClick: () -> Unit) {
-    val hidden = tx.isHidden
-    // 수동 입력은 계좌가 없어도 정식 내역 → 미등록/흐림 대상 아님
-    val dim = hidden || (!tx.isMain && !tx.isManual)
+fun TransactionRow(tx: Transaction, budgetName: String = "예산", onClick: () -> Unit) {
+    val excluded = tx.scope == TxScope.EXCLUDED
+    val ledgerOnly = tx.scope == TxScope.LEDGER_ONLY
+    val isUnregistered = !tx.isMain && !tx.isManual   // 자동감지 · 계좌 미등록
+    val dim = excluded                                 // 회색/흐림은 EXCLUDED만
     val isIncome = tx.type == TransactionType.INCOME || tx.amount < 0
 
     // 타이틀 = 사용처(고정) / 하단 = 시간, 메모 있으면 시간 뒤에 (한 줄, 넘치면 …)
@@ -46,8 +49,8 @@ fun TransactionRow(tx: Transaction, onClick: () -> Unit) {
 
     AmCard(
         modifier = Modifier.fillMaxWidth(),
-        // 숨김 항목은 카드 자체를 회색으로 → 합계에서 빠졌음을 확실히 표현
-        color = if (hidden) AmColors.HiddenBg else AmColors.CardBg,
+        // EXCLUDED(미등록·제외)만 회색 카드 → 합계에서 빠졌음을 표현. LEDGER_ONLY는 정상 흰색.
+        color = if (excluded) AmColors.HiddenBg else AmColors.CardBg,
         contentPadding = PaddingValues(14.dp),
         onClick = onClick,
     ) {
@@ -79,19 +82,23 @@ fun TransactionRow(tx: Transaction, onClick: () -> Unit) {
                             title,
                             style = AmType.label,
                             color = if (dim) AmColors.TextSecondary else AmColors.TextPrimary,
-                            textDecoration = if (hidden) TextDecoration.LineThrough else TextDecoration.None,
                             maxLines = 1,
                             overflow = TextOverflow.Ellipsis,
                             // 사용처가 길면 …로 줄이되 배지는 항상 보이게
                             modifier = Modifier.weight(1f, fill = false),
                         )
-                        if (hidden) {
-                            Box(Modifier.clip(RoundedCornerShape(5.dp)).background(AmColors.CardBg).padding(horizontal = 5.dp, vertical = 1.dp)) {
-                                Text("숨김", style = AmType.tag, color = AmColors.TextSecondary)
-                            }
-                        } else if (!tx.isMain && !tx.isManual) {
+                        // 상태 배지: 미등록(자동제외) / 제외(사용자) / 예산 외(가계부만)
+                        if (excluded && isUnregistered) {
                             Box(Modifier.clip(RoundedCornerShape(5.dp)).background(AmColors.Divider).padding(horizontal = 5.dp, vertical = 1.dp)) {
                                 Text("미등록", style = AmType.tag, color = AmColors.TextSecondary)
+                            }
+                        } else if (excluded) {
+                            Box(Modifier.clip(RoundedCornerShape(5.dp)).background(AmColors.CardBg).padding(horizontal = 5.dp, vertical = 1.dp)) {
+                                Text("제외", style = AmType.tag, color = AmColors.TextSecondary)
+                            }
+                        } else if (ledgerOnly) {
+                            Box(Modifier.clip(RoundedCornerShape(5.dp)).background(AmColors.ScreenBg).padding(horizontal = 5.dp, vertical = 1.dp)) {
+                                Text("$budgetName 제외", style = AmType.tag, color = AmColors.TextSecondary)
                             }
                         }
                     }
@@ -110,7 +117,6 @@ fun TransactionRow(tx: Transaction, onClick: () -> Unit) {
                 text = signedAmount(tx),
                 style = AmType.labelStrong,
                 color = amountColor(tx, dim),
-                textDecoration = if (hidden) TextDecoration.LineThrough else TextDecoration.None,
                 maxLines = 1,
             )
         }

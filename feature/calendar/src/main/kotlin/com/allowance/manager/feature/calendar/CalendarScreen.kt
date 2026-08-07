@@ -53,6 +53,7 @@ import com.allowance.manager.core.designsystem.theme.AmType
 import com.allowance.manager.core.domain.model.Transaction
 import com.allowance.manager.core.domain.model.TransactionCategory
 import com.allowance.manager.core.domain.model.TransactionType
+import com.allowance.manager.core.domain.model.TxScope
 import com.allowance.manager.core.domain.util.amountToComma
 import com.allowance.manager.core.ui.month.MonthNavBar
 import com.allowance.manager.core.ui.month.MonthPickerDialog
@@ -83,6 +84,7 @@ fun CalendarRoute(
         onToggleCategory = viewModel::onToggleCategory,
         onClearCategories = viewModel::onClearCategoryFilter,
         onSetHidden = viewModel::onSetHidden,
+        onSetScope = viewModel::onSetScope,
         onIgnoreSource = viewModel::onIgnoreSource,
         countIgnorable = viewModel::countIgnorable,
         onDelete = viewModel::onDelete,
@@ -102,6 +104,7 @@ fun CalendarScreen(
     onToggleCategory: (TransactionCategory) -> Unit = {},
     onClearCategories: () -> Unit = {},
     onSetHidden: (Long, Boolean) -> Unit = { _, _ -> },
+    onSetScope: (Long, TxScope) -> Unit = { _, _ -> },
     onIgnoreSource: (Transaction) -> Unit = {},
     countIgnorable: suspend (Transaction) -> Int = { 0 },
     onDelete: (Long) -> Unit = {},
@@ -154,6 +157,7 @@ fun CalendarScreen(
         TransactionList(
             transactions = uiState.transactions,
             searchActive = uiState.searchActive,
+            budgetName = uiState.userType.label,
             onSelect = { selected = it },
             onToggleHidden = { onSetHidden(it.id, !it.isHidden) },
             onRequestDelete = { pendingDelete = it },
@@ -178,7 +182,8 @@ fun CalendarScreen(
         TransactionFormSheet(
             mode = TxFormMode.Edit(tx),
             onDismiss = { selected = null },
-            onSetHidden = onSetHidden,
+            budgetName = uiState.userType.label,
+            onSetScope = onSetScope,
             onDelete = onDelete,
             onPromoteToMain = onPromoteToMain,
             onIgnoreSource = onIgnoreSource,
@@ -294,6 +299,7 @@ private fun SearchAndFilter(
 private fun TransactionList(
     transactions: List<Transaction>,
     searchActive: Boolean,
+    budgetName: String = "예산",
     onSelect: (Transaction) -> Unit,
     onToggleHidden: (Transaction) -> Unit,
     onRequestDelete: (Transaction) -> Unit,
@@ -314,7 +320,7 @@ private fun TransactionList(
                         onDelete = { onRequestDelete(tx) },
                         modifier = Modifier.animateItem(),
                     ) {
-                        TransactionRow(tx = tx, onClick = { onSelect(tx) })
+                        TransactionRow(tx = tx, budgetName = budgetName, onClick = { onSelect(tx) })
                     }
                 }
             }
