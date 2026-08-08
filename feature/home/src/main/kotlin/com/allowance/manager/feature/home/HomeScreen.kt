@@ -1,5 +1,6 @@
 package com.allowance.manager.feature.home
 
+import androidx.annotation.DrawableRes
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
@@ -92,6 +93,7 @@ import com.allowance.manager.core.designsystem.theme.AmColors
 import com.allowance.manager.core.designsystem.theme.AmShape
 import com.allowance.manager.core.designsystem.theme.AmSpacing
 import com.allowance.manager.core.designsystem.theme.AmType
+import com.allowance.manager.core.ui.guide.GuideAction
 import com.allowance.manager.core.ui.guide.GuideStep
 import com.allowance.manager.core.ui.guide.SpotShape
 import com.allowance.manager.core.ui.guide.SpotlightGuide
@@ -116,6 +118,10 @@ import kotlin.math.roundToInt
 @Composable
 fun HomeRoute(
     guideTargets: SnapshotStateMap<String, Rect>,
+    // 홈 가이드 위젯 스텝 배선 — feature 간 의존을 피해 app(위젯 모듈 접근)에서 주입한다.
+    widgetPinSupported: Boolean = false,
+    @DrawableRes widgetPreviewRes: Int = 0,
+    onAddWidget: () -> Unit = {},
     viewModel: HomeViewModel = hiltViewModel(),
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
@@ -134,6 +140,9 @@ fun HomeRoute(
         onAddTransaction = viewModel::onAddTransaction,
         showGuide = showGuide,
         onGuideFinished = viewModel::onGuideFinished,
+        widgetPinSupported = widgetPinSupported,
+        widgetPreviewRes = widgetPreviewRes,
+        onAddWidget = onAddWidget,
     )
 }
 
@@ -153,6 +162,9 @@ fun HomeScreen(
     onAddTransaction: (TransactionType, Long, String, TransactionCategory?, String) -> Unit = { _, _, _, _, _ -> },
     showGuide: Boolean = false,
     onGuideFinished: () -> Unit = {},
+    widgetPinSupported: Boolean = false,
+    @DrawableRes widgetPreviewRes: Int = 0,
+    onAddWidget: () -> Unit = {},
     modifier: Modifier = Modifier,
 ) {
     val analytics = LocalAnalyticsHelper.current
@@ -250,7 +262,7 @@ fun HomeScreen(
         // 최초 진입 가이드(스포트라이트). 시트가 안 떠 있을 때만.
         if (guideReady && showGuide && selected == null && !showAdd) {
             SpotlightGuide(
-                steps = homeGuideSteps(uiState.userType),
+                steps = homeGuideSteps(uiState.userType, widgetPinSupported, widgetPreviewRes, onAddWidget),
                 targets = guideTargets,
                 onFinish = onGuideFinished,
             )
@@ -258,31 +270,52 @@ fun HomeScreen(
     }
 }
 
-private fun homeGuideSteps(type: UserType): List<GuideStep> = listOf(
+// 홈 첫 진입 가이드: 헤드라인(큰 글씨) + 설명(작은 글씨) 2단. 마지막 스텝은 위젯 홍보(anchorless).
+private fun homeGuideSteps(
+    type: UserType,
+    widgetPinSupported: Boolean,
+    @DrawableRes widgetPreviewRes: Int,
+    onAddWidget: () -> Unit,
+): List<GuideStep> = listOf(
     GuideStep(
         "hero",
-        "이번 달 남은 ${type.label}${type.objectParticle} 한눈에 파악할 수 있어요.\n지출이 발생할 때마다 실시간으로 줄어들어요.",
+        "이번 달 ${type.label} 실시간 관리",
+        "카드·계좌 알림을 자동으로 인식해서 이번 달 남은 ${type.label}${type.objectParticle} 실시간으로 관리해줘요.",
         SpotShape.RECT,
     ),
     GuideStep(
         "expenseIncome",
-        "이번 달 지출과 수입,\n${type.label} 관리를 돕는 정보를 확인해요.",
+        "지출·수입 한눈에",
+        "이번 달 지출과 수입, 하루 권장 지출까지 ${type.label} 관리에 필요한 정보를 모았어요.",
         SpotShape.RECT,
     ),
     GuideStep(
         "firstItem",
-        "입출금 내역이 여기에 쌓여요.\n클릭해서 카테고리, 메모 등 자세한 정보를 기록할 수 있어요.",
+        "내역은 여기에 차곡차곡",
+        "입출금 내역이 자동으로 쌓여요. 클릭해서 자세하게 기록하고 왼쪽으로 밀어서 손쉽게 관리할 수 있어요.",
         SpotShape.RECT,
     ),
     GuideStep(
         "fab",
-        "자동으로 잡히지 않는 입·출금은\n직접 추가할 수 있어요.",
+        "빠진 내역은 직접 추가",
+        "자동으로 안 잡히는 입·출금은 직접 넣을 수 있어요.",
         SpotShape.CIRCLE,
     ),
+    // 위젯 홍보 — 구멍 없이 전체 딤 + 위젯 미리보기. 런처가 고정 요청을 지원하면 "위젯 추가하기", 아니면 안내+"확인".
     GuideStep(
-        listOf("calendar", "stats"),
-        "월별로 내역을 자세히 보고,\n통계에서 소비 추이와 카테고리별 분석을 확인해\n체계적으로 관리해요.",
-        SpotShape.RECT,
+        keys = emptyList(),
+        title = "위젯으로 한눈에!",
+        message = if (widgetPinSupported) {
+            "위젯으로 남은 ${type.label}${type.objectParticle} 빠르게 확인하세요. 과소비를 막는 데 효과적이에요."
+        } else {
+            "홈 화면을 길게 눌러 '내돈지켜' 위젯을 추가할 수 있어요. 앱을 열지 않아도 남은 ${type.label}${type.objectParticle} 바로 확인해요."
+        },
+        image = widgetPreviewRes.takeIf { it != 0 },
+        action = if (widgetPinSupported) {
+            GuideAction("위젯 추가하기", onClick = onAddWidget, secondaryLabel = "다음에 할게요")
+        } else {
+            GuideAction("확인", onClick = {})
+        },
     ),
 )
 

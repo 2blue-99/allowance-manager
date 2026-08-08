@@ -79,6 +79,7 @@ import com.allowance.manager.feature.setting.navigation.SettingRoute
 import com.allowance.manager.feature.setting.navigation.settingScreen
 import com.allowance.manager.feature.stats.navigation.StatsRoute
 import com.allowance.manager.feature.stats.navigation.statsScreen
+import com.allowance.manager.feature.widget.WidgetPinner
 import kotlin.reflect.KClass
 
 private data class BottomTab(
@@ -91,8 +92,8 @@ private data class BottomTab(
 
 private val bottomTabs = listOf(
     BottomTab(HomeRoute, HomeRoute::class, "홈", Icons.Filled.Home),
-    BottomTab(CalendarRoute(), CalendarRoute::class, "월별", Icons.Filled.CalendarMonth, guideKey = "calendar"),
-    BottomTab(StatsRoute, StatsRoute::class, "통계", Icons.Filled.BarChart, guideKey = "stats"),
+    BottomTab(CalendarRoute(), CalendarRoute::class, "월별", Icons.Filled.CalendarMonth),
+    BottomTab(StatsRoute, StatsRoute::class, "통계", Icons.Filled.BarChart),
 )
 
 @Composable
@@ -120,6 +121,8 @@ fun AppNavHost(
 
     // 홈에서 뒤로가기: 한 번은 안내, 2초 내 두 번이면 종료
     val context = LocalContext.current
+    // 홈 가이드 위젯 스텝: 런처가 위젯 고정 요청을 지원하는지 (미지원이면 "확인" 버튼으로 폴백)
+    val widgetPinSupported = remember(context) { WidgetPinner.isPinSupported(context) }
     var lastBackAt by remember { mutableStateOf(0L) }
     BackHandler(enabled = currentDestination.isOn(HomeRoute::class)) {
         val now = System.currentTimeMillis()
@@ -218,7 +221,12 @@ fun AppNavHost(
                     }
                 },
             )
-            homeScreen(guideTargets = guideTargets)
+            homeScreen(
+                guideTargets = guideTargets,
+                widgetPinSupported = widgetPinSupported,
+                widgetPreviewRes = WidgetPinner.remainPreview,
+                onAddWidget = { WidgetPinner.requestPinRemainWidget(context) },
+            )
             calendarScreen()
             statsScreen(
                 onOpenMonth = { ym ->

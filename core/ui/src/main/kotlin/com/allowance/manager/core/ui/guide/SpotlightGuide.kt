@@ -1,14 +1,19 @@
 package com.allowance.manager.core.ui.guide
 
+import androidx.annotation.DrawableRes
+import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.FastOutSlowInEasing
+import androidx.compose.animation.core.MutableTransitionState
 import androidx.compose.animation.core.animateRectAsState
 import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.slideInVertically
 import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
-import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
@@ -16,8 +21,11 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBars
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -42,10 +50,12 @@ import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.BlendMode
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.CompositingStrategy
+import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.layout.boundsInWindow
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.IntOffset
@@ -64,16 +74,31 @@ import kotlin.math.roundToInt
 enum class SpotShape { RECT, CIRCLE }
 
 /**
- * 가이드 한 스텝: 강조 대상 key(들) + 문구 + 모양.
- * keys가 여러 개면 그 영역들을 감싸는 union을 하나의 구멍으로 하이라이트한다(예: 월별+통계 탭).
+ * 가이드 한 스텝: 강조 대상 key(들) + 헤드라인/설명 + 모양.
+ * - keys가 여러 개면 그 영역들을 감싸는 union을 하나의 구멍으로 하이라이트한다(예: 월별+통계 탭).
+ * - keys가 비어 있으면(anchorless) 구멍 없이 화면 전체를 덮고, [image]·[action]으로 홍보성 스텝을 구성한다(예: 위젯 안내).
  */
 data class GuideStep(
     val keys: List<String>,
+    val title: String,
     val message: String,
     val shape: SpotShape = SpotShape.RECT,
+    @DrawableRes val image: Int? = null,
+    val action: GuideAction? = null,
 ) {
-    constructor(key: String, message: String, shape: SpotShape = SpotShape.RECT) : this(listOf(key), message, shape)
+    constructor(key: String, title: String, message: String, shape: SpotShape = SpotShape.RECT) :
+        this(listOf(key), title, message, shape)
 }
+
+/**
+ * 앵커 없는 스텝의 커스텀 버튼. 기본 '다음/시작하기' 대신 [label] 버튼을 노출한다.
+ * 누르면 [onClick] 실행 후 가이드가 종료된다. [secondaryLabel]은 옆의 보조 텍스트(없으면 미노출).
+ */
+data class GuideAction(
+    val label: String,
+    val onClick: () -> Unit,
+    val secondaryLabel: String? = null,
+)
 
 /** 강조 대상들의 창(window) 좌표 저장소 */
 @Composable
@@ -94,10 +119,13 @@ private val fullscreenPositionProvider = object : PopupPositionProvider {
 }
 
 private val DimColor = Color(0xFF0F1728).copy(alpha = 0.68f)
+private val CounterColor = Color(0xFF5EE0A8)
+private val TipDescColor = Color(0xFFD6DEEA)
 
 /**
  * 홈 최초 진입 가이드(스포트라이트). 대상 좌표가 잡힌 스텝만 노출한다(내역 없으면 자동 스킵).
- * 배경을 반어둡게 덮고 대상 자리에 타원/원 구멍을 뚫으며, 구멍 근처에 문구+버튼(V3)을 띄운다.
+ * 배경을 반어둡게 덮고 대상 자리에 둥근 사각형/원 구멍을 뚫으며, 구멍 근처에 헤드라인+설명+버튼을 띄운다.
+ * anchorless 스텝(keys 비어 있음)은 구멍 없이 전체를 덮고 이미지·설명·액션 버튼을 중앙에 배치한다.
  */
 @Composable
 fun SpotlightGuide(
@@ -105,17 +133,13 @@ fun SpotlightGuide(
     targets: SnapshotStateMap<String, Rect>,
     onFinish: () -> Unit,
 ) {
-    // 좌표가 측정된 스텝만 (측정 전이거나 없는 대상은 제외). 다중 key는 모두 측정돼야 노출.
+    // 좌표가 측정된 스텝만 (측정 전이거나 없는 대상은 제외). anchorless(keys 비어 있음)는 항상 통과.
     val visible = steps.filter { s -> s.keys.all { targets[it] != null } }
     if (visible.isEmpty()) return
 
     var rawIndex by remember { mutableIntStateOf(0) }
     val index = rawIndex.coerceIn(0, visible.lastIndex)
     val step = visible[index]
-    // 여러 key면 각 영역을 감싸는 union을 하나의 구멍으로
-    val rectWindow = step.keys.mapNotNull { targets[it] }
-        .reduceOrNull { a, r -> Rect(minOf(a.left, r.left), minOf(a.top, r.top), maxOf(a.right, r.right), maxOf(a.bottom, r.bottom)) }
-        ?: return
     val isLast = index == visible.lastIndex
 
     // 등장: 페이드 인 / 종료(건너뛰기·시작하기·뒤로가기 밖 탭): 페이드 아웃 후 onFinish
@@ -148,6 +172,50 @@ fun SpotlightGuide(
         BoxWithConstraints(modifier = Modifier.fillMaxSize().graphicsLayer { alpha = overlayAlpha.value }) {
             val screenH = constraints.maxHeight.toFloat()
 
+            if (step.keys.isEmpty()) {
+                // ── anchorless 스텝: 전체 딤 + 이미지 + 팁 (예: 위젯 홍보) ──
+                // 구멍이 없어 rect 이동 애니메이션이 없으므로, 콘텐츠를 페이드+슬라이드로 등장시켜 4→5 전환을 잇는다.
+                Canvas(modifier = Modifier.fillMaxSize()) { drawRect(DimColor) }
+
+                // 이 스텝을 벗어나면 블록이 컴포지션에서 빠지므로, 재진입 때마다 다시 등장 애니메이션이 재생된다.
+                val appear = remember { MutableTransitionState(false).apply { targetState = true } }
+                AnimatedVisibility(
+                    visibleState = appear,
+                    modifier = Modifier.fillMaxSize(),
+                    enter = fadeIn(tween(280)) + slideInVertically(tween(320, easing = FastOutSlowInEasing)) { it / 10 },
+                ) {
+                    // 이미지·헤드라인·설명·버튼을 한 덩어리로 화면 중앙에 배치한다.
+                    Column(modifier = Modifier.fillMaxSize().padding(horizontal = 22.dp)) {
+                        Spacer(Modifier.weight(1f))
+                        if (step.image != null) {
+                            Box(modifier = Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
+                                // 2x2 위젯 미리보기 → 정사각 타일. (좌우로 늘리지 않아 여백 최소화)
+                                Image(
+                                    painter = painterResource(step.image),
+                                    contentDescription = null,
+                                    modifier = Modifier
+                                        .size(176.dp)
+                                        .clip(RoundedCornerShape(20.dp))
+                                        .background(Color.White)
+                                        .padding(12.dp),
+                                )
+                            }
+                            Spacer(Modifier.height(32.dp))
+                        }
+                        Column(modifier = Modifier.fillMaxWidth()) {
+                            GuideTipContent(index, visible.size, isLast, step, onNext = { next() }, onPrev = { prev() }, onFinish = { finish() })
+                        }
+                        Spacer(Modifier.weight(1f))
+                    }
+                }
+            } else {
+
+            // ── 앵커 있는 스텝: 구멍 + 팁 ──
+            // 여러 key면 각 영역을 감싸는 union을 하나의 구멍으로
+            val rectWindow = step.keys.mapNotNull { targets[it] }
+                .reduceOrNull { a, r ->
+                    Rect(minOf(a.left, r.left), minOf(a.top, r.top), maxOf(a.right, r.right), maxOf(a.bottom, r.bottom))
+                } ?: return@BoxWithConstraints
             val rect = rectWindow.translate(0f, -statusBarTop)
 
             // 스텝 전환 시 구멍이 다음 요소로 부드럽게 이동·크기 변화
@@ -205,66 +273,123 @@ fun SpotlightGuide(
             Column(
                 modifier = Modifier
                     .offset { IntOffset(sidePx.roundToInt(), tipY.roundToInt()) }
-                    .width(260.dp)
+                    // 좌측 22dp offset + 우측 22dp 여백 → 헤드라인·설명이 화면 가로를 최대로 사용
+                    .width(maxWidth - 44.dp)
                     .onGloballyPositioned { tipHeight = it.size.height },
             ) {
-                Text(
-                    "${index + 1} / ${visible.size}",
-                    color = Color(0xFF5EE0A8),
-                    fontSize = 13.sp,
-                    fontWeight = FontWeight.ExtraBold,
-                )
-                Spacer(Modifier.padding(top = 6.dp))
-                Text(
-                    step.message,
-                    color = Color.White,
-                    fontSize = 16.sp,
-                    fontWeight = FontWeight.Bold,
-                    lineHeight = 23.sp,
-                )
-                Spacer(Modifier.padding(top = 14.dp))
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    // 뒤로가기 (첫 스텝에선 숨김)
-                    if (index > 0) {
-                        Text(
-                            "‹ 뒤로",
-                            color = Color.White.copy(alpha = 0.62f),
-                            fontSize = 13.sp,
-                            modifier = Modifier
-                                .noRippleClickable { prev() }
-                                .padding(vertical = 4.dp, horizontal = 2.dp),
-                        )
-                        Spacer(Modifier.width(16.dp))
-                    }
-                    // 다음 / 시작하기
-                    Text(
-                        if (isLast) "시작하기" else "다음 ›",
-                        color = Color.White,
-                        fontSize = 13.sp,
-                        fontWeight = FontWeight.ExtraBold,
-                        textAlign = TextAlign.Center,
-                        modifier = Modifier
-                            .clip(RoundedCornerShape(20.dp))
-                            .background(AmColors.Emerald)
-                            .noRippleClickable { next() }
-                            .padding(horizontal = 20.dp, vertical = 9.dp),
-                    )
-                    // 건너뛰기 — 마지막 스텝에선 숨김('시작하기'만 노출)
-                    if (!isLast) {
-                        Spacer(Modifier.width(16.dp))
-                        Text(
-                            "건너뛰기",
-                            color = Color.White.copy(alpha = 0.62f),
-                            fontSize = 13.sp,
-                            modifier = Modifier
-                                .noRippleClickable { finish() }
-                                .padding(vertical = 4.dp, horizontal = 2.dp),
-                        )
-                    }
-                }
+                GuideTipContent(index, visible.size, isLast, step, onNext = { next() }, onPrev = { prev() }, onFinish = { finish() })
+            }
             }
         }
     }
+}
+
+/** 스텝 번호(초록) + 헤드라인(큰 글씨) + 설명(작은 글씨) + 버튼 행. 호출부(Column) 안에서 세로로 쌓인다. */
+@Composable
+private fun GuideTipContent(
+    index: Int,
+    total: Int,
+    isLast: Boolean,
+    step: GuideStep,
+    onNext: () -> Unit,
+    onPrev: () -> Unit,
+    onFinish: () -> Unit,
+) {
+    // 상단 줄: 스텝 번호(좌) ─ 닫기 X(우, 컴포넌트 우상단). '다음'과 멀어 오탭 방지.
+    Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+        Text(
+            "${index + 1} / $total",
+            color = CounterColor,
+            fontSize = 13.sp,
+            fontWeight = FontWeight.ExtraBold,
+        )
+        Spacer(Modifier.weight(1f))
+        TipCloseIcon { onFinish() }
+    }
+    Spacer(Modifier.height(8.dp))
+    Text(
+        step.title,
+        color = Color.White,
+        fontSize = 20.sp,
+        fontWeight = FontWeight.Bold,
+        lineHeight = 26.sp,
+    )
+    Spacer(Modifier.height(10.dp))
+    Text(
+        step.message,
+        color = TipDescColor,
+        fontSize = 14.sp,
+        lineHeight = 21.sp,
+    )
+    Spacer(Modifier.height(16.dp))
+    Row(verticalAlignment = Alignment.CenterVertically) {
+        val action = step.action
+        if (action != null) {
+            // 커스텀 액션(예: 위젯 추가) → 실행 후 가이드 종료. 이전 스텝이 있으면 뒤로도 노출.
+            if (index > 0) {
+                TipSecondary("‹ 뒤로") { onPrev() }
+                Spacer(Modifier.width(16.dp))
+            }
+            TipPrimary(action.label) { action.onClick(); onFinish() }
+            if (action.secondaryLabel != null) {
+                Spacer(Modifier.width(16.dp))
+                TipSecondary(action.secondaryLabel) { onFinish() }
+            }
+        } else {
+            // 기본: 뒤로 · 다음/시작하기 · 건너뛰기
+            if (index > 0) {
+                TipSecondary("‹ 뒤로") { onPrev() }
+                Spacer(Modifier.width(16.dp))
+            }
+            TipPrimary(if (isLast) "시작하기" else "다음 ›") { onNext() }
+        }
+    }
+}
+
+/** 팁 컴포넌트 우상단 닫기(X) — 스텝 번호와 같은 줄 오른쪽 끝. 탭 영역 28dp에 작은 X(14dp). */
+@Composable
+private fun TipCloseIcon(onClick: () -> Unit) {
+    Box(
+        modifier = Modifier
+            .size(28.dp)
+            .noRippleClickable { onClick() },
+        contentAlignment = Alignment.Center,
+    ) {
+        Canvas(modifier = Modifier.size(14.dp)) {
+            val stroke = 2.dp.toPx()
+            val color = Color.White.copy(alpha = 0.75f)
+            drawLine(color, Offset(0f, 0f), Offset(size.width, size.height), stroke, cap = StrokeCap.Round)
+            drawLine(color, Offset(size.width, 0f), Offset(0f, size.height), stroke, cap = StrokeCap.Round)
+        }
+    }
+}
+
+@Composable
+private fun TipPrimary(text: String, onClick: () -> Unit) {
+    Text(
+        text,
+        color = Color.White,
+        fontSize = 13.sp,
+        fontWeight = FontWeight.ExtraBold,
+        textAlign = TextAlign.Center,
+        modifier = Modifier
+            .clip(RoundedCornerShape(20.dp))
+            .background(AmColors.Emerald)
+            .noRippleClickable { onClick() }
+            .padding(horizontal = 20.dp, vertical = 9.dp),
+    )
+}
+
+@Composable
+private fun TipSecondary(text: String, onClick: () -> Unit) {
+    Text(
+        text,
+        color = Color.White.copy(alpha = 0.62f),
+        fontSize = 13.sp,
+        modifier = Modifier
+            .noRippleClickable { onClick() }
+            .padding(vertical = 4.dp, horizontal = 2.dp),
+    )
 }
 
 private fun Modifier.noRippleClickable(onClick: () -> Unit): Modifier = composed {
