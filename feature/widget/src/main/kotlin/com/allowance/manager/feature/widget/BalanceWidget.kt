@@ -22,6 +22,8 @@ class BalanceWidget : GlanceAppWidget() {
                 SimpleBalanceContent(
                     budget = status?.budget ?: 0L,
                     spent = status?.spent ?: 0L,
+                    // 남은 = budget - spent + income. 홈과 동일하게 유즈케이스 계산값을 그대로 사용.
+                    remaining = status?.remaining ?: 0L,
                 )
             }
         }

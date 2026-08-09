@@ -70,6 +70,8 @@ class RemainWidget : GlanceAppWidget() {
                     label = userType.label,
                     budget = status?.budget ?: 0L,
                     spent = status?.spent ?: 0L,
+                    // 남은 = budget - spent + income. 홈과 동일하게 유즈케이스 계산값을 그대로 사용.
+                    remaining = status?.remaining ?: 0L,
                     showSpent = showSpent,
                 )
             }
@@ -78,16 +80,15 @@ class RemainWidget : GlanceAppWidget() {
 }
 
 @Composable
-private fun RemainWidgetContent(label: String, budget: Long, spent: Long, showSpent: Boolean) {
+private fun RemainWidgetContent(label: String, budget: Long, spent: Long, remaining: Long, showSpent: Boolean) {
     val context = LocalContext.current
-    val remaining = budget - spent
-    val over = budget > 0 && spent > budget
+    val over = budget > 0 && remaining < 0
     val percentUsed = if (budget > 0) ((spent.toDouble() / budget) * 100).roundToInt() else 0
     val progress = when {
         budget <= 0 -> 0f
         over -> 1f
-        showSpent -> spent.toFloat() / budget
-        else -> remaining.toFloat() / budget
+        showSpent -> (spent.toFloat() / budget).coerceIn(0f, 1f)
+        else -> (remaining.toFloat() / budget).coerceIn(0f, 1f)
     }
     val amount = when {
         budget <= 0 || showSpent -> spent.toCompactWon()

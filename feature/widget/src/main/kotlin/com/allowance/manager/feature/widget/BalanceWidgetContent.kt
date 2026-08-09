@@ -26,10 +26,9 @@ import com.allowance.manager.core.designsystem.theme.AmColors
 import com.allowance.manager.core.domain.util.toCompactWon
 
 @Composable
-fun SimpleBalanceContent(budget: Long, spent: Long) {
+fun SimpleBalanceContent(budget: Long, spent: Long, remaining: Long) {
     val context = LocalContext.current
-    val remaining = budget - spent
-    val over = budget > 0 && spent > budget
+    val over = budget > 0 && remaining < 0
     val progress = when {
         budget <= 0 -> 0f
         over -> 1f
