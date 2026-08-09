@@ -17,6 +17,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyHorizontalGrid
 import androidx.compose.foundation.lazy.grid.items
@@ -305,11 +306,15 @@ private fun TransactionList(
     onRequestDelete: (Transaction) -> Unit,
     modifier: Modifier = Modifier,
 ) {
+    val listState = rememberLazyListState()
+    // 화면 진입 시 리스트를 맨 위로. (월별은 직접추가가 없어 진입 시에만)
+    LaunchedEffect(Unit) { listState.scrollToItem(0) }
     Box(modifier = modifier.clip(AmShape.sheetTop).background(AmColors.ScreenBg)) {
         if (transactions.isEmpty()) {
             EmptyState(searchActive = searchActive)
         } else {
             LazyColumn(
+                state = listState,
                 contentPadding = PaddingValues(horizontal = AmSpacing.xl, vertical = AmSpacing.sm),
                 verticalArrangement = Arrangement.spacedBy(9.dp),
             ) {

@@ -28,6 +28,7 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
@@ -171,6 +172,8 @@ fun HomeScreen(
     var selected by remember { mutableStateOf<Transaction?>(null) }
     var pendingDelete by remember { mutableStateOf<Transaction?>(null) }
     var showAdd by remember { mutableStateOf(false) }
+    // 직접추가 시 리스트를 맨 위로 올리는 트리거 (증가할 때마다 BottomContent가 top으로 스크롤)
+    var addTick by remember { mutableIntStateOf(0) }
     // 화면 진입 직후 바로 띄우면 어색 → 0.5초 뒤에 가이드 노출 (이후 SpotlightGuide가 페이드 인)
     var guideReady by remember { mutableStateOf(false) }
     LaunchedEffect(showGuide) {
@@ -204,6 +207,7 @@ fun HomeScreen(
                 guideTargets = guideTargets,
                 // 예시(디폴트) 아이템은 가이드가 떠 있을 때만 노출 → 가이드 종료 시 사라짐
                 showSample = showGuide,
+                addTick = addTick,
                 modifier = Modifier.weight(1f),
             )
         }
@@ -250,7 +254,7 @@ fun HomeScreen(
             TransactionFormSheet(
                 mode = TxFormMode.Add,
                 onDismiss = { showAdd = false },
-                onAdd = { t, a, s, c, m -> onAddTransaction(t, a, s, c, m); pendingToast = "내역이 추가되었습니다." },
+                onAdd = { t, a, s, c, m -> onAddTransaction(t, a, s, c, m); pendingToast = "내역이 추가되었습니다."; addTick++ },
             )
         }
 
@@ -489,8 +493,14 @@ private fun BottomContent(
     onRequestDelete: (Transaction) -> Unit,
     guideTargets: SnapshotStateMap<String, Rect>,
     showSample: Boolean,
+    addTick: Int,
     modifier: Modifier = Modifier,
 ) {
+    val listState = rememberLazyListState()
+    // 화면 진입(초기 실행) + 직접추가(addTick 증가) 시에만 리스트를 맨 위로.
+    // 배경 자동기록·수정·삭제로는 스크롤하지 않는다(편집 중 방해 방지).
+    LaunchedEffect(addTick) { listState.animateScrollToItem(0) }
+
     // 월별과 동일 구조: 헤더는 clip(sheetTop) 밖, 리스트만 독립 clip Box 안.
     // → 리스트 애니메이션 잔상이 헤더(입출금 내역) 영역으로 새지 않도록 클리핑됨.
     Column(modifier = modifier) {
@@ -507,6 +517,7 @@ private fun BottomContent(
                 .background(AmColors.ScreenBg),
         ) {
             LazyColumn(
+                state = listState,
                 contentPadding = PaddingValues(horizontal = AmSpacing.xl, vertical = AmSpacing.sm),
                 verticalArrangement = Arrangement.spacedBy(9.dp),
             ) {
