@@ -84,6 +84,7 @@ private fun RemainWidgetContent(label: String, budget: Long, spent: Long, remain
     val context = LocalContext.current
     val over = budget > 0 && remaining < 0
     val percentUsed = if (budget > 0) ((spent.toDouble() / budget) * 100).roundToInt() else 0
+    val percentRemain = if (budget > 0) ((remaining.toDouble() / budget) * 100).roundToInt().coerceAtLeast(0) else 0
     val progress = when {
         budget <= 0 -> 0f
         over -> 1f
@@ -94,7 +95,13 @@ private fun RemainWidgetContent(label: String, budget: Long, spent: Long, remain
         budget <= 0 || showSpent -> spent.toCompactWon()
         else -> remaining.toCompactWon()
     }
-    val sub = if (budget > 0) "$percentUsed% 사용" else "예산 미설정"
+    // 모드별 문구: 지출=사용률, 남은=잔여율. 남은 모드에서 초과(음수)면 '예산 초과'.
+    val sub = when {
+        budget <= 0 -> "예산 미설정"
+        showSpent -> "$percentUsed% 사용"
+        over -> "예산 초과"
+        else -> "$percentRemain% 남음"
+    }
 
     val ring = ringBitmap(sizePx = 340, progress = progress, over = over)
     // 앱 열기는 링 영역에만 건다. (루트에 걸면 하단 토글과 중첩 clickable로 동시 발화 → 중복선택 버그)
@@ -152,7 +159,7 @@ private fun ModeToggle(showSpent: Boolean) {
             .padding(3.dp),
     ) {
         ToggleSegment(
-            text = "남은",
+            text = "남음",
             active = !showSpent,
             onClick = actionRunCallback<SetRemainOnly>(),
             modifier = GlanceModifier.defaultWeight(),
