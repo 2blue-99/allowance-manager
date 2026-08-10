@@ -18,7 +18,7 @@ import com.allowance.manager.core.local.entity.TransactionEntity
         BudgetEntity::class,
         IgnoredAccountEntity::class,
     ],
-    version = 9,   // v9: Transaction.is_hidden → scope(TxScope) 전환 (예산 반영 3-상태)
+    version = 10,  // v10: transactions.merchant(사용처) 컬럼 추가 (출처와 분리)
     exportSchema = true,
 )
 abstract class AppDatabase : RoomDatabase() {

@@ -270,7 +270,7 @@ private fun SearchAndFilter(
         AmTextField(
             value = query,
             onValueChange = onQueryChange,
-            label = "사용처·메모 검색",
+            label = "출처·사용처·메모 검색",
             modifier = Modifier.fillMaxWidth(),
         )
         Spacer(Modifier.height(12.dp))

@@ -28,6 +28,7 @@ data class TransactionEntity(
     val packageName: String,
     @ColumnInfo(name = "source_name")
     val sourceName: String,
+    val merchant: String? = null,           // 사용처(가게). null = 미기록 → 리스트에서 sourceName로 대체
     @ColumnInfo(name = "extracted_account")
     val extractedAccount: String?,          // 알림에서 파싱한 계좌 식별자 (매칭·승격용)
     @ColumnInfo(name = "account_id")

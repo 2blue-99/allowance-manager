@@ -44,7 +44,8 @@ fun TransactionRow(tx: Transaction, budgetName: String = "예산", onClick: () -
     // 타이틀 = 사용처(고정) / 하단 = 시간, 메모 있으면 시간 뒤에 (한 줄, 넘치면 …)
     val memo = tx.memo?.takeIf { it.isNotBlank() }
     val time = formatListTimestamp(tx.createdAt)
-    val title = tx.sourceName
+    // 사용처(merchant)를 우선 표시, 없으면 출처(sourceName)로 대체
+    val title = tx.merchant?.takeIf { it.isNotBlank() } ?: tx.sourceName
     val subtitle = if (memo != null) "$time · $memo" else time
 
     AmCard(

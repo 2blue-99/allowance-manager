@@ -119,6 +119,7 @@ class CalendarViewModel @Inject constructor(
             val matchCategory = fp.categories.isEmpty() || tx.category in fp.categories
             val matchQuery = fp.query.isBlank() ||
                 tx.sourceName.contains(fp.query, ignoreCase = true) ||
+                (tx.merchant?.contains(fp.query, ignoreCase = true) == true) ||
                 (tx.memo?.contains(fp.query, ignoreCase = true) == true)
             matchCategory && matchQuery
         }
@@ -216,11 +217,11 @@ class CalendarViewModel @Inject constructor(
         id: Long,
         type: TransactionType,
         amount: Long,
-        sourceName: String,
+        merchant: String,
         memo: String,
         category: TransactionCategory?,
     ) {
-        viewModelScope.launch { updateTransactionUseCase(id, type, amount, sourceName, memo, category) }
+        viewModelScope.launch { updateTransactionUseCase(id, type, amount, merchant, memo, category) }
     }
 
     fun onPromoteToMain(transaction: Transaction) {

@@ -38,6 +38,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.allowance.manager.core.analytics.AmAnalytics
@@ -105,7 +106,9 @@ fun TransactionFormSheet(
     var amountText by remember(stateKey) {
         mutableStateOf(editTx?.let { abs(it.amount).toString() } ?: "")
     }
-    var source by remember(stateKey) { mutableStateOf(editTx?.sourceName.orEmpty()) }
+    // 출처(은행/앱): 읽기전용 — 헤더 표시·사용처 힌트·저장조건에만 사용. 편집하는 건 사용처(merchant)뿐.
+    val source = editTx?.sourceName.orEmpty()
+    var merchant by remember(stateKey) { mutableStateOf(editTx?.merchant.orEmpty()) }
     var category by remember(stateKey) { mutableStateOf<TransactionCategory?>(editTx?.category ?: TransactionCategory.ETC) }
     var memo by remember(stateKey) { mutableStateOf(editTx?.memo.orEmpty()) }
     var txScope by remember(stateKey) { mutableStateOf(editTx?.scope ?: TxScope.BUDGET) }
@@ -115,7 +118,8 @@ fun TransactionFormSheet(
     var ignoreCount by remember(stateKey) { mutableIntStateOf(0) }
 
     val amount = amountText.toLongOrNull() ?: 0L
-    val canSubmit = amount > 0 && source.isNotBlank()
+    // 출처가 있으면(자동감지) 사용처 선택 / 출처가 비면(직접추가) 사용처 필수
+    val canSubmit = amount > 0 && (source.isNotBlank() || merchant.isNotBlank())
 
     // 슬라이드 아웃 후 닫기
     fun close() {
@@ -156,12 +160,23 @@ fun TransactionFormSheet(
                             Text(headerEmoji, fontSize = 20.sp)
                         }
                         Spacer(Modifier.width(14.dp))
-                        Text(
-                            formatFullTimestamp(editTx.createdAt),
-                            style = AmType.caption,
-                            color = AmColors.TextSecondary,
-                            modifier = Modifier.weight(1f),
-                        )
+                        // 출처(은행/앱) — 있으면 시간 위에 표시(읽기전용). 직접추가(출처 없음)면 시간만.
+                        Column(modifier = Modifier.weight(1f)) {
+                            if (source.isNotBlank()) {
+                                Text(
+                                    source,
+                                    style = AmType.bodyStrong,
+                                    color = AmColors.TextPrimary,
+                                    maxLines = 1,
+                                    overflow = TextOverflow.Ellipsis,
+                                )
+                            }
+                            Text(
+                                formatFullTimestamp(editTx.createdAt),
+                                style = AmType.caption,
+                                color = AmColors.TextSecondary,
+                            )
+                        }
                         Icon(
                             Icons.Outlined.Delete,
                             contentDescription = "삭제",
@@ -243,8 +258,9 @@ fun TransactionFormSheet(
                 SheetLabel("사용처")
                 Spacer(Modifier.height(10.dp))
                 AmTextField(
-                    value = source,
-                    onValueChange = { source = it },
+                    value = merchant,
+                    onValueChange = { merchant = it },
+                    // 출처(은행)는 헤더에 이미 보이므로, 사용처 칸은 빈 칸 느낌의 일반 힌트만.
                     label = "예: 스타벅스",
                     modifier = Modifier.fillMaxWidth(),
                 )
@@ -292,7 +308,7 @@ fun TransactionFormSheet(
                 if (editTx == null) {
                     AmButton(
                         "추가",
-                        onClick = { onAdd(type, amount, source, effectiveCategory, memo); close() },
+                        onClick = { onAdd(type, amount, merchant, effectiveCategory, memo); close() },
                         modifier = Modifier.weight(1f),
                         enabled = canSubmit,
                     )
@@ -315,11 +331,11 @@ fun TransactionFormSheet(
                             val categoryChanged = effectiveCategory != editTx.category
                             val typeChanged = type != editTx.type
                             val amountChanged = amount != abs(editTx.amount)
-                            val sourceChanged = source.trim() != editTx.sourceName
-                            val coreChanged = memoChanged || categoryChanged || typeChanged || amountChanged || sourceChanged
+                            val merchantChanged = merchant.trim().ifBlank { null } != editTx.merchant
+                            val coreChanged = memoChanged || categoryChanged || typeChanged || amountChanged || merchantChanged
                             val scopeChanged = txScope != editTx.scope
                             val promoteNow = promote && !editTx.isMain
-                            if (coreChanged) onSaveTransaction(editTx.id, type, amount, source, memo, effectiveCategory)
+                            if (coreChanged) onSaveTransaction(editTx.id, type, amount, merchant, memo, effectiveCategory)
                             if (scopeChanged) onSetScope(editTx.id, txScope)
                             if (promoteNow) onPromoteToMain(editTx)
                             if (coreChanged || scopeChanged || promoteNow) onSaved()

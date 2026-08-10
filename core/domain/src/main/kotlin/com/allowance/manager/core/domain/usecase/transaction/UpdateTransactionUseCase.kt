@@ -19,7 +19,7 @@ class UpdateTransactionUseCase @Inject constructor(
         id: Long,
         type: TransactionType,
         amount: Long,
-        sourceName: String,
+        merchant: String,
         memo: String,
         category: TransactionCategory?,
     ) {
@@ -34,7 +34,8 @@ class UpdateTransactionUseCase @Inject constructor(
             tx.copy(
                 type = type,
                 amount = signed,
-                sourceName = sourceName.trim(),
+                // 출처(sourceName)는 읽기전용. 사용자가 편집하는 건 사용처(merchant)뿐.
+                merchant = merchant.trim().ifBlank { null },
                 memo = memo.trim().ifBlank { null },
                 category = category,
             )

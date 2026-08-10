@@ -198,18 +198,18 @@ class HomeViewModel @Inject constructor(
         id: Long,
         type: TransactionType,
         amount: Long,
-        sourceName: String,
+        merchant: String,
         memo: String,
         category: TransactionCategory?,
     ) {
-        viewModelScope.launch { updateTransactionUseCase(id, type, amount, sourceName, memo, category) }
+        viewModelScope.launch { updateTransactionUseCase(id, type, amount, merchant, memo, category) }
     }
 
     /** FAB — 수동 내역 추가 */
     fun onAddTransaction(
         type: TransactionType,
         amount: Long,
-        sourceName: String,
+        merchant: String,
         category: TransactionCategory?,
         memo: String,
     ) {
@@ -220,7 +220,7 @@ class HomeViewModel @Inject constructor(
                 AmAnalytics.Param.TYPE to type.name.lowercase(),
             ),
         )
-        viewModelScope.launch { addManualTransactionUseCase(type, amount, sourceName, category, memo) }
+        viewModelScope.launch { addManualTransactionUseCase(type, amount, merchant, category, memo) }
     }
 
     fun onPromoteToMain(transaction: Transaction) {

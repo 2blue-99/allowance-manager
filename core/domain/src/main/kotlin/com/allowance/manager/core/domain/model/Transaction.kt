@@ -24,7 +24,8 @@ data class Transaction(
     val amount: Long,
     val balance: Long? = null,
     val packageName: String,
-    val sourceName: String,
+    val sourceName: String,            // 출처(은행/카드/앱). 자동감지=패키지→은행맵, 없으면 알림 제목. 읽기전용
+    val merchant: String? = null,      // 사용처(가게). 사용자가 기록. null이면 리스트에 sourceName(출처)로 대체 노출
     val extractedAccount: String? = null,
     val accountId: Long? = null,
     val category: TransactionCategory? = null,

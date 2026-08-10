@@ -16,7 +16,7 @@ class AddManualTransactionUseCase @Inject constructor(
     suspend operator fun invoke(
         type: TransactionType,
         amount: Long,
-        sourceName: String,
+        merchant: String,
         category: TransactionCategory?,
         memo: String,
     ): Long = transactionRepository.record(
@@ -25,7 +25,9 @@ class AddManualTransactionUseCase @Inject constructor(
             amount = amount,
             balance = null,
             packageName = "",
-            sourceName = sourceName.trim(),
+            // 직접추가는 출처(은행)가 없음 → sourceName 빈값, 사용처(merchant)에 입력값 저장
+            sourceName = "",
+            merchant = merchant.trim().ifBlank { null },
             extractedAccount = null,
             accountId = null,
             category = category,
