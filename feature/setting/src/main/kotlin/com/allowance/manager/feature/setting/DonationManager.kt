@@ -110,6 +110,7 @@ class DonationManager(context: Context) {
     }
 
     companion object {
-        const val DONATION_PRODUCT_ID = "donate_coffee"
+        // Play Console 일회성 제품 ID (개발자 커피값 후원). 콘솔의 '제품 ID'와 정확히 일치해야 결제창이 뜬다.
+        const val DONATION_PRODUCT_ID = "com.allowance.coffee"
     }
 }
