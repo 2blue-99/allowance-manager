@@ -21,6 +21,11 @@ android {
     }
 }
 
+// Room 스키마 export → 마이그레이션 검증·테스트용 baseline(JSON) 생성
+ksp {
+    arg("room.schemaLocation", "$projectDir/schemas")
+}
+
 dependencies {
     implementation(libs.androidx.room.runtime)
     implementation(libs.androidx.room.ktx)

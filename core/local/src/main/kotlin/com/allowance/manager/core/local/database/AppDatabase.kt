@@ -18,7 +18,7 @@ import com.allowance.manager.core.local.entity.TransactionEntity
         BudgetEntity::class,
         IgnoredAccountEntity::class,
     ],
-    version = 10,  // v10: transactions.merchant(사용처) 컬럼 추가 (출처와 분리)
+    version = 1,    // v1.0.0 릴리즈 baseline (개발 중 누적 마이그레이션 폐기, 최종 스키마로 시작)
     exportSchema = true,
 )
 abstract class AppDatabase : RoomDatabase() {

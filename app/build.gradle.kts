@@ -1,3 +1,6 @@
+import java.io.FileInputStream
+import java.util.Properties
+
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.android)
@@ -7,6 +10,12 @@ plugins {
     alias(libs.plugins.google.services)
     alias(libs.plugins.firebase.crashlytics)
     alias(libs.plugins.compose.screenshot)
+}
+
+// 릴리즈 서명 정보(keystore.properties, gitignore). 파일 없으면 unsigned 로 빌드(R8 검증엔 충분).
+val keystorePropsFile = rootProject.file("keystore.properties")
+val keystoreProps = Properties().apply {
+    if (keystorePropsFile.exists()) FileInputStream(keystorePropsFile).use { load(it) }
 }
 
 android {
@@ -21,6 +30,18 @@ android {
         versionName = "1.0.0"
     }
 
+    signingConfigs {
+        // keystore.properties 있을 때만 release 서명 설정 (없으면 unsigned 로 빌드됨)
+        if (keystorePropsFile.exists()) {
+            create("release") {
+                storeFile = file(keystoreProps.getProperty("storeFile"))
+                storePassword = keystoreProps.getProperty("storePassword")
+                keyAlias = keystoreProps.getProperty("keyAlias")
+                keyPassword = keystoreProps.getProperty("keyPassword")
+            }
+        }
+    }
+
     buildTypes {
         debug {
             // debug는 별도 패키지(com.allowance.manager.dev) → release와 한 폰에 동시 설치 가능,
@@ -28,11 +49,15 @@ android {
             applicationIdSuffix = ".dev"
         }
         release {
-            isMinifyEnabled = false
+            // R8: 코드 축소·난독화 (keep 룰은 proguard-rules.pro)
+            isMinifyEnabled = true
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
             )
+            if (keystorePropsFile.exists()) {
+                signingConfig = signingConfigs.getByName("release")
+            }
         }
     }
     compileOptions {
