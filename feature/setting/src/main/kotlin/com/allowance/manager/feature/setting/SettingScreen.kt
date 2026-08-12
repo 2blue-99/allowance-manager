@@ -102,10 +102,15 @@ fun SettingRoute(
         onPaydayChange = viewModel::setPayday,
         onUserTypeChange = viewModel::setUserType,
         onSupport = {
-            (context as? Activity)?.let { activity ->
-                donationManager.donate(activity) { result ->
-                    analytics.logEvent(AmAnalytics.Event.DONATE_RESULT, mapOf(AmAnalytics.Param.RESULT to result.name.lowercase()))
-                    if (result == DonationManager.Result.SUCCESS) showThanks = true
+            // debug 빌드(onNavigateToDebug != null)에선 미등록 상품이라 결제창이 안 뜸 → 바로 감사 다이얼로그로 결과 확인
+            if (onNavigateToDebug != null) {
+                showThanks = true
+            } else {
+                (context as? Activity)?.let { activity ->
+                    donationManager.donate(activity) { result ->
+                        analytics.logEvent(AmAnalytics.Event.DONATE_RESULT, mapOf(AmAnalytics.Param.RESULT to result.name.lowercase()))
+                        if (result == DonationManager.Result.SUCCESS) showThanks = true
+                    }
                 }
             }
         },
@@ -115,17 +120,16 @@ fun SettingRoute(
 
     if (showThanks) {
         AmDialog(
-            title = "후원해 주셔서 감사해요 ☕",
+            title = "감사합니다 ☕",
             onDismiss = { showThanks = false },
             onConfirm = { showThanks = false },
             confirmText = "닫기",
             dismissText = "",
             analyticsTag = AmAnalytics.Dialog.DONATE_THANKS,
         ) {
-            // TODO: 감사 문구는 추후 확정 (주인이 전달 예정)
             Text(
-                "보내주신 커피값으로 더 편한 가계부를 만들게요.\n덕분에 오늘도 힘내서 개발합니다!",
-                fontSize = 13.sp,
+                "이 한 잔이 저에게는 큰 힘이 됩니다.\n더 쓸만한 가계부로 보답하겠습니다!",
+                fontSize = 14.sp,
                 color = AmColors.TextSecondary,
             )
         }
