@@ -128,7 +128,7 @@ fun SettingRoute(
             analyticsTag = AmAnalytics.Dialog.DONATE_THANKS,
         ) {
             Text(
-                "이 한 잔이 저에게는 큰 힘이 됩니다.\n더 쓸만한 가계부로 보답하겠습니다!",
+                "이 한 잔이 저에게는 큰 힘이 됩니다.\n더 쓸 만한 가계부로 보답하겠습니다!",
                 fontSize = 14.sp,
                 color = AmColors.TextSecondary,
             )
