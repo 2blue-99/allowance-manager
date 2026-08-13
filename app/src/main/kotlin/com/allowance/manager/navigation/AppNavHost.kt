@@ -49,7 +49,6 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.allowance.manager.core.designsystem.anim.AmMotion
-import com.allowance.manager.core.designsystem.component.amRippleClickable
 import com.allowance.manager.core.designsystem.theme.AmColors
 import com.allowance.manager.core.ui.guide.guideTarget
 import com.allowance.manager.core.ui.guide.rememberGuideTargets
@@ -283,7 +282,12 @@ private fun RowScope.BottomBarItem(
             .weight(1f)
             .fillMaxHeight()
             .then(modifier)
-            .amRippleClickable(onClick = onClick),
+            // 바텀바 탭은 리플 없이 색 전환만 (선택 색상 애니메이션으로 피드백)
+            .clickable(
+                interactionSource = remember { MutableInteractionSource() },
+                indication = null,
+                onClick = onClick,
+            ),
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center,
     ) {

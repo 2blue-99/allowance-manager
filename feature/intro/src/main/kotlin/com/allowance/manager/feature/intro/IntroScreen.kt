@@ -33,6 +33,7 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.allowance.manager.core.designsystem.component.AmButton
 import com.allowance.manager.core.designsystem.theme.AmColors
+import com.allowance.manager.core.designsystem.theme.AmType
 import kotlinx.coroutines.launch
 
 private val Accent = AmColors.Emerald
@@ -91,6 +92,7 @@ fun IntroScreen(onFinish: () -> Unit = {}) {
                 else scope.launch { pagerState.animateScrollToPage(pagerState.currentPage + 1) }
             },
             modifier = Modifier.fillMaxWidth().padding(horizontal = 24.dp),
+            textStyle = AmType.size14_bold,
         )
         Spacer(Modifier.height(24.dp))
     }

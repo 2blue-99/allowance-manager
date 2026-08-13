@@ -14,6 +14,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
@@ -38,6 +39,8 @@ fun AmButton(
     enabled: Boolean = true,
     height: Dp = AmButtonHeight,
     containerColor: Color? = null,
+    // null이면 Material 기본 라벨 스타일. 더 두꺼운 라벨이 필요하면 AmType 토큰을 넘긴다.
+    textStyle: TextStyle? = null,
 ) {
     val interaction = remember { MutableInteractionSource() }
     val pressed by interaction.collectIsPressedAsState()
@@ -56,7 +59,7 @@ fun AmButton(
             .height(height)
             .graphicsLayer { scaleX = scale; scaleY = scale },
     ) {
-        Text(text)
+        if (textStyle != null) Text(text, style = textStyle) else Text(text)
     }
 }
 
