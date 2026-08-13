@@ -194,7 +194,7 @@ fun SettingScreen(
                     label = "${uiState.userType.label} 설정",
                     items = listOf(
                         {
-                            AmSettingItem(title = "유형", subtitle = "이 금액을 부르는 호칭 (용돈/생활비/예산)", onClick = { showTypeDialog = true }) {
+                            AmSettingItem(title = "유형", subtitle = "금액을 부르는 호칭 (용돈/생활비/예산)", onClick = { showTypeDialog = true }) {
                                 Text(uiState.userType.label, fontSize = 13.sp, fontWeight = FontWeight.Bold, color = AmColors.Emerald)
                                 Spacer(Modifier.width(AmSpacing.xs))
                                 AmChevron()
@@ -246,12 +246,12 @@ fun SettingScreen(
                     label = "정보 · 지원",
                     items = listOf(
                         {
-                            AmSettingItem(title = "건의하기", subtitle = "devcoderblue@gmail.com", onClick = { analytics.logEvent(AmAnalytics.Event.SETTING_FEEDBACK_CLICK); onFeedback() }) {
+                            AmSettingItem(title = "건의하기", onClick = { analytics.logEvent(AmAnalytics.Event.SETTING_FEEDBACK_CLICK); onFeedback() }) {
                                 AmChevron()
                             }
                         },
                         {
-                            AmSettingItem(title = "평가하기", subtitle = "플레이스토어에서 별점 남기기", onClick = { analytics.logEvent(AmAnalytics.Event.SETTING_RATE_CLICK); onRate() }) {
+                            AmSettingItem(title = "평가하기", onClick = { analytics.logEvent(AmAnalytics.Event.SETTING_RATE_CLICK); onRate() }) {
                                 AmChevron()
                             }
                         },

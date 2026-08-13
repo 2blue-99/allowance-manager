@@ -2,6 +2,7 @@ package com.allowance.manager.core.designsystem.component
 
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
@@ -18,6 +19,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.allowance.manager.core.designsystem.theme.AmColors
 import com.allowance.manager.core.designsystem.theme.AmShape
+import com.allowance.manager.core.designsystem.theme.AmSpacing
 import com.allowance.manager.core.designsystem.theme.AmType
 
 /**
@@ -108,7 +110,10 @@ fun AmSettingItem(
         .let { if (onClick != null) it.amRippleClickable(onClick = onClick) else it }
         .padding(horizontal = 16.dp, vertical = 15.dp)
     Row(modifier = rowModifier, verticalAlignment = Alignment.CenterVertically) {
-        Column(modifier = Modifier.weight(1f)) {
+        Column(
+            modifier = Modifier.weight(1f),
+            verticalArrangement = Arrangement.spacedBy(AmSpacing.xxs),
+        ) {
             Text(title, style = AmType.bodyStrong, color = AmColors.TextPrimary)
             if (subtitle != null) {
                 Text(subtitle, style = AmType.caption, color = AmColors.TextSecondary)
