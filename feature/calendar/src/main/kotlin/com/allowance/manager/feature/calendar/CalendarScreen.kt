@@ -87,6 +87,7 @@ fun CalendarRoute(
         onNextMonth = viewModel::onNextMonth,
         onSelectMonth = viewModel::onSelectMonth,
         onToggleSearch = viewModel::onToggleSearch,
+        onToggleMainOnly = viewModel::onToggleMainOnly,
         onQueryChange = viewModel::onQueryChange,
         onSetTypeFilter = viewModel::onSetTypeFilter,
         onToggleCategory = viewModel::onToggleCategory,
@@ -108,6 +109,7 @@ fun CalendarScreen(
     onNextMonth: () -> Unit = {},
     onSelectMonth: (YearMonth) -> Unit = {},
     onToggleSearch: () -> Unit = {},
+    onToggleMainOnly: () -> Unit = {},
     onQueryChange: (String) -> Unit = {},
     onSetTypeFilter: (LedgerTypeFilter) -> Unit = {},
     onToggleCategory: (TransactionCategory) -> Unit = {},
@@ -151,8 +153,17 @@ fun CalendarScreen(
             SummaryCard(expense = uiState.expense, income = uiState.income)
             Spacer(Modifier.height(12.dp))
             LedgerListHeader(
-                showChips = false,   // 월별은 전체 고정 → 필터 칩 없이 제목 + 검색만
-                trailing = { SearchToggle(active = uiState.searchActive, onToggle = onToggleSearch) },
+                showChips = false,   // 스코프 필터는 아래 trailing에서 단일 '메인' 토글로 제공
+                trailing = {
+                    Row(
+                        horizontalArrangement = Arrangement.spacedBy(6.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        // 메인 계좌만 보기(홈과 같은 개념) — 켜면 초록, 해제하면 전체
+                        AmChip(label = "메인", selected = uiState.mainOnly, onClick = onToggleMainOnly)
+                        SearchToggle(active = uiState.searchActive, onToggle = onToggleSearch)
+                    }
+                },
             )
 
             // 🔍 활성 시에만 검색창 + 유형/분류 필터 노출 (해제하면 원복)

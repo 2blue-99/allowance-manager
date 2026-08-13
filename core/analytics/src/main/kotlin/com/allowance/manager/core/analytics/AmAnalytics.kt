@@ -25,6 +25,7 @@ object AmAnalytics {
         // 월별
         const val CALENDAR_MONTH_CHANGE = "calendar_month_change"
         const val CALENDAR_SEARCH_TOGGLE = "calendar_search_toggle"
+        const val CALENDAR_MAIN_FILTER = "calendar_main_filter"
         const val CALENDAR_CATEGORY_FILTER = "calendar_category_filter"
         const val CALENDAR_TX_SWIPE_HIDE = "calendar_tx_swipe_hide"
         const val CALENDAR_TX_SWIPE_DELETE = "calendar_tx_swipe_delete"

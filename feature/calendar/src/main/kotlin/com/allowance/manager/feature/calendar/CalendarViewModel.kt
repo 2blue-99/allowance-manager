@@ -40,6 +40,7 @@ data class CalendarUiState(
     val expense: Long = 0L,                             // 노출 리스트 기준 지출 합계 (숨김 제외)
     val income: Long = 0L,                              // 노출 리스트 기준 수입 합계 (숨김 제외)
     val searchActive: Boolean = false,
+    val mainOnly: Boolean = false,                      // 메인 계좌만 보기 (헤더 '메인' 토글)
     val query: String = "",
     val typeFilter: LedgerTypeFilter = LedgerTypeFilter.ALL,
     val categoryFilter: Set<TransactionCategory> = emptySet(),
@@ -60,6 +61,7 @@ private data class FilterParams(
     val categories: Set<TransactionCategory>,
     val typeFilter: LedgerTypeFilter,
     val searchActive: Boolean,
+    val mainOnly: Boolean,
 )
 
 @HiltViewModel
@@ -83,6 +85,7 @@ class CalendarViewModel @Inject constructor(
     private val categoryFilter = MutableStateFlow<Set<TransactionCategory>>(emptySet())
     private val typeFilter = MutableStateFlow(LedgerTypeFilter.ALL)
     private val searchActive = MutableStateFlow(false)
+    private val mainOnly = MutableStateFlow(false)
     private val minMonth = MutableStateFlow<YearMonth?>(null)
 
     private val _uiState = MutableStateFlow(CalendarUiState())
@@ -91,8 +94,8 @@ class CalendarViewModel @Inject constructor(
     @OptIn(ExperimentalCoroutinesApi::class)
     private val monthTransactions = month.flatMapLatest { observeMonthTransactionsUseCase(it) }
 
-    private val filterParams = combine(query, categoryFilter, typeFilter, searchActive) { q, c, t, a ->
-        FilterParams(q, c, t, a)
+    private val filterParams = combine(query, categoryFilter, typeFilter, searchActive, mainOnly) { q, c, t, a, m ->
+        FilterParams(q, c, t, a, m)
     }
 
     // 거래 있는 달 (월 피커 활성화용)
@@ -122,6 +125,8 @@ class CalendarViewModel @Inject constructor(
         userType: UserType,
     ): CalendarUiState {
         val filtered = raw.filter { tx ->
+            // 메인 토글: 켜지면 메인 계좌(accountId != null) 내역만
+            val matchMain = !fp.mainOnly || tx.isMain
             val matchCategory = fp.categories.isEmpty() || tx.category in fp.categories
             // 유형 필터: 전체=모두(이체 포함), 지출/수입=해당 타입만
             val matchType = when (fp.typeFilter) {
@@ -133,7 +138,7 @@ class CalendarViewModel @Inject constructor(
                 tx.sourceName.contains(fp.query, ignoreCase = true) ||
                 (tx.merchant?.contains(fp.query, ignoreCase = true) == true) ||
                 (tx.memo?.contains(fp.query, ignoreCase = true) == true)
-            matchCategory && matchType && matchQuery
+            matchMain && matchCategory && matchType && matchQuery
         }
         // 가계부 집계(BUDGET+LEDGER_ONLY)만 요약. EXCLUDED(미등록·제외)는 리스트엔 노출하되 요약에서 뺀다.
         val counted = filtered.filter { it.inLedger }
@@ -145,6 +150,7 @@ class CalendarViewModel @Inject constructor(
             expense = expense,
             income = income,
             searchActive = fp.searchActive,
+            mainOnly = fp.mainOnly,
             query = fp.query,
             typeFilter = fp.typeFilter,
             categoryFilter = fp.categories,
@@ -187,6 +193,13 @@ class CalendarViewModel @Inject constructor(
             categoryFilter.value = emptySet()
             typeFilter.value = LedgerTypeFilter.ALL
         }
+    }
+
+    /** 헤더 '메인' 토글 — 켜지면 메인 계좌 내역만, 해제하면 전체. (검색과 독립) */
+    fun onToggleMainOnly() {
+        val next = !mainOnly.value
+        analytics.logEvent(AmAnalytics.Event.CALENDAR_MAIN_FILTER, mapOf(AmAnalytics.Param.ACTIVE to next))
+        mainOnly.value = next
     }
 
     fun onQueryChange(value: String) {
