@@ -41,9 +41,9 @@ fun AmSettingRow(
     ) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             Column(modifier = Modifier.weight(1f)) {
-                Text(title, style = AmType.bodyStrong, color = AmColors.TextPrimary)
+                Text(title, style = AmType.size14_bold, color = AmColors.TextPrimary)
                 if (subtitle != null) {
-                    Text(subtitle, style = AmType.caption, color = AmColors.TextSecondary)
+                    Text(subtitle, style = AmType.size11_medium, color = AmColors.TextSecondary)
                 }
             }
             trailing?.invoke(this)
@@ -71,7 +71,7 @@ fun AmSettingGroup(
         if (label != null) {
             Text(
                 text = label,
-                style = AmType.labelStrong,
+                style = AmType.size12_black,
                 color = AmColors.TextSecondary,
                 modifier = Modifier.padding(horizontal = 6.dp, vertical = 11.dp),
             )
@@ -114,9 +114,9 @@ fun AmSettingItem(
             modifier = Modifier.weight(1f),
             verticalArrangement = Arrangement.spacedBy(AmSpacing.xxs),
         ) {
-            Text(title, style = AmType.bodyStrong, color = AmColors.TextPrimary)
+            Text(title, style = AmType.size14_bold, color = AmColors.TextPrimary)
             if (subtitle != null) {
-                Text(subtitle, style = AmType.caption, color = AmColors.TextSecondary)
+                Text(subtitle, style = AmType.size11_medium, color = AmColors.TextSecondary)
             }
         }
         trailing?.invoke(this)

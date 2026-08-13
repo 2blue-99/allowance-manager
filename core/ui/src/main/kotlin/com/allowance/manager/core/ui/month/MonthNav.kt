@@ -68,7 +68,7 @@ fun MonthNavBar(
                 .padding(horizontal = 12.dp, vertical = 6.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            Text("${month.year}년 ${month.monthValue}월", style = AmType.header, color = AmColors.TextPrimary)
+            Text("${month.year}년 ${month.monthValue}월", style = AmType.size18_black, color = AmColors.TextPrimary)
             Icon(
                 Icons.Filled.KeyboardArrowDown,
                 contentDescription = "월 선택",
@@ -112,7 +112,7 @@ fun MonthPickerDialog(
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 NavArrow(Icons.Filled.ChevronLeft, canPrevYear, "이전 해") { if (canPrevYear) year-- }
-                Text("${year}년", style = AmType.title, color = AmColors.TextPrimary)
+                Text("${year}년", style = AmType.size22_black, color = AmColors.TextPrimary)
                 NavArrow(Icons.Filled.ChevronRight, canNextYear, "다음 해") { if (canNextYear) year++ }
             }
             // 3열 x 4행 월 그리드
@@ -203,6 +203,6 @@ private fun MonthCell(
             ),
         contentAlignment = Alignment.Center,
     ) {
-        Text(label, style = AmType.bodyStrong, color = fg)
+        Text(label, style = AmType.size14_bold, color = fg)
     }
 }

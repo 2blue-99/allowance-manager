@@ -190,7 +190,7 @@ fun CalendarScreen(
             confirmText = "삭제",
             confirmColor = AmColors.Red,
         ) {
-            Text("삭제하면 되돌릴 수 없어요.", style = AmType.body, color = AmColors.TextSecondary)
+            Text("삭제하면 되돌릴 수 없어요.", style = AmType.size14_medium, color = AmColors.TextSecondary)
         }
     }
 
@@ -241,9 +241,9 @@ private fun SummaryCell(label: String, value: String, valueColor: Color, modifie
         modifier = modifier,
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
-        Text(label, style = AmType.labelMuted, color = AmColors.TextSecondary)
+        Text(label, style = AmType.size12_medium, color = AmColors.TextSecondary)
         Spacer(Modifier.height(5.dp))
-        Text(value, style = AmType.bodyStrong, color = valueColor)
+        Text(value, style = AmType.size14_bold, color = valueColor)
     }
 }
 
@@ -400,7 +400,7 @@ private fun EmptyState(searchActive: Boolean) {
             Box(modifier = Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
                 Text(
                     if (searchActive) "조건에 맞는 내역이 없어요" else "입출금 내역이 없어요",
-                    style = AmType.caption,
+                    style = AmType.size11_medium,
                     color = AmColors.TextSecondary,
                 )
             }

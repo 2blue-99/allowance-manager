@@ -139,7 +139,7 @@ fun AccountSettingScreen(
             confirmText = "삭제",
             confirmColor = AmColors.Red,
         ) {
-            Text("삭제하면 되돌릴 수 없어요.", style = AmType.body, color = AmColors.TextSecondary)
+            Text("삭제하면 되돌릴 수 없어요.", style = AmType.size14_medium, color = AmColors.TextSecondary)
         }
     }
 }

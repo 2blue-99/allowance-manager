@@ -63,7 +63,7 @@ fun AmDialog(
                 .background(AmColors.CardBg)
                 .padding(AmSpacing.xl),
         ) {
-            Text(title, style = AmType.dialogTitle, color = AmColors.TextPrimary)
+            Text(title, style = AmType.size17_black, color = AmColors.TextPrimary)
             Spacer(Modifier.height(AmSpacing.xxl))
             content()
             Spacer(Modifier.height(AmSpacing.xxl))

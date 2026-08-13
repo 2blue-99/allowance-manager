@@ -64,7 +64,7 @@ fun AmChip(
         Text(
             text = label,
             color = fg,
-            style = AmType.value,
+            style = AmType.size13_bold,
         )
     }
 }

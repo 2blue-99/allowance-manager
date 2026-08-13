@@ -81,7 +81,7 @@ fun TransactionRow(tx: Transaction, budgetName: String = "예산", onClick: () -
                     Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(5.dp)) {
                         Text(
                             title,
-                            style = AmType.label,
+                            style = AmType.size12_bold,
                             color = if (dim) AmColors.TextSecondary else AmColors.TextPrimary,
                             maxLines = 1,
                             overflow = TextOverflow.Ellipsis,
@@ -91,22 +91,22 @@ fun TransactionRow(tx: Transaction, budgetName: String = "예산", onClick: () -
                         // 상태 배지: 미등록(자동제외) / 제외(사용자) / 예산 외(가계부만)
                         if (excluded && isUnregistered) {
                             Box(Modifier.clip(RoundedCornerShape(5.dp)).background(AmColors.Divider).padding(horizontal = 5.dp, vertical = 1.dp)) {
-                                Text("미등록", style = AmType.tag, color = AmColors.TextSecondary)
+                                Text("미등록", style = AmType.size8_bold, color = AmColors.TextSecondary)
                             }
                         } else if (excluded) {
                             Box(Modifier.clip(RoundedCornerShape(5.dp)).background(AmColors.CardBg).padding(horizontal = 5.dp, vertical = 1.dp)) {
-                                Text("제외", style = AmType.tag, color = AmColors.TextSecondary)
+                                Text("제외", style = AmType.size8_bold, color = AmColors.TextSecondary)
                             }
                         } else if (ledgerOnly) {
                             Box(Modifier.clip(RoundedCornerShape(5.dp)).background(AmColors.ScreenBg).padding(horizontal = 5.dp, vertical = 1.dp)) {
-                                Text("$budgetName 제외", style = AmType.tag, color = AmColors.TextSecondary)
+                                Text("$budgetName 제외", style = AmType.size8_bold, color = AmColors.TextSecondary)
                             }
                         }
                     }
                     // 시간 + 메모: 한 줄, 넘치면 … 처리
                     Text(
                         subtitle,
-                        style = AmType.tiny,
+                        style = AmType.size9_medium,
                         color = AmColors.TextTertiary,
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis,
@@ -116,7 +116,7 @@ fun TransactionRow(tx: Transaction, budgetName: String = "예산", onClick: () -
             Spacer(Modifier.width(10.dp))
             Text(
                 text = signedAmount(tx),
-                style = AmType.labelStrong,
+                style = AmType.size12_black,
                 color = amountColor(tx, dim),
                 maxLines = 1,
             )

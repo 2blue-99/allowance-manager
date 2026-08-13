@@ -236,7 +236,7 @@ fun HomeScreen(
                 confirmText = "삭제",
                 confirmColor = AmColors.Red,
             ) {
-                Text("삭제하면 되돌릴 수 없어요.", style = AmType.body, color = AmColors.TextSecondary)
+                Text("삭제하면 되돌릴 수 없어요.", style = AmType.size14_medium, color = AmColors.TextSecondary)
             }
         }
 
@@ -382,13 +382,13 @@ private fun BudgetCard(uiState: HomeUiState) {
         ) {
             Text(
                 "이번 달 남은 ${uiState.userType.label}",
-                style = AmType.labelSoft.copy(fontSize = 13.sp),
-                color = Color.White.copy(alpha = 0.55f),
+                style = AmType.size12_bold.copy(fontSize = 13.sp),
+                color = Color.White.copy(alpha = 0.6f),
             )
             Spacer(Modifier.height(10.dp))
             Text(
                 text = if (uiState.isOver) "-${abs(shownAmount).amountToComma()}원" else "${shownAmount.amountToComma()}원",
-                style = AmType.amountHero,
+                style = AmType.size36_black,
                 color = if (uiState.isOver) AmColors.Red else Color.White,
             )
             Spacer(Modifier.height(23.dp))
@@ -410,13 +410,13 @@ private fun BudgetCard(uiState: HomeUiState) {
                 Text(
                     // 퍼센트도 바와 함께 0부터 카운트업
                     text = if (uiState.isOver) "초과" else "${(ratioAnim.value * 100).toInt()}% 사용",
-                    style = AmType.labelStrong,
+                    style = AmType.size12_medium,
                     color = fillColor,
                 )
                 Text(
-                    "${uiState.userType.label} ${uiState.budget.amountToComma()}원",
-                    style = AmType.caption,
-                    color = Color.White.copy(alpha = 0.4f),
+                    "${uiState.budget.amountToComma()}원",
+                    style = AmType.size12_medium,
+                    color = Color.White.copy(alpha = 0.6f),
                 )
             }
         }
@@ -441,9 +441,9 @@ private fun ExpenseIncomeCard(uiState: HomeUiState) {
 @Composable
 private fun SummaryCell(label: String, value: String, valueColor: Color, modifier: Modifier = Modifier) {
     Column(modifier = modifier, horizontalAlignment = Alignment.CenterHorizontally) {
-        Text(label, style = AmType.micro, color = AmColors.TextSecondary)
+        Text(label, style = AmType.size10_medium, color = AmColors.TextSecondary)
         Spacer(Modifier.height(5.dp))
-        Text(value, style = AmType.valueStrong, color = valueColor)
+        Text(value, style = AmType.size14_black, color = valueColor)
     }
 }
 
@@ -477,9 +477,9 @@ private fun StatCell(value: String, label: String, modifier: Modifier = Modifier
         modifier = modifier.padding(vertical = 12.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
-        Text(value, style = AmType.valueStrong, color = valueColor)
+        Text(value, style = AmType.size14_black, color = valueColor)
         Spacer(Modifier.height(3.dp))
-        Text(label, style = AmType.micro, color = AmColors.TextSecondary)
+        Text(label, style = AmType.size10_medium, color = AmColors.TextSecondary)
     }
 }
 
@@ -563,7 +563,7 @@ private fun EmptyState(filter: LedgerFilter, showSample: Boolean) {
                 Box(modifier = Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
                     Text(
                         "아직 내역이 없어요.\n결제 알림이 오면 자동으로 기록돼요.",
-                        style = AmType.caption,
+                        style = AmType.size11_medium,
                         color = AmColors.TextSecondary,
                         textAlign = TextAlign.Center,
                         lineHeight = 18.sp,
@@ -577,7 +577,7 @@ private fun EmptyState(filter: LedgerFilter, showSample: Boolean) {
     val message = if (filter.showMain) "메인 내역이 없어요" else "표시할 내역이 없어요"
     AmCard(modifier = Modifier.fillMaxWidth(), contentPadding = PaddingValues(vertical = 28.dp)) {
         Box(modifier = Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
-            Text(message, style = AmType.caption, color = AmColors.TextSecondary)
+            Text(message, style = AmType.size11_medium, color = AmColors.TextSecondary)
         }
     }
 }
@@ -602,21 +602,21 @@ private fun SampleHint() {
                     ) { Text("☕", fontSize = 15.sp) }
                     Column {
                         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(5.dp)) {
-                            Text("스타벅스", style = AmType.label, color = AmColors.TextPrimary)
+                            Text("스타벅스", style = AmType.size12_bold, color = AmColors.TextPrimary)
                             Box(Modifier.clip(RoundedCornerShape(5.dp)).background(AmColors.Divider).padding(horizontal = 5.dp, vertical = 1.dp)) {
-                                Text("예시", style = AmType.tag, color = AmColors.TextSecondary)
+                                Text("예시", style = AmType.size8_bold, color = AmColors.TextSecondary)
                             }
                         }
-                        Text("오후 1:30", style = AmType.tiny, color = AmColors.TextTertiary)
+                        Text("오후 1:30", style = AmType.size9_medium, color = AmColors.TextTertiary)
                     }
                 }
-                Text("-5,600원", style = AmType.labelStrong, color = AmColors.Red)
+                Text("-5,600원", style = AmType.size12_black, color = AmColors.Red)
             }
         }
         Spacer(Modifier.height(10.dp))
         Text(
             "결제 알림이 오면 이렇게 자동으로 기록돼요.",
-            style = AmType.caption,
+            style = AmType.size11_medium,
             color = AmColors.TextSecondary,
             textAlign = TextAlign.Center,
             modifier = Modifier.fillMaxWidth(),

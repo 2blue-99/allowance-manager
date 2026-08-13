@@ -97,7 +97,7 @@ fun IgnoredAccountScreen(
         ) {
             Text(
                 "${account.sourceName}에서 오는 알림을 다시 받아요. 이미 삭제된 과거 내역은 복구되지 않아요.",
-                style = AmType.body,
+                style = AmType.size14_medium,
                 color = AmColors.TextSecondary,
             )
         }

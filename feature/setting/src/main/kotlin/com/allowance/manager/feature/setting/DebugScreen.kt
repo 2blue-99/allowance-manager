@@ -85,7 +85,7 @@ fun DebugScreen(
     ) {
         AmScreenHeader(title = "디버그", onBack = onBack)
         Spacer(Modifier.height(AmSpacing.lg))
-        Text("화면 이동", style = AmType.label, color = AmColors.TextSecondary)
+        Text("화면 이동", style = AmType.size12_bold, color = AmColors.TextSecondary)
         Spacer(Modifier.height(AmSpacing.md))
 
         AmButton(text = "인트로 화면으로", onClick = onNavigateToIntro, modifier = Modifier.fillMaxWidth())
@@ -93,7 +93,7 @@ fun DebugScreen(
         AmButton(text = "온보딩 화면으로", onClick = onNavigateToOnboarding, modifier = Modifier.fillMaxWidth())
 
         Spacer(Modifier.height(AmSpacing.xl))
-        Text("가이드", style = AmType.label, color = AmColors.TextSecondary)
+        Text("가이드", style = AmType.size12_bold, color = AmColors.TextSecondary)
         Spacer(Modifier.height(AmSpacing.md))
         // ON = 홈 재진입 시 가이드 노출 / OFF = 노출 안 함
         Row(
@@ -101,12 +101,12 @@ fun DebugScreen(
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            Text("홈 가이드 표시", style = AmType.bodyStrong, color = AmColors.TextPrimary)
+            Text("홈 가이드 표시", style = AmType.size14_bold, color = AmColors.TextPrimary)
             Switch(checked = homeGuideEnabled, onCheckedChange = onHomeGuideEnabledChange)
         }
 
         Spacer(Modifier.height(AmSpacing.xl))
-        Text("테스트 데이터", style = AmType.label, color = AmColors.TextSecondary)
+        Text("테스트 데이터", style = AmType.size12_bold, color = AmColors.TextSecondary)
         Spacer(Modifier.height(AmSpacing.md))
         // 과거 12개월(1~12개월 전) 각 달 수동 지출 1건씩 삽입 → 월별·통계 이동 화살표 활성화 확인용
         AmButton(text = "과거 12개월 테스트 내역 넣기", onClick = onSeedTestData, modifier = Modifier.fillMaxWidth())
@@ -126,7 +126,7 @@ fun DebugScreen(
         )
 
         Spacer(Modifier.height(AmSpacing.xl))
-        Text("달별 세팅 (대상 달 기준)", style = AmType.label, color = AmColors.TextSecondary)
+        Text("달별 세팅 (대상 달 기준)", style = AmType.size12_bold, color = AmColors.TextSecondary)
         Spacer(Modifier.height(AmSpacing.md))
         // 월급일은 앱 전역 설정이라 달과 무관하게 전역 적용. 지출/수입은 그 달에 1건씩 추가.
         AmTextField(

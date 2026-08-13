@@ -9,12 +9,14 @@ import androidx.compose.ui.unit.sp
 import com.allowance.manager.core.designsystem.R
 
 val pretendard = FontFamily(
-    Font(R.font.pretendard_light, FontWeight.Light),
-    Font(R.font.pretendard_regular, FontWeight.Normal),
-    Font(R.font.pretendard_medium, FontWeight.Medium),
-    Font(R.font.pretendard_semi_bold, FontWeight.SemiBold),
-    Font(R.font.pretendard_bold, FontWeight.Bold),
-    Font(R.font.pretendard_extra_bold, FontWeight.ExtraBold),
+    Font(R.font.pretendard_thin, FontWeight.Thin),           // 100
+    Font(R.font.pretendard_light, FontWeight.Light),         // 300
+    Font(R.font.pretendard_regular, FontWeight.Normal),      // 400
+    Font(R.font.pretendard_medium, FontWeight.Medium),       // 500
+    Font(R.font.pretendard_semi_bold, FontWeight.SemiBold),  // 600
+    Font(R.font.pretendard_bold, FontWeight.Bold),           // 700
+    Font(R.font.pretendard_extra_bold, FontWeight.ExtraBold),// 800
+    Font(R.font.pretendard_black, FontWeight.Black),         // 900
 )
 
 val typography = Typography(
@@ -36,47 +38,39 @@ val typography = Typography(
 )
 
 /**
- * 앱 공통 타이포그래피 토큰(의미 기반).
- * 화면에서 fontSize/fontWeight를 직접 쓰지 말고 `style = AmType.xxx` 로 사용한다.
- * (색은 별개 관심사 → Text의 color 파라미터로 지정)
+ * 앱 공통 폰트 토큰 — **크기 × 굵기** 조합만으로 구성한다. (의미 기반 이름 금지)
+ *
+ * 이름 규칙: `size{px}_{weight}`
+ * - 굵기: `thin`(100) · `light`(300) · `medium`(500) · `bold`(700) · `black`(900)
+ * - 화면에서 `fontSize`/`fontWeight`를 직접 쓰지 말고 `style = AmType.size14_medium` 처럼 쓴다.
+ * - 색·자간은 별개 관심사 → `Text`의 `color` 등 파라미터로 지정.
+ * - 필요한 조합이 없으면 아래에 한 줄 추가한다.
  */
 object AmType {
-    private fun t(size: Int, weight: FontWeight, ls: androidx.compose.ui.unit.TextUnit = 0.sp) =
-        TextStyle(fontFamily = pretendard, fontSize = size.sp, fontWeight = weight, letterSpacing = ls)
+    private fun t(size: Int, weight: FontWeight) =
+        TextStyle(fontFamily = pretendard, fontSize = size.sp, fontWeight = weight)
 
-    // 금액·큰 숫자
-    val amountHero = t(36, FontWeight.ExtraBold, (-1.2).sp)   // 홈 남은 용돈(메인 강조)
-    val amountLarge = t(28, FontWeight.ExtraBold)             // 통계 총액
+    // black (900) — 완전볼드
+    val size36_black = t(36, FontWeight.Black)
+    val size22_black = t(22, FontWeight.Black)
+    val size18_black = t(18, FontWeight.Black)
+    val size17_black = t(17, FontWeight.Black)
+    val size14_black = t(14, FontWeight.Black)
+    val size13_black = t(13, FontWeight.Black)
+    val size12_black = t(12, FontWeight.Black)
 
-    // 제목
-    val titleXl = t(30, FontWeight.ExtraBold)                 // 온보딩 대제목
-    val titleLg = t(24, FontWeight.ExtraBold)                 // 인트로 제목
-    val title = t(22, FontWeight.ExtraBold)                   // 화면 타이틀·섹션 질문
-    val titleSm = t(20, FontWeight.ExtraBold)                 // 스플래시 앱명
-    val header = t(18, FontWeight.ExtraBold)                  // 상단 헤더
-    val dialogTitle = t(17, FontWeight.ExtraBold)
+    // bold (700)
+    val size14_bold = t(14, FontWeight.Bold)
+    val size13_bold = t(13, FontWeight.Bold)
+    val size12_bold = t(12, FontWeight.Bold)
+    val size11_bold = t(11, FontWeight.Bold)
+    val size10_bold = t(10, FontWeight.Bold)
+    val size8_bold = t(8, FontWeight.Bold)
 
-    // 본문
-    val bodyLarge = t(16, FontWeight.Normal)
-    val body = t(14, FontWeight.Normal)
-    val bodyStrong = t(14, FontWeight.Bold)                   // 설정 행 제목, 계좌명
-
-    // 값·강조
-    val emphasis = t(15, FontWeight.ExtraBold)                // 시트 소스명·금액
-    val valueStrong = t(13, FontWeight.ExtraBold)             // 홈/통계 강조 값
-    val value = t(13, FontWeight.Bold)                        // 설정 값, 칩
-    val bodySmall = t(13, FontWeight.Normal)                  // 스플래시 서브타이틀
-
-    // 라벨·캡션
-    val labelStrong = t(12, FontWeight.ExtraBold)             // 리스트 헤더, %·금액
-    val label = t(12, FontWeight.Bold)                        // 거래명
-    val labelSoft = t(12, FontWeight.SemiBold, 0.3.sp)        // 히어로 라벨
-    val labelMuted = t(12, FontWeight.Normal)                 // 보조 라벨
-    val captionStrong = t(11, FontWeight.Bold)               // 토글 라벨·상태 칩
-    val caption = t(11, FontWeight.Normal)                    // 캡션·시간
-    val microStrong = t(10, FontWeight.Bold)
-    val micro = t(10, FontWeight.Normal)                      // 아주 작은 라벨
-    val tinyStrong = t(9, FontWeight.Bold)
-    val tiny = t(9, FontWeight.Normal)
-    val tag = t(8, FontWeight.Bold)                           // 숨김·미등록 태그
+    // medium (500)
+    val size14_medium = t(14, FontWeight.Medium)
+    val size12_medium = t(12, FontWeight.Medium)
+    val size11_medium = t(11, FontWeight.Medium)
+    val size10_medium = t(10, FontWeight.Medium)
+    val size9_medium = t(9, FontWeight.Medium)
 }

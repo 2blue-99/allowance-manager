@@ -78,7 +78,7 @@ fun LedgerListHeader(
         horizontalArrangement = Arrangement.spacedBy(8.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        Text(title, style = AmType.labelStrong, color = AmColors.TextPrimary)
+        Text(title, style = AmType.size12_black, color = AmColors.TextPrimary)
         Spacer(Modifier.weight(1f))
         if (showChips) LedgerFilterChips(filter = filter, onChip = onFilterChip, allBadge = allBadge)
         trailing?.invoke()

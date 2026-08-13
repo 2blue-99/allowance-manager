@@ -231,7 +231,7 @@ private fun BarChart(bars: List<MonthBar>, onSelectMonth: (YearMonth) -> Unit) {
                     if (bar.isSelected) {
                         Text(
                             manWon(bar.expense),
-                            style = AmType.microStrong,
+                            style = AmType.size10_bold,
                             color = if (bar.isOver) AmColors.Red else AmColors.Emerald,
                         )
                         Spacer(Modifier.height(3.dp))
@@ -287,7 +287,7 @@ private fun BarChart(bars: List<MonthBar>, onSelectMonth: (YearMonth) -> Unit) {
         bars.forEach { bar ->
             Text(
                 bar.label,
-                style = AmType.micro,
+                style = AmType.size10_medium,
                 color = if (bar.isSelected) AmColors.TextPrimary else AmColors.TextSecondary,
                 modifier = Modifier.weight(1f),
                 textAlign = androidx.compose.ui.text.style.TextAlign.Center,
@@ -302,7 +302,7 @@ private fun SummaryCard(month: YearMonth, summary: MonthSummary, label: String, 
     AmCard(modifier = Modifier.fillMaxWidth()) {
         Column {
             Row(verticalAlignment = Alignment.CenterVertically) {
-                Text("${month.monthValue}월 요약", style = AmType.labelStrong, color = AmColors.TextPrimary)
+                Text("${month.monthValue}월 요약", style = AmType.size12_black, color = AmColors.TextPrimary)
             }
             Spacer(Modifier.height(12.dp))
             Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
@@ -327,7 +327,7 @@ private fun SummaryCard(month: YearMonth, summary: MonthSummary, label: String, 
                     .padding(vertical = 10.dp),
                 contentAlignment = Alignment.Center,
             ) {
-                Text("이 달 내역 보기 ›", style = AmType.captionStrong, color = AmColors.Emerald)
+                Text("이 달 내역 보기 ›", style = AmType.size11_bold, color = AmColors.Emerald)
             }
         }
     }
@@ -336,9 +336,9 @@ private fun SummaryCard(month: YearMonth, summary: MonthSummary, label: String, 
 @Composable
 private fun SummaryCell(label: String, value: String, valueColor: Color, modifier: Modifier = Modifier) {
     Column(modifier = modifier, horizontalAlignment = Alignment.CenterHorizontally) {
-        Text(label, style = AmType.micro, color = AmColors.TextSecondary)
+        Text(label, style = AmType.size10_medium, color = AmColors.TextSecondary)
         Spacer(Modifier.height(5.dp))
-        Text(value, style = AmType.valueStrong, color = valueColor)
+        Text(value, style = AmType.size13_black, color = valueColor)
     }
 }
 
@@ -347,11 +347,11 @@ private fun SummaryCell(label: String, value: String, valueColor: Color, modifie
 private fun CategoryCard(month: YearMonth, categories: List<CategorySlice>, total: Long) {
     AmCard(modifier = Modifier.fillMaxWidth()) {
         Column {
-            Text("${month.monthValue}월 카테고리 분포", style = AmType.labelStrong, color = AmColors.TextPrimary)
+            Text("${month.monthValue}월 카테고리 분포", style = AmType.size12_black, color = AmColors.TextPrimary)
             Spacer(Modifier.height(16.dp))
             if (categories.isEmpty()) {
                 Box(modifier = Modifier.fillMaxWidth().padding(vertical = 20.dp), contentAlignment = Alignment.Center) {
-                    Text("이 달 지출 내역이 없어요", style = AmType.caption, color = AmColors.TextSecondary)
+                    Text("이 달 지출 내역이 없어요", style = AmType.size11_medium, color = AmColors.TextSecondary)
                 }
             } else {
                 Row(verticalAlignment = Alignment.CenterVertically) {
@@ -394,8 +394,8 @@ private fun Donut(categories: List<CategorySlice>, total: Long, modifier: Modifi
             }
         }
         Column(horizontalAlignment = Alignment.CenterHorizontally) {
-            Text("총지출", style = AmType.tiny, color = AmColors.TextSecondary)
-            Text(manWon(total), style = AmType.valueStrong, color = AmColors.TextPrimary)
+            Text("총지출", style = AmType.size9_medium, color = AmColors.TextSecondary)
+            Text(manWon(total), style = AmType.size13_black, color = AmColors.TextPrimary)
         }
     }
 }
@@ -405,11 +405,11 @@ private fun CategoryRow(slice: CategorySlice) {
     Row(verticalAlignment = Alignment.CenterVertically) {
         Box(Modifier.size(8.dp).clip(RoundedCornerShape(2.dp)).background(categoryColor(slice.category)))
         Spacer(Modifier.width(6.dp))
-        Text(categoryLabel(slice.category), style = AmType.caption, color = AmColors.TextPrimary)
+        Text(categoryLabel(slice.category), style = AmType.size11_medium, color = AmColors.TextPrimary)
         Spacer(Modifier.width(6.dp))
-        Text("${(slice.ratio * 100).toInt()}%", style = AmType.caption, color = AmColors.TextTertiary)
+        Text("${(slice.ratio * 100).toInt()}%", style = AmType.size11_medium, color = AmColors.TextTertiary)
         Spacer(Modifier.weight(1f))
-        Text("${slice.amount.amountToComma()}원", style = AmType.captionStrong, color = AmColors.TextPrimary)
+        Text("${slice.amount.amountToComma()}원", style = AmType.size11_bold, color = AmColors.TextPrimary)
     }
 }
 
@@ -419,7 +419,7 @@ private fun LegendDot(color: Color, label: String) {
     Row(verticalAlignment = Alignment.CenterVertically) {
         Box(Modifier.size(8.dp).clip(RoundedCornerShape(2.dp)).background(color))
         Spacer(Modifier.width(4.dp))
-        Text(label, style = AmType.micro, color = AmColors.TextSecondary)
+        Text(label, style = AmType.size10_medium, color = AmColors.TextSecondary)
     }
 }
 
@@ -428,7 +428,7 @@ private fun LegendDash(label: String) {
     Row(verticalAlignment = Alignment.CenterVertically) {
         Box(Modifier.width(12.dp).height(2.dp).background(AmColors.TextTertiary))
         Spacer(Modifier.width(4.dp))
-        Text(label, style = AmType.micro, color = AmColors.TextSecondary)
+        Text(label, style = AmType.size10_medium, color = AmColors.TextSecondary)
     }
 }
 

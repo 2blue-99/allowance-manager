@@ -119,6 +119,6 @@ private fun SwipeAction(
     ) {
         Icon(icon, contentDescription = label, tint = foreground, modifier = Modifier.size(20.dp))
         Spacer(Modifier.height(4.dp))
-        Text(label, style = AmType.tiny, color = foreground)
+        Text(label, style = AmType.size9_medium, color = foreground)
     }
 }

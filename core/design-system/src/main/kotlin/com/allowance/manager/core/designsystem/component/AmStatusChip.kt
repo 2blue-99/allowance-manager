@@ -28,6 +28,6 @@ fun AmStatusChip(
             .background(background)
             .padding(horizontal = 10.dp, vertical = 5.dp),
     ) {
-        Text(text, style = AmType.captionStrong, color = color)
+        Text(text, style = AmType.size11_bold, color = color)
     }
 }

@@ -88,7 +88,7 @@ class MainActivity : ComponentActivity() {
                             dismissText = "닫기",
                             analyticsTag = AmAnalytics.Dialog.FORCE_UPDATE,
                         ) {
-                            Text(uiState.updateNote, style = AmType.body, color = AmColors.TextSecondary)
+                            Text(uiState.updateNote, style = AmType.size14_medium, color = AmColors.TextSecondary)
                         }
                     }
                     }

@@ -39,6 +39,6 @@ fun AmScreenHeader(
             )
             Spacer(Modifier.width(AmSpacing.md))
         }
-        Text(title, style = AmType.header, color = AmColors.TextPrimary)
+        Text(title, style = AmType.size18_black, color = AmColors.TextPrimary)
     }
 }
