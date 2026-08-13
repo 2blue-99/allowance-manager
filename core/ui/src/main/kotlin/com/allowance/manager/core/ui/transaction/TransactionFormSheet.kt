@@ -23,6 +23,7 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Delete
+import androidx.compose.material.icons.rounded.Add
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.ModalBottomSheet
@@ -148,8 +149,22 @@ fun TransactionFormSheet(
                     .padding(horizontal = 20.dp),
             ) {
                 if (editTx == null) {
-                    // 추가 모드: 제목
-                    Text("내역 추가", style = AmType.title, color = AmColors.TextPrimary)
+                    // 추가 모드: 슬림 헤더(➕ 아이콘 + 제목) — 수정 모드 헤더와 톤 통일
+                    Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                        Box(
+                            modifier = Modifier.size(46.dp).clip(AmShape.card).background(AmColors.EmeraldBg),
+                            contentAlignment = Alignment.Center,
+                        ) {
+                            Icon(
+                                Icons.Rounded.Add,
+                                contentDescription = null,
+                                tint = AmColors.Emerald,
+                                modifier = Modifier.size(24.dp),
+                            )
+                        }
+                        Spacer(Modifier.width(14.dp))
+                        Text("내역 추가", style = AmType.size14_bold, color = AmColors.TextPrimary)
+                    }
                     Spacer(Modifier.height(20.dp))
                 } else {
                     // 수정 모드: 슬림 헤더(아이콘 + 시간 + 삭제). 아이콘 이모지는 분류를 즉시 반영.
@@ -173,7 +188,7 @@ fun TransactionFormSheet(
                             if (source.isNotBlank()) {
                                 Text(
                                     source,
-                                    style = AmType.bodyStrong,
+                                    style = AmType.size14_bold,
                                     color = AmColors.TextPrimary,
                                     maxLines = 1,
                                     overflow = TextOverflow.Ellipsis,
@@ -181,7 +196,7 @@ fun TransactionFormSheet(
                             }
                             Text(
                                 formatFullTimestamp(editTx.createdAt),
-                                style = AmType.caption,
+                                style = AmType.size11_medium,
                                 color = AmColors.TextSecondary,
                             )
                         }
@@ -385,7 +400,7 @@ fun TransactionFormSheet(
             confirmText = "삭제",
             confirmColor = AmColors.Red,
         ) {
-            Text("삭제하면 되돌릴 수 없어요.", style = AmType.body, color = AmColors.TextSecondary)
+            Text("삭제하면 되돌릴 수 없어요.", style = AmType.size14_medium, color = AmColors.TextSecondary)
         }
     }
 
@@ -403,13 +418,13 @@ fun TransactionFormSheet(
         ) {
             Text(
                 "${target}에서 오는 알림을 앞으로 받지 않고, 기존 내역 ${ignoreCount}건도 모두 삭제돼요.",
-                style = AmType.body,
+                style = AmType.size14_medium,
                 color = AmColors.TextSecondary,
             )
             Spacer(Modifier.height(10.dp))
             Text(
                 "무시 해제는 설정에서 할 수 있어요.",
-                style = AmType.caption,
+                style = AmType.size11_medium,
                 color = AmColors.TextTertiary,
             )
         }
@@ -431,14 +446,14 @@ private fun IgnoreSourceButton(label: String, onClick: () -> Unit) {
     ) {
         Text("🚫", fontSize = 17.sp)
         Spacer(Modifier.width(11.dp))
-        Text(label, style = AmType.bodyStrong, color = AmColors.Red, modifier = Modifier.weight(1f))
-        Text("›", style = AmType.bodyStrong, color = AmColors.Red.copy(alpha = 0.5f))
+        Text(label, style = AmType.size14_bold, color = AmColors.Red, modifier = Modifier.weight(1f))
+        Text("›", style = AmType.size14_bold, color = AmColors.Red.copy(alpha = 0.5f))
     }
 }
 
 @Composable
 private fun SheetLabel(text: String) {
-    Text(text, style = AmType.label, color = AmColors.TextSecondary)
+    Text(text, style = AmType.size12_bold, color = AmColors.TextSecondary)
 }
 
 /** 유형별 기본 예산 반영 상태 — 수입은 '가계부만'(예산 미반영), 그 외는 예산 반영. */
@@ -449,7 +464,7 @@ private fun defaultScopeFor(type: TransactionType): TxScope =
 @Composable
 private fun SheetScopeSelector(scope: TxScope, budgetName: String, onScope: (TxScope) -> Unit) {
     Column(modifier = Modifier.fillMaxWidth().padding(vertical = 6.dp)) {
-        Text("예산 반영", style = AmType.bodyStrong, color = AmColors.TextPrimary)
+        Text("예산 반영", style = AmType.size14_bold, color = AmColors.TextPrimary)
         Spacer(Modifier.height(10.dp))
         Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
             AmChip("예산 반영", scope == TxScope.BUDGET, modifier = Modifier.weight(1f)) { onScope(TxScope.BUDGET) }
@@ -463,7 +478,7 @@ private fun SheetScopeSelector(scope: TxScope, budgetName: String, onScope: (TxS
             TxScope.LEDGER_ONLY -> "${budgetName}에는 포함되지 않고, 지출·수입에만 포함됩니다."
             TxScope.EXCLUDED -> "전체에서 제외됩니다."
         }
-        Text(hint, style = AmType.caption, color = AmColors.TextSecondary)
+        Text(hint, style = AmType.size11_medium, color = AmColors.TextSecondary)
     }
 }
 
@@ -479,9 +494,9 @@ private fun SheetToggleRow(
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Column(Modifier.weight(1f)) {
-            Text(title, style = AmType.bodyStrong, color = AmColors.TextPrimary)
+            Text(title, style = AmType.size14_bold, color = AmColors.TextPrimary)
             if (!subtitle.isNullOrBlank()) {
-                Text(subtitle, style = AmType.caption, color = AmColors.TextSecondary)
+                Text(subtitle, style = AmType.size11_medium, color = AmColors.TextSecondary)
             }
         }
         AmToggle(checked = checked, onCheckedChange = onCheckedChange)
