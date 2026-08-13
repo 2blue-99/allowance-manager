@@ -3,6 +3,7 @@ package com.allowance.manager.core.domain.usecase.transaction
 import com.allowance.manager.core.domain.model.MaskedAccount
 import com.allowance.manager.core.domain.model.ParsedTransaction
 import com.allowance.manager.core.domain.model.Transaction
+import com.allowance.manager.core.domain.model.TransactionType
 import com.allowance.manager.core.domain.model.TxScope
 import com.allowance.manager.core.domain.repository.AccountRepository
 import com.allowance.manager.core.domain.repository.DataStoreRepository
@@ -52,8 +53,13 @@ class RecordTransactionUseCase @Inject constructor(
                 sourceName = parsed.sourceName,
                 extractedAccount = parsed.extractedAccount,
                 accountId = accountId,
-                // 등록계좌 매칭 = 예산 반영(BUDGET), 미등록 = 제외(EXCLUDED). 이후 사용자·승격으로 조정.
-                scope = if (accountId != null) TxScope.BUDGET else TxScope.EXCLUDED,
+                // 미등록 계좌 = 제외(EXCLUDED). 등록계좌 매칭 시 수입은 예산 미반영(가계부만),
+                // 그 외(지출·이체)는 예산 반영(BUDGET). 이후 사용자·승격으로 조정.
+                scope = when {
+                    accountId == null -> TxScope.EXCLUDED
+                    parsed.type == TransactionType.INCOME -> TxScope.LEDGER_ONLY
+                    else -> TxScope.BUDGET
+                },
                 createdAt = System.currentTimeMillis(),
             )
         )

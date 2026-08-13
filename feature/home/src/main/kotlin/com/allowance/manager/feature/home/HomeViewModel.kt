@@ -212,6 +212,7 @@ class HomeViewModel @Inject constructor(
         merchant: String,
         category: TransactionCategory?,
         memo: String,
+        scope: TxScope,
     ) {
         analytics.logEvent(
             AmAnalytics.Event.TX_ADD_SAVE,
@@ -220,7 +221,7 @@ class HomeViewModel @Inject constructor(
                 AmAnalytics.Param.TYPE to type.name.lowercase(),
             ),
         )
-        viewModelScope.launch { addManualTransactionUseCase(type, amount, merchant, category, memo) }
+        viewModelScope.launch { addManualTransactionUseCase(type, amount, merchant, category, memo, scope) }
     }
 
     fun onPromoteToMain(transaction: Transaction) {

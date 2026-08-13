@@ -1,5 +1,6 @@
 package com.allowance.manager.core.ui.transaction
 
+import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -28,6 +29,7 @@ import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.Text
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
@@ -83,7 +85,7 @@ fun TransactionFormSheet(
     onDismiss: () -> Unit,
     budgetName: String = "예산",   // 자산 호칭(용돈/생활비/예산) — 예산 반영 안내문에 사용
     // 추가 모드 콜백
-    onAdd: (TransactionType, Long, String, TransactionCategory?, String) -> Unit = { _, _, _, _, _ -> },
+    onAdd: (TransactionType, Long, String, TransactionCategory?, String, TxScope) -> Unit = { _, _, _, _, _, _ -> },
     // 수정 모드 콜백 (유형·금액·사용처·메모·분류)
     onSaveTransaction: (Long, TransactionType, Long, String, String, TransactionCategory?) -> Unit = { _, _, _, _, _, _ -> },
     onSetScope: (Long, TxScope) -> Unit = { _, _ -> },
@@ -111,7 +113,13 @@ fun TransactionFormSheet(
     var merchant by remember(stateKey) { mutableStateOf(editTx?.merchant.orEmpty()) }
     var category by remember(stateKey) { mutableStateOf<TransactionCategory?>(editTx?.category ?: TransactionCategory.ETC) }
     var memo by remember(stateKey) { mutableStateOf(editTx?.memo.orEmpty()) }
-    var txScope by remember(stateKey) { mutableStateOf(editTx?.scope ?: TxScope.BUDGET) }
+    // 수입 기본은 '가계부만'(예산 미반영), 그 외는 예산 반영
+    var txScope by remember(stateKey) { mutableStateOf(editTx?.scope ?: defaultScopeFor(TransactionType.EXPENSE)) }
+    // 추가 모드에서 사용자가 직접 고르기 전까진 유형에 따라 기본 scope 자동 반영
+    var scopeTouched by remember(stateKey) { mutableStateOf(false) }
+    LaunchedEffect(type) {
+        if (editTx == null && !scopeTouched) txScope = defaultScopeFor(type)
+    }
     var promote by remember(stateKey) { mutableStateOf(editTx?.isMain ?: false) }
     var showDeleteConfirm by remember(stateKey) { mutableStateOf(false) }
     var showIgnoreConfirm by remember(stateKey) { mutableStateOf(false) }
@@ -193,24 +201,38 @@ fun TransactionFormSheet(
                     Spacer(Modifier.height(20.dp))
                 }
 
-                // 수정 모드 전용: 관리 토글(숨김 + 메인등록) · 무시 — 최상단(유형 위)에 배치
-                if (editTx != null) {
+                // 관리 카드(유형 위) — 예산 반영(추가·수정 공통) + 메인등록·무시(수정 전용)
+                // 이체는 어떤 집계에도 안 잡혀 예산 반영 선택이 의미 없음 → 숨김(애니메이션)
+                val showScope = type != TransactionType.TRANSFER
+                // 수동 입력은 이미 집계 대상 → '메인 계좌로 등록' 불필요. 추가 모드엔 없음
+                val showPromote = editTx != null && !editTx.isManual
+                AnimatedVisibility(visible = showScope || showPromote) {
                     AmCard(
                         modifier = Modifier.fillMaxWidth(),
                         color = AmColors.ScreenBg,
                         contentPadding = PaddingValues(horizontal = AmSpacing.lg, vertical = AmSpacing.xs),
                     ) {
                         Column(modifier = Modifier.fillMaxWidth()) {
-                            SheetScopeSelector(scope = txScope, budgetName = budgetName, onScope = { txScope = it })
-                            // 수동 입력 내역은 이미 집계 대상 → '메인 계좌로 등록' 불필요, 감춤
-                            if (!editTx.isManual) {
-                                Box(
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .padding(vertical = 5.dp)
-                                        .height(1.5.dp)
-                                        .background(AmColors.BarTrack),
-                                )
+                            AnimatedVisibility(visible = showScope) {
+                                Column(modifier = Modifier.fillMaxWidth()) {
+                                    SheetScopeSelector(
+                                        scope = txScope,
+                                        budgetName = budgetName,
+                                        onScope = { txScope = it; if (editTx == null) scopeTouched = true },
+                                    )
+                                    // 아래 토글이 함께 있을 때만 구분선 (scope와 함께 접힘)
+                                    if (showPromote) {
+                                        Box(
+                                            modifier = Modifier
+                                                .fillMaxWidth()
+                                                .padding(vertical = 5.dp)
+                                                .height(1.5.dp)
+                                                .background(AmColors.BarTrack),
+                                        )
+                                    }
+                                }
+                            }
+                            if (editTx != null && !editTx.isManual) {
                                 SheetToggleRow(
                                     title = "메인 계좌로 등록",
                                     // 계좌번호가 있으면 번호를, 없으면 출처(사용처)를 안내
@@ -221,16 +243,19 @@ fun TransactionFormSheet(
                             }
                         }
                     }
+                }
 
-                    // 무시(출처/계좌 차단) — 비메인·자동감지 내역에만. 숨김과 달리 알림 자체를 안 받음.
-                    if (!editTx.isMain && !editTx.isManual) {
-                        Spacer(Modifier.height(14.dp))
-                        IgnoreSourceButton(
-                            label = if (!editTx.extractedAccount.isNullOrBlank()) "해당 계좌 알림 무시하기" else "해당 출처 알림 무시하기",
-                            onClick = { scope.launch { ignoreCount = countIgnorable(editTx); showIgnoreConfirm = true } },
-                        )
-                    }
+                // 무시(출처/계좌 차단) — 비메인·자동감지 내역에만. 숨김과 달리 알림 자체를 안 받음.
+                if (editTx != null && !editTx.isMain && !editTx.isManual) {
+                    Spacer(Modifier.height(14.dp))
+                    IgnoreSourceButton(
+                        label = if (!editTx.extractedAccount.isNullOrBlank()) "해당 계좌 알림 무시하기" else "해당 출처 알림 무시하기",
+                        onClick = { scope.launch { ignoreCount = countIgnorable(editTx); showIgnoreConfirm = true } },
+                    )
+                }
 
+                // 관리 카드/무시가 하나라도 보이면 유형과 간격
+                AnimatedVisibility(visible = showScope || showPromote || (editTx != null && !editTx.isMain && !editTx.isManual)) {
                     Spacer(Modifier.height(24.dp))
                 }
 
@@ -276,6 +301,8 @@ fun TransactionFormSheet(
                                 label = "${cat.emoji} ${cat.label}",
                                 // 미지정은 기타로 취급 → 기타 칩이 기본 선택으로 보임
                                 selected = (category ?: TransactionCategory.ETC) == cat,
+                                // 선택 시 각 카테고리색으로 채움
+                                selectedColor = categoryChipColor(cat),
                             ) { category = if (category == cat) null else cat }
                         }
                     }
@@ -308,7 +335,7 @@ fun TransactionFormSheet(
                 if (editTx == null) {
                     AmButton(
                         "추가",
-                        onClick = { onAdd(type, amount, merchant, effectiveCategory, memo); close() },
+                        onClick = { onAdd(type, amount, merchant, effectiveCategory, memo, txScope); close() },
                         modifier = Modifier.weight(1f),
                         enabled = canSubmit,
                     )
@@ -413,6 +440,10 @@ private fun IgnoreSourceButton(label: String, onClick: () -> Unit) {
 private fun SheetLabel(text: String) {
     Text(text, style = AmType.label, color = AmColors.TextSecondary)
 }
+
+/** 유형별 기본 예산 반영 상태 — 수입은 '가계부만'(예산 미반영), 그 외는 예산 반영. */
+private fun defaultScopeFor(type: TransactionType): TxScope =
+    if (type == TransactionType.INCOME) TxScope.LEDGER_ONLY else TxScope.BUDGET
 
 /** 예산 반영 상태 3분기 선택 (BUDGET / LEDGER_ONLY / EXCLUDED) */
 @Composable

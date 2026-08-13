@@ -160,7 +160,7 @@ fun HomeScreen(
     onDelete: (Long) -> Unit = {},
     onPromoteToMain: (Transaction) -> Unit = {},
     onSaveTransaction: (Long, TransactionType, Long, String, String, TransactionCategory?) -> Unit = { _, _, _, _, _, _ -> },
-    onAddTransaction: (TransactionType, Long, String, TransactionCategory?, String) -> Unit = { _, _, _, _, _ -> },
+    onAddTransaction: (TransactionType, Long, String, TransactionCategory?, String, TxScope) -> Unit = { _, _, _, _, _, _ -> },
     showGuide: Boolean = false,
     onGuideFinished: () -> Unit = {},
     widgetPinSupported: Boolean = false,
@@ -254,7 +254,7 @@ fun HomeScreen(
             TransactionFormSheet(
                 mode = TxFormMode.Add,
                 onDismiss = { showAdd = false },
-                onAdd = { t, a, s, c, m -> onAddTransaction(t, a, s, c, m); pendingToast = "내역이 추가되었습니다."; addTick++ },
+                onAdd = { t, a, s, c, m, sc -> onAddTransaction(t, a, s, c, m, sc); pendingToast = "내역이 추가되었습니다."; addTick++ },
             )
         }
 
