@@ -43,7 +43,8 @@ object AmColors {
     val CatCafe = Color(0xFFFFC24B)       // 카페·간식
     val CatTransport = Color(0xFF4DA3FF)  // 교통
     val CatShopping = Color(0xFFFF6FB5)   // 쇼핑
-    val CatFashion = Color(0xFFCE72C8)    // 패션·미용
+    val CatFashion = Color(0xFFCE72C8)    // 패션·의류
+    val CatBeauty = Color(0xFFDE6796)     // 뷰티·미용
     val CatLiving = Color(0xFF5AD1C0)     // 생활
     val CatHealth = Color(0xFFFF6B6B)     // 의료·건강
     val CatCulture = Color(0xFF9B8CFF)    // 문화·취미
@@ -61,6 +62,7 @@ object AmColors {
     val CatTransportOn = Color(0xFF3B93F5)
     val CatShoppingOn = Color(0xFFF45AA5)
     val CatFashionOn = Color(0xFFC05CBA)
+    val CatBeautyOn = Color(0xFFC7466E)
     val CatLivingOn = Color(0xFF229E8D)
     val CatHealthOn = Color(0xFFF25555)
     val CatCultureOn = Color(0xFF8677F0)

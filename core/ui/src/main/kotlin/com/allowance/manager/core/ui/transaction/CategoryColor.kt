@@ -11,6 +11,7 @@ fun categoryColor(category: TransactionCategory?): Color = when (category) {
     TransactionCategory.TRANSPORT -> AmColors.CatTransport
     TransactionCategory.SHOPPING -> AmColors.CatShopping
     TransactionCategory.FASHION -> AmColors.CatFashion
+    TransactionCategory.BEAUTY -> AmColors.CatBeauty
     TransactionCategory.LIVING -> AmColors.CatLiving
     TransactionCategory.HEALTH -> AmColors.CatHealth
     TransactionCategory.CULTURE -> AmColors.CatCulture
@@ -32,6 +33,7 @@ fun categoryChipColor(category: TransactionCategory?): Color = when (category) {
     TransactionCategory.TRANSPORT -> AmColors.CatTransportOn
     TransactionCategory.SHOPPING -> AmColors.CatShoppingOn
     TransactionCategory.FASHION -> AmColors.CatFashionOn
+    TransactionCategory.BEAUTY -> AmColors.CatBeautyOn
     TransactionCategory.LIVING -> AmColors.CatLivingOn
     TransactionCategory.HEALTH -> AmColors.CatHealthOn
     TransactionCategory.CULTURE -> AmColors.CatCultureOn
