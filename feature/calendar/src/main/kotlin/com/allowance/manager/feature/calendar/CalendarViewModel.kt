@@ -31,6 +31,9 @@ import kotlinx.coroutines.launch
 import java.time.YearMonth
 import javax.inject.Inject
 
+/** 내역 리스트 유형 필터 — 전체 / 지출만 / 수입만. (이체는 '전체'에서만 노출) */
+enum class LedgerTypeFilter { ALL, EXPENSE, INCOME }
+
 data class CalendarUiState(
     val month: YearMonth = YearMonth.now(),
     val transactions: List<Transaction> = emptyList(), // 검색·필터가 적용된 '노출 리스트'
@@ -38,6 +41,7 @@ data class CalendarUiState(
     val income: Long = 0L,                              // 노출 리스트 기준 수입 합계 (숨김 제외)
     val searchActive: Boolean = false,
     val query: String = "",
+    val typeFilter: LedgerTypeFilter = LedgerTypeFilter.ALL,
     val categoryFilter: Set<TransactionCategory> = emptySet(),
     val minMonth: YearMonth? = null,                    // 이보다 과거로는 이동 불가 (첫 내역의 달)
     val dataMonths: Set<YearMonth> = emptySet(),        // 거래 있는 달 (월 피커 활성화용)
@@ -54,6 +58,7 @@ data class CalendarUiState(
 private data class FilterParams(
     val query: String,
     val categories: Set<TransactionCategory>,
+    val typeFilter: LedgerTypeFilter,
     val searchActive: Boolean,
 )
 
@@ -76,6 +81,7 @@ class CalendarViewModel @Inject constructor(
     private val month = MutableStateFlow(YearMonth.now())
     private val query = MutableStateFlow("")
     private val categoryFilter = MutableStateFlow<Set<TransactionCategory>>(emptySet())
+    private val typeFilter = MutableStateFlow(LedgerTypeFilter.ALL)
     private val searchActive = MutableStateFlow(false)
     private val minMonth = MutableStateFlow<YearMonth?>(null)
 
@@ -85,8 +91,8 @@ class CalendarViewModel @Inject constructor(
     @OptIn(ExperimentalCoroutinesApi::class)
     private val monthTransactions = month.flatMapLatest { observeMonthTransactionsUseCase(it) }
 
-    private val filterParams = combine(query, categoryFilter, searchActive) { q, c, a ->
-        FilterParams(q, c, a)
+    private val filterParams = combine(query, categoryFilter, typeFilter, searchActive) { q, c, t, a ->
+        FilterParams(q, c, t, a)
     }
 
     // 거래 있는 달 (월 피커 활성화용)
@@ -117,11 +123,17 @@ class CalendarViewModel @Inject constructor(
     ): CalendarUiState {
         val filtered = raw.filter { tx ->
             val matchCategory = fp.categories.isEmpty() || tx.category in fp.categories
+            // 유형 필터: 전체=모두(이체 포함), 지출/수입=해당 타입만
+            val matchType = when (fp.typeFilter) {
+                LedgerTypeFilter.ALL -> true
+                LedgerTypeFilter.EXPENSE -> tx.type == TransactionType.EXPENSE
+                LedgerTypeFilter.INCOME -> tx.type == TransactionType.INCOME
+            }
             val matchQuery = fp.query.isBlank() ||
                 tx.sourceName.contains(fp.query, ignoreCase = true) ||
                 (tx.merchant?.contains(fp.query, ignoreCase = true) == true) ||
                 (tx.memo?.contains(fp.query, ignoreCase = true) == true)
-            matchCategory && matchQuery
+            matchCategory && matchType && matchQuery
         }
         // 가계부 집계(BUDGET+LEDGER_ONLY)만 요약. EXCLUDED(미등록·제외)는 리스트엔 노출하되 요약에서 뺀다.
         val counted = filtered.filter { it.inLedger }
@@ -134,6 +146,7 @@ class CalendarViewModel @Inject constructor(
             income = income,
             searchActive = fp.searchActive,
             query = fp.query,
+            typeFilter = fp.typeFilter,
             categoryFilter = fp.categories,
             minMonth = minMonth,
             dataMonths = dataMonths.toSet(),
@@ -172,11 +185,17 @@ class CalendarViewModel @Inject constructor(
         if (!next) {
             query.value = ""
             categoryFilter.value = emptySet()
+            typeFilter.value = LedgerTypeFilter.ALL
         }
     }
 
     fun onQueryChange(value: String) {
         query.value = value
+    }
+
+    /** 유형 슬라이드(전체/지출/수입) 선택 */
+    fun onSetTypeFilter(filter: LedgerTypeFilter) {
+        typeFilter.value = filter
     }
 
     fun onToggleCategory(category: TransactionCategory) {

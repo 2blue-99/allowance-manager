@@ -54,4 +54,19 @@ object AmColors {
     val CatTransfer = Color(0xFFA9B4C4)   // 이체
     val CatEtc = Color(0xFFC7CDD6)        // 기타
     val CatNone = Color(0xFFD5DAE2)       // 미분류
+
+    // ── 카테고리 칩 '선택' 채움색 — 흰 글씨 대비 확보용(밝은 도넛색은 톤 다운) ──
+    val CatFoodOn = Color(0xFFFF8A5B)
+    val CatCafeOn = Color(0xFFE8930C)
+    val CatTransportOn = Color(0xFF3B93F5)
+    val CatShoppingOn = Color(0xFFF45AA5)
+    val CatFashionOn = Color(0xFFC05CBA)
+    val CatLivingOn = Color(0xFF229E8D)
+    val CatHealthOn = Color(0xFFF25555)
+    val CatCultureOn = Color(0xFF8677F0)
+    val CatEducationOn = Color(0xFF2FA971)
+    val CatEventOn = Color(0xFFB67A4C)
+    val CatHousingOn = Color(0xFF6A82A4)
+    val CatIncomeOn = Color(0xFF10A472)
+    val CatEtcOn = Color(0xFF98A2B0)
 }

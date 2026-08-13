@@ -1,5 +1,6 @@
 package com.allowance.manager.core.designsystem.component
 
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.OutlinedTextField
@@ -10,6 +11,7 @@ import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.VisualTransformation
+import androidx.compose.ui.unit.dp
 
 /**
  * 공통 입력 필드. OutlinedTextField를 감싸 라벨/행수/키보드 타입을 표준화.
@@ -29,10 +31,25 @@ fun AmTextField(
     minLines: Int = 1,
     supportingText: String? = null,
     visualTransformation: VisualTransformation = VisualTransformation.None,
+    // 컴팩트 모드: 라벨 대신 placeholder + 낮은 높이(검색창 등)
+    dense: Boolean = false,
 ) {
     val focusManager = LocalFocusManager.current
     // 한 줄 입력만 '완료'로 포커스 해제 (여러 줄은 줄바꿈 유지)
     val imeAction = if (singleLine) ImeAction.Done else ImeAction.Default
+    if (dense) {
+        OutlinedTextField(
+            value = value,
+            onValueChange = onValueChange,
+            placeholder = { Text(label) },
+            singleLine = true,
+            keyboardOptions = KeyboardOptions(keyboardType = keyboardType, imeAction = imeAction),
+            keyboardActions = KeyboardActions(onDone = { focusManager.clearFocus() }),
+            visualTransformation = visualTransformation,
+            modifier = modifier.height(48.dp),
+        )
+        return
+    }
     OutlinedTextField(
         value = value,
         onValueChange = onValueChange,

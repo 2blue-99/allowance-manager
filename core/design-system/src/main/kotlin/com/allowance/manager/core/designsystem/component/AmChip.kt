@@ -31,17 +31,20 @@ fun AmChip(
     label: String,
     selected: Boolean,
     modifier: Modifier = Modifier,
+    // 선택 시 채움색 — 기본은 브랜드 에메랄드. 카테고리 칩은 각 카테고리색을 넘긴다.
+    selectedColor: Color = AmColors.Emerald,
     onClick: () -> Unit,
 ) {
     // 기본 spring이 느긋해 빠른 tween으로 (약 120ms)
     val colorSpec = tween<Color>(durationMillis = 120)
     val bg by animateColorAsState(
-        targetValue = if (selected) AmColors.Emerald else AmColors.ChipBg,
+        targetValue = if (selected) selectedColor else AmColors.ChipBg,
         animationSpec = colorSpec,
         label = "chipBg",
     )
     val fg by animateColorAsState(
-        targetValue = if (selected) Color.White else AmColors.TextPrimary,
+        // 미선택 라벨은 진한 네이비보다 한 톤 낮춘 회색으로 (덜 무겁게)
+        targetValue = if (selected) Color.White else AmColors.NeutralBtnText,
         animationSpec = colorSpec,
         label = "chipFg",
     )
