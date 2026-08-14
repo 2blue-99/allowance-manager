@@ -45,12 +45,15 @@ fun DebugRoute(
     viewModel: DebugViewModel = hiltViewModel(),
 ) {
     val homeGuideEnabled by viewModel.homeGuideEnabled.collectAsStateWithLifecycle()
+    val calendarSearchAutoEnabled by viewModel.calendarSearchAutoEnabled.collectAsStateWithLifecycle()
     DebugScreen(
         onBack = onBack,
         onNavigateToIntro = onNavigateToIntro,
         onNavigateToOnboarding = onNavigateToOnboarding,
         homeGuideEnabled = homeGuideEnabled,
         onHomeGuideEnabledChange = viewModel::setHomeGuideEnabled,
+        calendarSearchAutoEnabled = calendarSearchAutoEnabled,
+        onCalendarSearchAutoEnabledChange = viewModel::setCalendarSearchAutoEnabled,
         onSeedTestData = viewModel::seedTestData,
         onSeedCategories = viewModel::seedCategoriesForMonth,
         onApplyMonthSettings = viewModel::applyMonthSettings,
@@ -64,6 +67,8 @@ fun DebugScreen(
     onNavigateToOnboarding: () -> Unit = {},
     homeGuideEnabled: Boolean = false,
     onHomeGuideEnabledChange: (Boolean) -> Unit = {},
+    calendarSearchAutoEnabled: Boolean = false,
+    onCalendarSearchAutoEnabledChange: (Boolean) -> Unit = {},
     onSeedTestData: () -> Unit = {},
     onSeedCategories: (YearMonth) -> Unit = {},
     onApplyMonthSettings: (YearMonth, Int?, Long?, Long?, Long?) -> Unit = { _, _, _, _, _ -> },
@@ -103,6 +108,16 @@ fun DebugScreen(
         ) {
             Text("홈 가이드 표시", style = AmType.size14_bold, color = AmColors.TextPrimary)
             Switch(checked = homeGuideEnabled, onCheckedChange = onHomeGuideEnabledChange)
+        }
+        Spacer(Modifier.height(AmSpacing.md))
+        // ON = 월별 재진입 시 검색·필터 자동 노출 / OFF = 노출 안 함 (최초 1회 노출 초기화용)
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Text("월별 검색 자동 노출", style = AmType.size14_bold, color = AmColors.TextPrimary)
+            Switch(checked = calendarSearchAutoEnabled, onCheckedChange = onCalendarSearchAutoEnabledChange)
         }
 
         Spacer(Modifier.height(AmSpacing.xl))

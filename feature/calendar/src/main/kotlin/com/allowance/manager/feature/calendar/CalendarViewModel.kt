@@ -19,13 +19,17 @@ import com.allowance.manager.core.domain.usecase.transaction.HideTransactionUseC
 import com.allowance.manager.core.domain.usecase.transaction.PromoteToMainUseCase
 import com.allowance.manager.core.domain.usecase.transaction.SetTxScopeUseCase
 import com.allowance.manager.core.domain.usecase.transaction.UpdateTransactionUseCase
+import com.allowance.manager.core.domain.usecase.setting.GetCalendarSearchAutoShownUseCase
+import com.allowance.manager.core.domain.usecase.setting.SetCalendarSearchAutoShownUseCase
 import com.allowance.manager.core.domain.model.TxScope
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.launch
 import java.time.YearMonth
@@ -77,6 +81,8 @@ class CalendarViewModel @Inject constructor(
     private val updateTransactionUseCase: UpdateTransactionUseCase,
     private val setTxScopeUseCase: SetTxScopeUseCase,
     private val promoteToMainUseCase: PromoteToMainUseCase,
+    private val getCalendarSearchAutoShownUseCase: GetCalendarSearchAutoShownUseCase,
+    private val setCalendarSearchAutoShownUseCase: SetCalendarSearchAutoShownUseCase,
     private val analytics: AnalyticsHelper,
 ) : BaseViewModel() {
 
@@ -112,6 +118,23 @@ class CalendarViewModel @Inject constructor(
             combine(month, monthTransactions, minMonth, filterParams, dataMonthsAndType) { m, raw, min, fp, dmType ->
                 render(m, raw, min, fp, dmType.first, dmType.second)
             }.collect { _uiState.value = it }
+        }
+    }
+
+    /**
+     * 발견성 유도: 앱 최초 1회만, 월별 화면이 보일 때 0.5초 뒤 검색·필터 + '메인' 토글을 자동으로 펼친다.
+     * 탭 전환으로 VM이 유지되므로 진입 판정은 in-memory가 아닌 DataStore 플래그로 한다.
+     * (사용자가 직접 닫아도 플래그가 저장돼 다시는 자동으로 뜨지 않음 / 디버그에서 초기화하면 다시 발동)
+     * 화면 RESUMED마다 호출됨 → 플래그를 먼저 저장해 짧은 시간 내 중복 진입 시 재실행을 막는다.
+     */
+    fun maybeAutoOpenSearch() {
+        viewModelScope.launch {
+            if (!getCalendarSearchAutoShownUseCase().first()) {
+                setCalendarSearchAutoShownUseCase(true)
+                delay(500)
+                searchActive.value = true
+                mainOnly.value = true
+            }
         }
     }
 

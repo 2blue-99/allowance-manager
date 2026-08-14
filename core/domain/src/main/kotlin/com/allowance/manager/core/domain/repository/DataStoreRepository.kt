@@ -38,4 +38,8 @@ interface DataStoreRepository {
     /** 새(미등록) 계좌 감지 배지 — 전체 칩 빨간 점. 전체를 보면 해제 */
     fun getHomeNewAccountBadge(): Flow<Boolean>
     suspend fun setHomeNewAccountBadge(show: Boolean)
+
+    /** 월별 검색·필터 최초 1회 자동 노출 완료 여부 (false면 아직 안 봄 → 진입 시 자동 펼침) */
+    fun getCalendarSearchAutoShown(): Flow<Boolean>
+    suspend fun setCalendarSearchAutoShown(shown: Boolean)
 }
