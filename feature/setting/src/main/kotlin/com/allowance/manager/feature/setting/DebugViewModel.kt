@@ -8,9 +8,7 @@ import com.allowance.manager.core.domain.model.TransactionType
 import com.allowance.manager.core.domain.repository.BudgetRepository
 import com.allowance.manager.core.domain.repository.TransactionRepository
 import com.allowance.manager.core.domain.usecase.budget.SetPaydayUseCase
-import com.allowance.manager.core.domain.usecase.setting.GetCalendarSearchAutoShownUseCase
 import com.allowance.manager.core.domain.usecase.setting.GetHomeGuideShownUseCase
-import com.allowance.manager.core.domain.usecase.setting.SetCalendarSearchAutoShownUseCase
 import com.allowance.manager.core.domain.usecase.setting.SetHomeGuideShownUseCase
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.SharingStarted
@@ -26,8 +24,6 @@ import javax.inject.Inject
 class DebugViewModel @Inject constructor(
     getHomeGuideShownUseCase: GetHomeGuideShownUseCase,
     private val setHomeGuideShownUseCase: SetHomeGuideShownUseCase,
-    getCalendarSearchAutoShownUseCase: GetCalendarSearchAutoShownUseCase,
-    private val setCalendarSearchAutoShownUseCase: SetCalendarSearchAutoShownUseCase,
     private val transactionRepository: TransactionRepository,
     private val budgetRepository: BudgetRepository,
     private val setPaydayUseCase: SetPaydayUseCase,
@@ -42,17 +38,6 @@ class DebugViewModel @Inject constructor(
     /** 토글 — ON이면 홈 재진입 시 가이드 노출, OFF면 노출 안 함 */
     fun setHomeGuideEnabled(enabled: Boolean) {
         viewModelScope.launch { setHomeGuideShownUseCase(!enabled) }
-    }
-
-    /** ON = 월별 진입 시 검색·필터 자동 노출(아직 안 본 상태). OFF = 이미 본 것으로 처리. */
-    val calendarSearchAutoEnabled: StateFlow<Boolean> =
-        getCalendarSearchAutoShownUseCase()
-            .map { shown -> !shown }
-            .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), false)
-
-    /** 토글 — ON이면 월별 재진입 시 검색·필터 자동 노출, OFF면 노출 안 함 */
-    fun setCalendarSearchAutoEnabled(enabled: Boolean) {
-        viewModelScope.launch { setCalendarSearchAutoShownUseCase(!enabled) }
     }
 
     /**

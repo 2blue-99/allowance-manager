@@ -30,7 +30,6 @@ class PreferencesDataSource @Inject constructor(
         val USER_TYPE = stringPreferencesKey("user_type")           // 사용자 유형 (student/youth/common)
         val HOME_GUIDE_SHOWN = booleanPreferencesKey("home_guide_shown")  // 홈 최초 진입 가이드 노출 여부
         val HOME_NEW_ACCOUNT_BADGE = booleanPreferencesKey("home_new_account_badge")  // 새(미등록) 계좌 감지 → 전체 칩 빨간 점
-        val CAL_SEARCH_AUTO_SHOWN = booleanPreferencesKey("cal_search_auto_shown")  // 월별 검색·필터 최초 1회 자동 노출 완료
 
         private const val DEFAULT_PAYDAY = 25
         private const val DEFAULT_USER_TYPE = "common"              // UserType.Default.key
@@ -79,9 +78,6 @@ class PreferencesDataSource @Inject constructor(
 
     fun getHomeNewAccountBadge(): Flow<Boolean> = get(HOME_NEW_ACCOUNT_BADGE, false)
     suspend fun setHomeNewAccountBadge(show: Boolean) = set(HOME_NEW_ACCOUNT_BADGE, show)
-
-    fun getCalSearchAutoShown(): Flow<Boolean> = get(CAL_SEARCH_AUTO_SHOWN, false)
-    suspend fun setCalSearchAutoShown(shown: Boolean) = set(CAL_SEARCH_AUTO_SHOWN, shown)
 
     private fun <T> get(key: Preferences.Key<T>, defaultValue: T): Flow<T> =
         dataStore.data.map { it[key] ?: defaultValue }

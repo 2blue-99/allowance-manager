@@ -46,10 +46,7 @@ import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import androidx.hilt.navigation.compose.hiltViewModel
-import androidx.lifecycle.Lifecycle
-import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import androidx.lifecycle.repeatOnLifecycle
 import com.allowance.manager.core.designsystem.component.AmCard
 import com.allowance.manager.core.designsystem.component.AmChip
 import com.allowance.manager.core.designsystem.component.AmDialog
@@ -82,14 +79,6 @@ fun CalendarRoute(
     // 통계에서 딥링크로 특정 달을 열면 그 달로 이동 (최초 1회)
     LaunchedEffect(Unit) {
         if (initialMonth != null) viewModel.onSelectMonth(initialMonth)
-    }
-    // 탭 전환 시 상태가 saveState/restoreState로 복원돼 LaunchedEffect가 재실행되지 않으므로,
-    // 화면이 보일 때(RESUMED)마다 자동 오픈 판정을 돌린다. (최초 1회는 VM이 DataStore 플래그로 보장)
-    val lifecycleOwner = LocalLifecycleOwner.current
-    LaunchedEffect(lifecycleOwner) {
-        lifecycleOwner.repeatOnLifecycle(Lifecycle.State.RESUMED) {
-            viewModel.maybeAutoOpenSearch()
-        }
     }
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     CalendarScreen(

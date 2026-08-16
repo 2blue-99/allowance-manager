@@ -46,7 +46,4 @@ class DataStoreRepositoryImpl @Inject constructor(
 
     override fun getHomeNewAccountBadge(): Flow<Boolean> = preferencesDataSource.getHomeNewAccountBadge()
     override suspend fun setHomeNewAccountBadge(show: Boolean) = preferencesDataSource.setHomeNewAccountBadge(show)
-
-    override fun getCalendarSearchAutoShown(): Flow<Boolean> = preferencesDataSource.getCalSearchAutoShown()
-    override suspend fun setCalendarSearchAutoShown(shown: Boolean) = preferencesDataSource.setCalSearchAutoShown(shown)
 }

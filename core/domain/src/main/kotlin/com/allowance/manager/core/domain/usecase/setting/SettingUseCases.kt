@@ -66,16 +66,3 @@ class SetHomeNewAccountBadgeUseCase @Inject constructor(
 ) {
     suspend operator fun invoke(show: Boolean) = dataStoreRepository.setHomeNewAccountBadge(show)
 }
-
-/** 월별 검색·필터 최초 1회 자동 노출 완료 여부 (false면 아직 안 봄 → 진입 시 자동 펼침) */
-class GetCalendarSearchAutoShownUseCase @Inject constructor(
-    private val dataStoreRepository: DataStoreRepository,
-) {
-    operator fun invoke(): Flow<Boolean> = dataStoreRepository.getCalendarSearchAutoShown()
-}
-
-class SetCalendarSearchAutoShownUseCase @Inject constructor(
-    private val dataStoreRepository: DataStoreRepository,
-) {
-    suspend operator fun invoke(shown: Boolean) = dataStoreRepository.setCalendarSearchAutoShown(shown)
-}
