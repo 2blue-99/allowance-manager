@@ -13,10 +13,17 @@ object AmAnalytics {
 
         // 홈
         const val HOME_FILTER_SELECT = "home_filter_select"
+        const val HOME_BUDGET_CARD_CLICK = "home_budget_card_click"
         const val HOME_TX_SWIPE_HIDE = "home_tx_swipe_hide"
         const val HOME_TX_SWIPE_DELETE = "home_tx_swipe_delete"
         const val HOME_ADD_FAB_CLICK = "home_add_fab_click"
         const val HOME_TX_ITEM_CLICK = "home_tx_item_click"
+
+        // 홈 첫 진입 가이드(스포트라이트)
+        const val GUIDE_SLIDE = "guide_slide"
+        const val GUIDE_BACK = "guide_back"
+        const val GUIDE_SKIP = "guide_skip"
+        const val GUIDE_COMPLETE = "guide_complete"
 
         // 내역 저장(상세/추가 시트)
         const val TX_SAVE = "tx_save"
@@ -24,15 +31,19 @@ object AmAnalytics {
 
         // 월별
         const val CALENDAR_MONTH_CHANGE = "calendar_month_change"
+        const val CALENDAR_MONTH_PICKER_OPEN = "calendar_month_picker_open"
         const val CALENDAR_SEARCH_TOGGLE = "calendar_search_toggle"
+        const val CALENDAR_SEARCH_SUBMIT = "calendar_search_submit"
         const val CALENDAR_MAIN_FILTER = "calendar_main_filter"
         const val CALENDAR_CATEGORY_FILTER = "calendar_category_filter"
+        const val CALENDAR_TX_ITEM_CLICK = "calendar_tx_item_click"
         const val CALENDAR_TX_SWIPE_HIDE = "calendar_tx_swipe_hide"
         const val CALENDAR_TX_SWIPE_DELETE = "calendar_tx_swipe_delete"
 
         // 통계
         const val STATS_MONTH_SELECT = "stats_month_select"
         const val STATS_WINDOW_MOVE = "stats_window_move"
+        const val STATS_OPEN_MONTH_CLICK = "stats_open_month_click"
 
         // 설정
         const val SETTING_STATUSBAR_TOGGLE = "setting_statusbar_toggle"
@@ -82,6 +93,7 @@ object AmAnalytics {
         const val BANK = "bank"
         const val DIALOG = "dialog"
         const val BY = "by"
+        const val STEP = "step"
     }
 
     /** User Property 키 */

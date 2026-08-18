@@ -67,6 +67,8 @@ import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Popup
 import androidx.compose.ui.window.PopupPositionProvider
 import androidx.compose.ui.window.PopupProperties
+import com.allowance.manager.core.analytics.AmAnalytics
+import com.allowance.manager.core.analytics.LocalAnalyticsHelper
 import com.allowance.manager.core.designsystem.theme.AmColors
 import kotlin.math.roundToInt
 
@@ -137,6 +139,7 @@ fun SpotlightGuide(
     val visible = steps.filter { s -> s.keys.all { targets[it] != null } }
     if (visible.isEmpty()) return
 
+    val analytics = LocalAnalyticsHelper.current
     var rawIndex by remember { mutableIntStateOf(0) }
     val index = rawIndex.coerceIn(0, visible.lastIndex)
     val step = visible[index]
@@ -153,9 +156,30 @@ fun SpotlightGuide(
             overlayAlpha.animateTo(1f, tween(durationMillis = 260))
         }
     }
-    fun finish() { finishing = true }
-    fun next() { if (isLast) finish() else rawIndex = index + 1 }
-    fun prev() { if (index > 0) rawIndex = index - 1 }
+    // 종료: 마지막 스텝까지 봤으면 완료, 아니면 중간 이탈(건너뛰기). step은 1-based 현재 스텝.
+    fun finish() {
+        if (finishing) return
+        if (isLast) {
+            analytics.logEvent(AmAnalytics.Event.GUIDE_COMPLETE)
+        } else {
+            analytics.logEvent(AmAnalytics.Event.GUIDE_SKIP, mapOf(AmAnalytics.Param.STEP to index + 1))
+        }
+        finishing = true
+    }
+    fun next() {
+        if (isLast) {
+            finish()
+        } else {
+            analytics.logEvent(AmAnalytics.Event.GUIDE_SLIDE, mapOf(AmAnalytics.Param.STEP to index + 1))
+            rawIndex = index + 1
+        }
+    }
+    fun prev() {
+        if (index > 0) {
+            analytics.logEvent(AmAnalytics.Event.GUIDE_BACK, mapOf(AmAnalytics.Param.STEP to index + 1))
+            rawIndex = index - 1
+        }
+    }
 
     // ⚠️ 상태바 높이는 반드시 팝업 '밖'(메인 창)에서 읽는다.
     // 팝업은 별도 창이라 그 안에서 WindowInsets를 읽으면 0으로 잡혀 보정이 무효가 됨.

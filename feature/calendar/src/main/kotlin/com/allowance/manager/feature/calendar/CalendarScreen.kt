@@ -47,6 +47,8 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.allowance.manager.core.analytics.AmAnalytics
+import com.allowance.manager.core.analytics.LocalAnalyticsHelper
 import com.allowance.manager.core.designsystem.component.AmCard
 import com.allowance.manager.core.designsystem.component.AmChip
 import com.allowance.manager.core.designsystem.component.AmDialog
@@ -123,6 +125,7 @@ fun CalendarScreen(
     onPromoteToMain: (Transaction) -> Unit = {},
     modifier: Modifier = Modifier,
 ) {
+    val analytics = LocalAnalyticsHelper.current
     var selected by remember { mutableStateOf<Transaction?>(null) }
     var pendingDelete by remember { mutableStateOf<Transaction?>(null) }
     var showMonthPicker by remember { mutableStateOf(false) }
@@ -143,7 +146,7 @@ fun CalendarScreen(
             canGoNext = uiState.canGoNext,
             onPrev = onPrevMonth,
             onNext = onNextMonth,
-            onPickMonth = { showMonthPicker = true },
+            onPickMonth = { analytics.logEvent(AmAnalytics.Event.CALENDAR_MONTH_PICKER_OPEN); showMonthPicker = true },
             modifier = Modifier.padding(horizontal = AmSpacing.lg, vertical = 10.dp),
             prevDesc = "이전 달",
             nextDesc = "다음 달",
@@ -176,6 +179,7 @@ fun CalendarScreen(
                     onSetTypeFilter = onSetTypeFilter,
                     onToggleCategory = onToggleCategory,
                     onClearCategories = onClearCategories,
+                    onSubmitSearch = { analytics.logEvent(AmAnalytics.Event.CALENDAR_SEARCH_SUBMIT) },
                 )
             }
             Spacer(Modifier.height(8.dp))
@@ -185,7 +189,7 @@ fun CalendarScreen(
             transactions = uiState.transactions,
             searchActive = uiState.searchActive,
             budgetName = uiState.userType.label,
-            onSelect = { selected = it },
+            onSelect = { analytics.logEvent(AmAnalytics.Event.CALENDAR_TX_ITEM_CLICK); selected = it },
             onToggleHidden = { onSetHidden(it.id, !it.isHidden) },
             onRequestDelete = { pendingDelete = it },
             modifier = Modifier.weight(1f),
@@ -293,6 +297,7 @@ private fun SearchAndFilter(
     onSetTypeFilter: (LedgerTypeFilter) -> Unit,
     onToggleCategory: (TransactionCategory) -> Unit,
     onClearCategories: () -> Unit,
+    onSubmitSearch: () -> Unit = {},
 ) {
     val focusManager = LocalFocusManager.current
     var searchFocused by remember { mutableStateOf(false) }
@@ -309,6 +314,8 @@ private fun SearchAndFilter(
                 onValueChange = onQueryChange,
                 label = "출처·사용처·메모 검색",
                 dense = true,
+                // 검색어가 있을 때 IME '완료' = 검색 확정으로 계측(검색어 텍스트는 미포함)
+                onImeAction = { if (query.isNotBlank()) onSubmitSearch() },
                 modifier = Modifier.fillMaxWidth().onFocusChanged { searchFocused = it.isFocused },
             )
             Spacer(Modifier.height(12.dp))

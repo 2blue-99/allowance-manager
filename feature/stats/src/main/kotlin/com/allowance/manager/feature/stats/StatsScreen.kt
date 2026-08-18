@@ -51,6 +51,8 @@ import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.allowance.manager.core.analytics.AmAnalytics
+import com.allowance.manager.core.analytics.LocalAnalyticsHelper
 import com.allowance.manager.core.designsystem.component.AmCard
 import com.allowance.manager.core.designsystem.theme.AmColors
 import com.allowance.manager.core.designsystem.theme.AmShape
@@ -88,6 +90,7 @@ fun StatsScreen(
     onPickMonth: (YearMonth) -> Unit = {},
     onOpenMonth: (YearMonth) -> Unit = {},
 ) {
+    val analytics = LocalAnalyticsHelper.current
     // 월 피커 노출 여부 — 순수 UI 상태라 화면이 보유
     var showMonthPicker by remember { mutableStateOf(false) }
 
@@ -118,7 +121,7 @@ fun StatsScreen(
                     month = detail.month,
                     summary = detail.summary,
                     label = uiState.userType.label,
-                    onOpenMonth = { onOpenMonth(detail.month) },
+                    onOpenMonth = { analytics.logEvent(AmAnalytics.Event.STATS_OPEN_MONTH_CLICK); onOpenMonth(detail.month) },
                 )
                 Spacer(Modifier.height(AmSpacing.md))
                 CategoryCard(month = detail.month, categories = detail.categories, total = detail.summary.expense)

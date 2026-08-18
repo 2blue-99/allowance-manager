@@ -353,6 +353,7 @@ private fun Hero(
 // 진입/클릭 시 금액은 0→현재치 카운트업, 소진율 바는 0→현재치 채움.
 @Composable
 private fun BudgetCard(uiState: HomeUiState) {
+    val analytics = LocalAnalyticsHelper.current
     val fillColor = if (uiState.isOver) AmColors.Red else AmColors.Emerald
     val targetRatio = if (uiState.isOver) 1f else uiState.spentRatio
 
@@ -374,7 +375,7 @@ private fun BudgetCard(uiState: HomeUiState) {
         shape = AmShape.cardLarge,
         contentPadding = PaddingValues(horizontal = 22.dp, vertical = 30.dp),
         rippleColor = Color.White,          // 어두운 카드 → 흰색 리플
-        onClick = { playKey++ },            // 탭하면 다시 재생
+        onClick = { analytics.logEvent(AmAnalytics.Event.HOME_BUDGET_CARD_CLICK); playKey++ },  // 탭하면 다시 재생
     ) {
         Column(
             modifier = Modifier.fillMaxWidth(),

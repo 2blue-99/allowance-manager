@@ -33,6 +33,8 @@ fun AmTextField(
     visualTransformation: VisualTransformation = VisualTransformation.None,
     // 컴팩트 모드: 라벨 대신 placeholder + 낮은 높이(검색창 등)
     dense: Boolean = false,
+    // 한 줄 입력에서 IME '완료'를 눌렀을 때 추가 동작(예: 검색 확정 계측). 포커스 해제는 항상 수행.
+    onImeAction: () -> Unit = {},
 ) {
     val focusManager = LocalFocusManager.current
     // 한 줄 입력만 '완료'로 포커스 해제 (여러 줄은 줄바꿈 유지)
@@ -44,7 +46,7 @@ fun AmTextField(
             placeholder = { Text(label) },
             singleLine = true,
             keyboardOptions = KeyboardOptions(keyboardType = keyboardType, imeAction = imeAction),
-            keyboardActions = KeyboardActions(onDone = { focusManager.clearFocus() }),
+            keyboardActions = KeyboardActions(onDone = { onImeAction(); focusManager.clearFocus() }),
             visualTransformation = visualTransformation,
             modifier = modifier.height(48.dp),
         )
@@ -57,7 +59,7 @@ fun AmTextField(
         singleLine = singleLine,
         minLines = minLines,
         keyboardOptions = KeyboardOptions(keyboardType = keyboardType, imeAction = imeAction),
-        keyboardActions = KeyboardActions(onDone = { focusManager.clearFocus() }),
+        keyboardActions = KeyboardActions(onDone = { onImeAction(); focusManager.clearFocus() }),
         visualTransformation = visualTransformation,
         supportingText = supportingText?.let { { Text(it) } },
         modifier = modifier,
