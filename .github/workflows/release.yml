@@ -1,0 +1,99 @@
+name: Release Build
+
+# 태그 규칙
+#  - dev  테스트:  vX.Y.Z-rc.N/dev    → debug APK (dev Firebase, 디버그 서명)  → GitHub Release(prerelease)
+#  - 공개 테스트:  vX.Y.Z-rc.N/prod   → 서명 release AAB (운영 Firebase)       → GitHub Release(prerelease)
+#  - 정식 배포:    vX.Y.Z             → 서명 release AAB (운영 Firebase)       → GitHub Release(정식)
+on:
+  push:
+    tags:
+      - 'v*'      # 정식: v1.0.0
+      - 'v*/**'   # dev/prod: v1.0.0-rc.1/dev, v1.0.0-rc.1/prod (슬래시 포함)
+
+permissions:
+  contents: write   # GitHub Release 생성/자산 업로드
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      # 태그 이름으로 빌드타입(debug/release)·prerelease 여부 분기 + 버전명 추출
+      #   */dev  → debug 빌드, prerelease
+      #   */prod → release 빌드(서명), prerelease
+      #   vX.Y.Z → release 빌드(서명), 정식 release
+      - name: Resolve variant from tag
+        id: vars
+        run: |
+          TAG="${GITHUB_REF_NAME}"
+          case "$TAG" in
+            */dev)  echo "build=debug"   >> "$GITHUB_OUTPUT"; echo "prerelease=true"  >> "$GITHUB_OUTPUT" ;;
+            */prod) echo "build=release" >> "$GITHUB_OUTPUT"; echo "prerelease=true"  >> "$GITHUB_OUTPUT" ;;
+            *)      echo "build=release" >> "$GITHUB_OUTPUT"; echo "prerelease=false" >> "$GITHUB_OUTPUT" ;;
+          esac
+          VNAME="${TAG#v}"; VNAME="${VNAME%/*}"   # v 제거 + 뒤 /dev·/prod 제거
+          echo "version_name=$VNAME" >> "$GITHUB_OUTPUT"
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@v4
+
+      - name: Grant execute for gradlew
+        run: chmod +x ./gradlew
+
+      # google-services.json 주입 (gitignore 되어 있으므로 시크릿에서 복원)
+      #   debug 빌드 → dev 프로젝트 / release 빌드 → 운영 프로젝트
+      - name: Decode google-services.json
+        env:
+          GS_DEV: ${{ secrets.GOOGLE_SERVICES_DEV_BASE64 }}
+          GS_PROD: ${{ secrets.GOOGLE_SERVICES_PROD_BASE64 }}
+        run: |
+          if [[ "${{ steps.vars.outputs.build }}" == "debug" ]]; then
+            mkdir -p app/src/debug
+            echo "$GS_DEV" | base64 -d > app/src/debug/google-services.json
+          else
+            mkdir -p app/src/release
+            echo "$GS_PROD" | base64 -d > app/src/release/google-services.json
+          fi
+
+      # 키스토어 복원 (release 빌드만 서명 필요)
+      - name: Decode keystore
+        if: steps.vars.outputs.build == 'release'
+        env:
+          KEYSTORE_BASE64: ${{ secrets.KEYSTORE_BASE64 }}
+        run: echo "$KEYSTORE_BASE64" | base64 -d > "$RUNNER_TEMP/release.jks"
+
+      - name: Build debug APK
+        if: steps.vars.outputs.build == 'debug'
+        run: ./gradlew :app:assembleDebug -PappVersionName=${{ steps.vars.outputs.version_name }}
+
+      - name: Build release AAB (signed)
+        if: steps.vars.outputs.build == 'release'
+        env:
+          KEYSTORE_PATH: ${{ runner.temp }}/release.jks
+          KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
+          KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
+        run: ./gradlew :app:bundleRelease -PappVersionName=${{ steps.vars.outputs.version_name }}
+
+      - name: Resolve artifact path
+        id: artifact
+        run: |
+          if [[ "${{ steps.vars.outputs.build }}" == "debug" ]]; then
+            echo "path=app/build/outputs/apk/debug/app-debug.apk" >> "$GITHUB_OUTPUT"
+          else
+            echo "path=app/build/outputs/bundle/release/app-release.aab" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Publish GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ github.ref_name }}
+          name: ${{ github.ref_name }}
+          prerelease: ${{ steps.vars.outputs.prerelease }}
+          files: ${{ steps.artifact.outputs.path }}

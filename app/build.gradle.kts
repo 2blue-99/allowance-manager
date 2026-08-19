@@ -1,3 +1,6 @@
+import java.io.FileInputStream
+import java.util.Properties
+
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.android)
@@ -18,7 +21,27 @@ android {
         minSdk = 26
         targetSdk = 36
         versionCode = 2
-        versionName = "1.0.0"
+        // CI(태그 빌드)에서 -PappVersionName 으로 태그 버전 주입, 없으면 기본값
+        versionName = (project.findProperty("appVersionName") as String?) ?: "1.0.0"
+    }
+
+    // release 서명: CI는 환경변수, 로컬은 keystore.properties(선택, gitignore)에서 읽는다.
+    // 둘 다 없으면 서명 미설정 → 로컬에서 키 없이도 빌드는 그대로 동작.
+    val keystorePropsFile = rootProject.file("keystore.properties")
+    val keystoreProps = Properties().apply {
+        if (keystorePropsFile.exists()) FileInputStream(keystorePropsFile).use { load(it) }
+    }
+    val releaseStorePath = System.getenv("KEYSTORE_PATH") ?: keystoreProps.getProperty("storeFile")
+
+    signingConfigs {
+        create("release") {
+            if (releaseStorePath != null) {
+                storeFile = file(releaseStorePath)
+                storePassword = System.getenv("KEYSTORE_PASSWORD") ?: keystoreProps.getProperty("storePassword")
+                keyAlias = System.getenv("KEY_ALIAS") ?: keystoreProps.getProperty("keyAlias")
+                keyPassword = System.getenv("KEY_PASSWORD") ?: keystoreProps.getProperty("keyPassword")
+            }
+        }
     }
 
     buildTypes {
@@ -28,6 +51,10 @@ android {
             applicationIdSuffix = ".dev"
         }
         release {
+            // 서명 정보(CI 환경변수 or keystore.properties)가 있을 때만 release 서명 적용
+            if (releaseStorePath != null) {
+                signingConfig = signingConfigs.getByName("release")
+            }
             isMinifyEnabled = false
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
