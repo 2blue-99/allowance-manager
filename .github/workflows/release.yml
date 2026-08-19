@@ -72,7 +72,8 @@ jobs:
         if: steps.vars.outputs.build == 'debug'
         run: ./gradlew :app:assembleDebug -PappVersionName=${{ steps.vars.outputs.version_name }}
 
-      - name: Build release AAB (signed)
+      # AAB(Play 업로드용) + APK(직접 설치용) 둘 다 서명 빌드
+      - name: Build release AAB + APK (signed)
         if: steps.vars.outputs.build == 'release'
         env:
           KEYSTORE_PATH: ${{ runner.temp }}/release.jks
@@ -81,7 +82,7 @@ jobs:
           KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
         # versionCode = run_number (release 빌드마다 자동 증가). 스토어 현재값 2 → 다음 빌드부터 3,4…
         run: >
-          ./gradlew :app:bundleRelease
+          ./gradlew :app:bundleRelease :app:assembleRelease
           -PappVersionName=${{ steps.vars.outputs.version_name }}
           -PappVersionCode=${{ github.run_number }}
 
@@ -89,10 +90,15 @@ jobs:
         id: artifact
         run: |
           if [[ "${{ steps.vars.outputs.build }}" == "debug" ]]; then
-            echo "path=app/build/outputs/apk/debug/app-debug.apk" >> "$GITHUB_OUTPUT"
+            FILES='app/build/outputs/apk/debug/app-debug.apk'
           else
-            echo "path=app/build/outputs/bundle/release/app-release.aab" >> "$GITHUB_OUTPUT"
+            FILES=$'app/build/outputs/bundle/release/app-release.aab\napp/build/outputs/apk/release/*.apk'
           fi
+          {
+            echo "files<<EOF"
+            echo "$FILES"
+            echo "EOF"
+          } >> "$GITHUB_OUTPUT"
 
       - name: Publish GitHub Release
         uses: softprops/action-gh-release@v2
@@ -100,4 +106,4 @@ jobs:
           tag_name: ${{ github.ref_name }}
           name: ${{ github.ref_name }}
           prerelease: ${{ steps.vars.outputs.prerelease }}
-          files: ${{ steps.artifact.outputs.path }}
+          files: ${{ steps.artifact.outputs.files }}
