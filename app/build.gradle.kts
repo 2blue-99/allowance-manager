@@ -20,7 +20,8 @@ android {
         applicationId = "com.allowance.manager"
         minSdk = 26
         targetSdk = 36
-        versionCode = 2
+        // CI(release 빌드)에서 -PappVersionCode 로 빌드번호 주입(자동 증가), 없으면 기본값
+        versionCode = (project.findProperty("appVersionCode") as String?)?.toIntOrNull() ?: 2
         // CI(태그 빌드)에서 -PappVersionName 으로 태그 버전 주입, 없으면 기본값
         versionName = (project.findProperty("appVersionName") as String?) ?: "1.0.0"
     }

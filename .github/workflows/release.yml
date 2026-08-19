@@ -79,7 +79,11 @@ jobs:
           KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
           KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
           KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
-        run: ./gradlew :app:bundleRelease -PappVersionName=${{ steps.vars.outputs.version_name }}
+        # versionCode = run_number (release 빌드마다 자동 증가). 스토어 현재값 2 → 다음 빌드부터 3,4…
+        run: >
+          ./gradlew :app:bundleRelease
+          -PappVersionName=${{ steps.vars.outputs.version_name }}
+          -PappVersionCode=${{ github.run_number }}
 
       - name: Resolve artifact path
         id: artifact
