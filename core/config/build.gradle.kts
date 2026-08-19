@@ -8,7 +8,7 @@ plugins {
 
 android {
     namespace = "com.allowance.manager.core.config"
-    compileSdk = 35
+    compileSdk = 36
 
     defaultConfig {
         minSdk = 26
