@@ -16,12 +16,17 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.fadeIn
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -34,6 +39,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.allowance.manager.core.designsystem.component.AmButton
 import com.allowance.manager.core.designsystem.theme.AmColors
 import com.allowance.manager.core.designsystem.theme.AmType
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
 private val Accent = AmColors.Emerald
@@ -66,35 +72,44 @@ fun IntroScreen(onFinish: () -> Unit = {}) {
     val scope = rememberCoroutineScope()
     val isLast = pagerState.currentPage == introPages.size - 1
 
-    Column(
-        modifier = Modifier.fillMaxSize().background(Color.White),
-    ) {
-        // 상태바 아래 여백
-        Spacer(Modifier.height(16.dp))
+    // 진입 시 흰 배경만 보이다가 0.5초 뒤 콘텐츠를 페이드로 노출
+    var contentVisible by remember { mutableStateOf(false) }
+    LaunchedEffect(Unit) {
+        delay(500)
+        contentVisible = true
+    }
 
-        // 좌우 스와이프로 슬라이드 전환. 이미지는 풀블리드(화면 폭 전체).
-        HorizontalPager(
-            state = pagerState,
-            pageSpacing = 12.dp,
-            modifier = Modifier.fillMaxWidth().weight(1f),
-        ) { index ->
-            IntroSlide(introPages[index])
+    Box(modifier = Modifier.fillMaxSize().background(Color.White)) {
+        AnimatedVisibility(visible = contentVisible, enter = fadeIn()) {
+            Column(modifier = Modifier.fillMaxSize()) {
+                // 상태바 아래 여백
+                Spacer(Modifier.height(16.dp))
+
+                // 좌우 스와이프로 슬라이드 전환. 이미지는 풀블리드(화면 폭 전체).
+                HorizontalPager(
+                    state = pagerState,
+                    pageSpacing = 12.dp,
+                    modifier = Modifier.fillMaxWidth().weight(1f),
+                ) { index ->
+                    IntroSlide(introPages[index])
+                }
+
+                Spacer(Modifier.height(12.dp))
+                PageIndicator(current = pagerState.currentPage)
+                Spacer(Modifier.height(16.dp))
+
+                AmButton(
+                    text = if (isLast) "시작하기" else "다음",
+                    onClick = {
+                        if (isLast) onFinish()
+                        else scope.launch { pagerState.animateScrollToPage(pagerState.currentPage + 1) }
+                    },
+                    modifier = Modifier.fillMaxWidth().padding(horizontal = 24.dp),
+                    textStyle = AmType.size14_bold,
+                )
+                Spacer(Modifier.height(24.dp))
+            }
         }
-
-        Spacer(Modifier.height(12.dp))
-        PageIndicator(current = pagerState.currentPage)
-        Spacer(Modifier.height(16.dp))
-
-        AmButton(
-            text = if (isLast) "시작하기" else "다음",
-            onClick = {
-                if (isLast) onFinish()
-                else scope.launch { pagerState.animateScrollToPage(pagerState.currentPage + 1) }
-            },
-            modifier = Modifier.fillMaxWidth().padding(horizontal = 24.dp),
-            textStyle = AmType.size14_bold,
-        )
-        Spacer(Modifier.height(24.dp))
     }
 }
 
