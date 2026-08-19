@@ -155,7 +155,8 @@ fun OnboardingRoute(
                 onBankNameChange = viewModel::onBankNameChange,
                 onAccountPatternChange = viewModel::onAccountPatternChange,
                 onBudgetChange = viewModel::onBudgetChange,
-                onPaydayChange = viewModel::onPaydayChange,
+                onPaydayInputChange = viewModel::onPaydayInputChange,
+                onPaydaySelect = viewModel::onPaydaySelect,
                 onFinish = viewModel::finish,
             )
         }
@@ -294,7 +295,8 @@ fun OnboardingInfoScreen(
     onBankNameChange: (String) -> Unit = {},
     onAccountPatternChange: (String) -> Unit = {},
     onBudgetChange: (String) -> Unit = {},
-    onPaydayChange: (Int) -> Unit = {},
+    onPaydayInputChange: (String) -> Unit = {},
+    onPaydaySelect: (Int) -> Unit = {},
     onFinish: () -> Unit = {},
 ) {
     // 자동 진행: 월급일 확정 → 용돈 노출 → 용돈 확정 → 계좌(선택) + 시작하기 노출.
@@ -344,15 +346,21 @@ fun OnboardingInfoScreen(
                     label = uiState.userType.label,
                     topic = uiState.userType.topic,
                     onBudgetChange = onBudgetChange,
+                    // IME '완료'·칩: 키보드 내리고 단계 완료
                     onCommit = { focusManager.clearFocus(); budgetDone = true },
+                    // 포커스 이탈(다른 필드 탭): 단계만 완료 — clearFocus로 새 필드 포커스를 뺏지 않는다
+                    onStepDone = { budgetDone = true },
                 )
             }
             // 첫번째 : 월급일 — 항상 노출
             PaydaySection(
                 payday = uiState.payday,
+                paydayInput = uiState.paydayInput,
                 paydayLabel = uiState.userType.paydayLabel,
-                onPaydayChange = onPaydayChange,
+                onInputChange = onPaydayInputChange,
+                onSelect = onPaydaySelect,
                 onCommit = { focusManager.clearFocus(); paydayDone = true },
+                onStepDone = { paydayDone = true },
             )
         }
 
@@ -424,6 +432,7 @@ private fun BudgetSection(
     topic: String,
     onBudgetChange: (String) -> Unit,
     onCommit: () -> Unit,
+    onStepDone: () -> Unit,
 ) {
     Section("월 $label$topic 얼마인가요?") {
         Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
@@ -435,7 +444,8 @@ private fun BudgetSection(
                 imeAction = ImeAction.Done,
                 // 값이 있을 때만 다음 단계로 (입력 중 조기 진행 방지)
                 onImeAction = { if (budget > 0) onCommit() },
-                onFocusLost = { if (budget > 0) onCommit() },
+                // 포커스 이탈은 단계 완료만 — clearFocus 금지(다음 필드 포커스 보존)
+                onFocusLost = { if (budget > 0) onStepDone() },
                 visualTransformation = remember { AmThousandsTransformation() },
                 modifier = Modifier.fillMaxWidth(),
             )
@@ -455,33 +465,35 @@ private fun BudgetSection(
 @Composable
 private fun PaydaySection(
     payday: Int?,
+    paydayInput: String,
     paydayLabel: String,
-    onPaydayChange: (Int) -> Unit,
+    onInputChange: (String) -> Unit,
+    onSelect: (Int) -> Unit,
     onCommit: () -> Unit,
+    onStepDone: () -> Unit,
 ) {
     Section("${paydayLabel}이 언제인가요?") {
         Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
 
             AmLineTextField(
-                value = if (payday != null && payday in 1..31) payday.toString() else "",
-                onValueChange = { v ->
-                    val day = v.filter { it.isDigit() }.toIntOrNull()?.coerceIn(1, 31)
-                    if (day != null) onPaydayChange(day)
-                },
+                // 텍스트는 입력값을 그대로 표시 → 자유롭게 지우고 수정 가능(스냅백 없음)
+                value = paydayInput,
+                onValueChange = onInputChange,
                 hint = "직접 입력",
                 keyboardType = KeyboardType.Number,
                 imeAction = ImeAction.Done,
-                // 값이 선택된 상태일 때만 다음 단계로
+                // 값이 유효(1~31)할 때만 다음 단계로
                 onImeAction = { if (payday != null) onCommit() },
-                onFocusLost = { if (payday != null) onCommit() },
+                // 포커스 이탈은 단계 완료만 — clearFocus 금지(다음 필드 포커스 보존)
+                onFocusLost = { if (payday != null) onStepDone() },
                 modifier = Modifier.fillMaxWidth(),
             )
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                // 칩은 항상 유효 → 바로 다음 단계
-                AmChip("15일", payday == 15) { onPaydayChange(15); onCommit() }
-                AmChip("20일", payday == 20) { onPaydayChange(20); onCommit() }
-                AmChip("25일", payday == 25) { onPaydayChange(25); onCommit() }
-                AmChip("말일", payday == PAYDAY_EOM) { onPaydayChange(PAYDAY_EOM); onCommit() }
+                // 칩 선택 → 입력 텍스트도 함께 채움. 이후 숫자 입력 시 payday가 바뀌면 자동 해제
+                AmChip("15일", payday == 15) { onSelect(15); onCommit() }
+                AmChip("20일", payday == 20) { onSelect(20); onCommit() }
+                AmChip("25일", payday == 25) { onSelect(25); onCommit() }
+                AmChip("말일", payday == PAYDAY_EOM) { onSelect(PAYDAY_EOM); onCommit() }
             }
         }
     }

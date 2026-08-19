@@ -169,7 +169,7 @@ private fun OnboardingPermissionPreview() = AllowanceManagerTheme {
 @Preview(name = "4. 온보딩·정보입력", group = GROUP, showBackground = true, widthDp = 360, heightDp = 740)
 @Composable
 private fun OnboardingInfoPreview() = AllowanceManagerTheme {
-    OnboardingInfoScreen(uiState = OnboardingUiState(payday = 25, budgetInput = "500000"))
+    OnboardingInfoScreen(uiState = OnboardingUiState(payday = 25, paydayInput = "25", budgetInput = "500000"))
 }
 
 @Preview(name = "5. 홈", group = GROUP, showBackground = true, widthDp = 360, heightDp = 740)

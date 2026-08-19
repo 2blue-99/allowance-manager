@@ -25,6 +25,7 @@ data class OnboardingUiState(
     val budgetInput: String = "",
     val userType: UserType = UserType.Default,   // 사용자 유형(용돈/생활비/예산)
     val payday: Int? = null,       // null = 미선택, 0 = 말일, 1~31 = 해당 일
+    val paydayInput: String = "",  // 월급일 직접입력 텍스트(칩과 분리, 자유 편집용)
     val isFinished: Boolean = false,
 ) {
     val budget: Long get() = budgetInput.filter { it.isDigit() }.toLongOrNull() ?: 0L
@@ -51,7 +52,18 @@ class OnboardingViewModel @Inject constructor(
     fun onBankNameChange(value: String) = _uiState.update { it.copy(bankName = value) }
     fun onAccountPatternChange(value: String) = _uiState.update { it.copy(accountPattern = value) }
     fun onBudgetChange(value: String) = _uiState.update { it.copy(budgetInput = value) }
-    fun onPaydayChange(day: Int) = _uiState.update { it.copy(payday = day) }
+
+    /** 직접 입력: 텍스트를 그대로 보유(자유 편집 가능) + payday 재계산 → 이전 칩 선택은 자동 해제. */
+    fun onPaydayInputChange(text: String) {
+        val digits = text.filter { it.isDigit() }.take(2)
+        val day = digits.toIntOrNull()?.takeIf { it in 1..31 }
+        _uiState.update { it.copy(paydayInput = digits, payday = day) }
+    }
+
+    /** 칩 선택: payday와 입력 텍스트를 함께 세팅(말일=0은 텍스트 비움). */
+    fun onPaydaySelect(day: Int) = _uiState.update {
+        it.copy(payday = day, paydayInput = if (day in 1..31) day.toString() else "")
+    }
     fun onUserTypeChange(type: UserType) = _uiState.update { it.copy(userType = type) }
 
     /** 유형 확정(첫 단계 '다음') → DataStore 저장 후 이후 화면 문구가 이 값을 따름 */
