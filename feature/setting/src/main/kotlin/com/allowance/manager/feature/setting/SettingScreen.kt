@@ -3,6 +3,7 @@ package com.allowance.manager.feature.setting
 import android.app.Activity
 import android.content.Intent
 import android.net.Uri
+import android.os.Build
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -79,10 +80,17 @@ fun SettingRoute(
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val context = LocalContext.current
     val analytics = LocalAnalyticsHelper.current
-    // 설치된 앱의 versionName을 그대로 표시 (모듈 BuildConfig 결합 없이)
+    // 설치된 앱의 versionName·versionCode를 그대로 표시 (모듈 BuildConfig 결합 없이)
     val versionName = remember {
         runCatching { context.packageManager.getPackageInfo(context.packageName, 0).versionName }
             .getOrNull().orEmpty()
+    }
+    val versionCode = remember {
+        runCatching {
+            val info = context.packageManager.getPackageInfo(context.packageName, 0)
+            @Suppress("DEPRECATION") // API 28 미만 fallback (minSdk 26)
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) info.longVersionCode else info.versionCode.toLong()
+        }.getOrNull() ?: 0L
     }
 
     // 후원(인앱 결제) — 화면 생존 동안 클라이언트 유지, 이탈 시 연결 해제
@@ -93,6 +101,7 @@ fun SettingRoute(
     SettingScreen(
         uiState = uiState,
         versionName = versionName,
+        versionCode = versionCode,
         onBack = onBack,
         onNavigateToAccount = onNavigateToAccount,
         onNavigateToIgnored = onNavigateToIgnored,
@@ -159,6 +168,7 @@ private fun android.content.Context.openPlayStore() {
 fun SettingScreen(
     uiState: SettingUiState,
     versionName: String = "",
+    versionCode: Long = 0,
     onBack: () -> Unit = {},
     onNavigateToAccount: () -> Unit = {},
     onNavigateToIgnored: () -> Unit = {},
@@ -257,7 +267,9 @@ fun SettingScreen(
                         },
                         {
                             AmSettingItem(title = "버전") {
-                                Text(versionName.ifBlank { "-" }, fontSize = 13.sp, fontWeight = FontWeight.Bold, color = AmColors.TextSecondary)
+                                // 버전명 + 빌드번호(versionCode) 함께 표기: "1.0.0 (3)"
+                                val versionLabel = if (versionName.isBlank()) "-" else "$versionName ($versionCode)"
+                                Text(versionLabel, fontSize = 13.sp, fontWeight = FontWeight.Bold, color = AmColors.TextSecondary)
                             }
                         },
                     ),

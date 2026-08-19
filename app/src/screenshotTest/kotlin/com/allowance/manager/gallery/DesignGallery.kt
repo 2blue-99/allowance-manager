@@ -187,7 +187,7 @@ private fun StatsPreview() = AllowanceManagerTheme { StatsScreen(uiState = sampl
 @Preview(name = "8. 설정", group = GROUP, showBackground = true, widthDp = 360, heightDp = 740)
 @Composable
 private fun SettingPreview() = AllowanceManagerTheme {
-    SettingScreen(uiState = SettingUiState(budget = 2_000_000L, payday = 25, statusBarEnabled = true), versionName = "1.0.0")
+    SettingScreen(uiState = SettingUiState(budget = 2_000_000L, payday = 25, statusBarEnabled = true), versionName = "1.0.0", versionCode = 3)
 }
 
 @Preview(name = "9. 계좌 관리", group = GROUP, showBackground = true, widthDp = 360, heightDp = 740)
