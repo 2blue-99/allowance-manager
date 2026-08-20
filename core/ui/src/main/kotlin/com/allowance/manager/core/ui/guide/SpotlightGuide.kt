@@ -56,7 +56,10 @@ import androidx.compose.ui.layout.boundsInWindow
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.text.SpanStyle
+import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.IntRect
@@ -87,6 +90,8 @@ data class GuideStep(
     val shape: SpotShape = SpotShape.RECT,
     @DrawableRes val image: Int? = null,
     val action: GuideAction? = null,
+    // [message] 안에서 강조(에메랄드+굵게)할 부분 문자열. null이면 강조 없음.
+    val emphasis: String? = null,
 ) {
     constructor(key: String, title: String, message: String, shape: SpotShape = SpotShape.RECT) :
         this(listOf(key), title, message, shape)
@@ -123,6 +128,7 @@ private val fullscreenPositionProvider = object : PopupPositionProvider {
 private val DimColor = Color(0xFF0F1728).copy(alpha = 0.68f)
 private val CounterColor = Color(0xFF5EE0A8)
 private val TipDescColor = Color(0xFFD6DEEA)
+private val EmphasisColor = Color(0xFF5EE0A8) // 설명 문구 강조(딤 배경에서 잘 읽히는 에메랄드)
 
 /**
  * 홈 최초 진입 가이드(스포트라이트). 대상 좌표가 잡힌 스텝만 노출한다(내역 없으면 자동 스킵).
@@ -340,7 +346,20 @@ private fun GuideTipContent(
     )
     Spacer(Modifier.height(10.dp))
     Text(
-        step.message,
+        // emphasis가 message 안에 있으면 그 부분만 에메랄드+굵게로 강조
+        buildAnnotatedString {
+            val emph = step.emphasis?.takeIf { it.isNotBlank() }
+            val at = emph?.let { step.message.indexOf(it) } ?: -1
+            if (emph != null && at >= 0) {
+                append(step.message.substring(0, at))
+                withStyle(SpanStyle(color = EmphasisColor, fontWeight = FontWeight.Bold)) {
+                    append(emph)
+                }
+                append(step.message.substring(at + emph.length))
+            } else {
+                append(step.message)
+            }
+        },
         color = TipDescColor,
         fontSize = 14.sp,
         lineHeight = 21.sp,

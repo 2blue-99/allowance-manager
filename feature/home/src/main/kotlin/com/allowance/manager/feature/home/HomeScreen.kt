@@ -294,10 +294,11 @@ private fun homeGuideSteps(
         SpotShape.RECT,
     ),
     GuideStep(
-        "firstItem",
-        "내역은 여기에 차곡차곡",
-        "입출금 내역이 자동으로 쌓여요. 클릭해서 자세하게 기록하고 왼쪽으로 밀어서 손쉽게 관리할 수 있어요.",
-        SpotShape.RECT,
+        keys = listOf("firstItem"),
+        title = "내역은 여기에 차곡차곡",
+        message = "카드·계좌 알림을 인식해 내역이 자동으로 쌓여요. 그중 하나를 눌러 메인으로 등록하면 그 출처 알림이 모두 이번 달 ${type.label}에 반영돼요.",
+        shape = SpotShape.RECT,
+        emphasis = "그중 하나를 눌러 메인으로 등록하면 그 출처 알림이 모두 이번 달 ${type.label}에 반영",
     ),
     GuideStep(
         "fab",
