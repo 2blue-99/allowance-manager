@@ -59,6 +59,7 @@ import com.allowance.manager.core.designsystem.theme.AmShape
 import com.allowance.manager.core.designsystem.theme.AmSpacing
 import com.allowance.manager.core.designsystem.theme.AmType
 import com.allowance.manager.core.domain.util.amountToComma
+import com.allowance.manager.core.domain.util.toCompactShort
 import com.allowance.manager.core.ui.month.MonthNavBar
 import com.allowance.manager.core.ui.month.MonthPickerDialog
 import com.allowance.manager.core.ui.transaction.categoryColor
@@ -118,13 +119,12 @@ fun StatsScreen(
         ) { detail ->
             Column {
                 SummaryCard(
-                    month = detail.month,
                     summary = detail.summary,
                     label = uiState.userType.label,
                     onOpenMonth = { analytics.logEvent(AmAnalytics.Event.STATS_OPEN_MONTH_CLICK); onOpenMonth(detail.month) },
                 )
                 Spacer(Modifier.height(AmSpacing.md))
-                CategoryCard(month = detail.month, categories = detail.categories, total = detail.summary.expense)
+                CategoryCard(categories = detail.categories, total = detail.summary.expense)
             }
         }
         Spacer(Modifier.height(AmSpacing.md))
@@ -132,7 +132,7 @@ fun StatsScreen(
 
     if (showMonthPicker) {
         MonthPickerDialog(
-            current = uiState.headerMonth,
+            current = uiState.selected,
             minMonth = uiState.minMonth,
             maxMonth = YearMonth.now(),
             dataMonths = uiState.dataMonths,
@@ -162,7 +162,8 @@ private fun ChartCard(
         Column {
             // 월별 화면과 동일한 월 네비게이션(‹ 월 ▾ ›). 통계는 화살표가 6개월 창을 3개월씩 이동.
             MonthNavBar(
-                month = uiState.headerMonth,
+                // 헤더 중앙은 6개월 창의 최신월이 아니라 '선택된 달'을 보여준다 (막대 탭/이동에 따라 갱신)
+                month = uiState.selected,
                 canGoPrev = uiState.canOlder,
                 canGoNext = uiState.canNewer,
                 onPrev = onOlder,
@@ -231,11 +232,14 @@ private fun BarChart(bars: List<MonthBar>, onSelectMonth: (YearMonth) -> Unit) {
                     horizontalAlignment = Alignment.CenterHorizontally,
                     verticalArrangement = Arrangement.Bottom,
                 ) {
-                    if (bar.isSelected) {
+                    // 모든 막대에 압축 금액 라벨(0원 달은 생략). 선택 막대만 굵게.
+                    if (bar.expense > 0L) {
                         Text(
-                            manWon(bar.expense),
-                            style = AmType.size10_bold,
+                            bar.expense.toCompactShort(),
+                            style = if (bar.isSelected) AmType.size10_bold else AmType.size10_medium,
                             color = if (bar.isOver) AmColors.Red else AmColors.Emerald,
+                            maxLines = 1,
+                            softWrap = false,
                         )
                         Spacer(Modifier.height(3.dp))
                     }
@@ -301,11 +305,11 @@ private fun BarChart(bars: List<MonthBar>, onSelectMonth: (YearMonth) -> Unit) {
 
 // ── 선택 달 요약 (용돈/지출/수입) ──
 @Composable
-private fun SummaryCard(month: YearMonth, summary: MonthSummary, label: String, onOpenMonth: () -> Unit) {
+private fun SummaryCard(summary: MonthSummary, label: String, onOpenMonth: () -> Unit) {
     AmCard(modifier = Modifier.fillMaxWidth()) {
         Column {
             Row(verticalAlignment = Alignment.CenterVertically) {
-                Text("${month.monthValue}월 요약", style = AmType.size12_black, color = AmColors.TextPrimary)
+                Text("요약", style = AmType.size12_black, color = AmColors.TextPrimary)
             }
             Spacer(Modifier.height(12.dp))
             Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
@@ -347,10 +351,10 @@ private fun SummaryCell(label: String, value: String, valueColor: Color, modifie
 
 // ── 카테고리 도넛 + 랭킹 ──
 @Composable
-private fun CategoryCard(month: YearMonth, categories: List<CategorySlice>, total: Long) {
+private fun CategoryCard(categories: List<CategorySlice>, total: Long) {
     AmCard(modifier = Modifier.fillMaxWidth()) {
         Column {
-            Text("${month.monthValue}월 카테고리 분포", style = AmType.size12_black, color = AmColors.TextPrimary)
+            Text("카테고리 분포", style = AmType.size12_black, color = AmColors.TextPrimary)
             Spacer(Modifier.height(16.dp))
             if (categories.isEmpty()) {
                 Box(modifier = Modifier.fillMaxWidth().padding(vertical = 20.dp), contentAlignment = Alignment.Center) {

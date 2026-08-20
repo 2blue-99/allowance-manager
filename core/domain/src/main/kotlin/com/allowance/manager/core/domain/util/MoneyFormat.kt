@@ -32,3 +32,43 @@ fun Long.toCompactWon(): String {
     }
     return "$sign$body"
 }
+
+/**
+ * 아주 좁은 폭(통계 막대 라벨 등)용 초압축 표기. **절삭** + **최상위 두 단위**까지만, 붙여서.
+ *
+ * - 0                       → "0"
+ * - 1 ~ 999                 → "약1천"      (1천원 미만은 뭉뚱그림)
+ * - 1,000 ~ 9,999           → "3천"        (천 단위 절삭)
+ * - 10,000 ~ 9,999만        → "8만2천" · "12만8천" · "120만" · "1200만"  (만 블록 풀 + 그 아래 천 한 자리)
+ * - 1억 이상                → "1억" · "1억3천만" · "1억5백만" · "12억"     (억 풀 + 그 아래 첫 단위 한 자리)
+ *
+ * [toCompactWon]과 달리 반올림·콤마·"원" 접미사·띄어쓰기가 없다.
+ */
+fun Long.toCompactShort(): String {
+    if (this == 0L) return "0"
+    val sign = if (this < 0) "-" else ""
+    val abs = abs(this)
+
+    val body = when {
+        abs < 1_000L -> "약1천"
+        abs < 10_000L -> "${abs / 1_000L}천"
+        abs < 100_000_000L -> {
+            val man = abs / 10_000L            // 1 ~ 9,999
+            val thou = (abs % 10_000L) / 1_000L // 0 ~ 9
+            if (thou > 0) "${man}만${thou}천" else "${man}만"
+        }
+        else -> {
+            val eok = abs / 100_000_000L       // 1억 = 100,000,000
+            val rem = abs % 100_000_000L       // 0 ~ 99,999,999
+            val second = when {
+                rem >= 10_000_000L -> "${rem / 10_000_000L}천만"
+                rem >= 1_000_000L -> "${rem / 1_000_000L}백만"
+                rem >= 100_000L -> "${rem / 100_000L}십만"
+                rem >= 10_000L -> "${rem / 10_000L}만"
+                else -> ""
+            }
+            "${eok}억$second"
+        }
+    }
+    return "$sign$body"
+}
