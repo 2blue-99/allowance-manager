@@ -16,6 +16,7 @@ import androidx.core.app.NotificationCompat
 import androidx.core.content.ContextCompat
 import com.allowance.manager.BuildConfig
 import com.allowance.manager.MainActivity
+import com.allowance.manager.R
 import com.allowance.manager.core.domain.model.UserType
 import com.allowance.manager.core.domain.usecase.budget.GetUserTypeUseCase
 import com.allowance.manager.core.domain.usecase.budget.ObserveBudgetStatusUseCase
@@ -121,7 +122,7 @@ class StatusBarService : Service() {
             PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT,
         )
         return NotificationCompat.Builder(this, CHANNEL_ID)
-            .setSmallIcon(android.R.drawable.ic_menu_info_details)
+            .setSmallIcon(R.drawable.ic_stat_piggy)
             .setContentTitle(if (isOver) "이번달 $label 초과" else "내돈지켜")
             .setContentText(content)
             .setOngoing(true)
