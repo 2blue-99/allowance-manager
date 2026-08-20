@@ -1,5 +1,7 @@
 package com.allowance.manager.core.ui.guide
 
+import android.content.Context
+import android.view.WindowManager
 import androidx.annotation.DrawableRes
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.Animatable
@@ -19,14 +21,12 @@ import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.statusBars
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Text
@@ -55,6 +55,7 @@ import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.layout.boundsInWindow
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.buildAnnotatedString
@@ -187,18 +188,24 @@ fun SpotlightGuide(
         }
     }
 
-    // ⚠️ 상태바 높이는 반드시 팝업 '밖'(메인 창)에서 읽는다.
-    // 팝업은 별도 창이라 그 안에서 WindowInsets를 읽으면 0으로 잡혀 보정이 무효가 됨.
-    // 대상 좌표(boundsInWindow)는 상태바 포함 메인 창 기준인데, 팝업 오버레이는 상태바 아래에서 시작 →
-    // 그 차이(상태바 높이)만큼 위로 보정해야 구멍이 실제 요소와 정렬된다.
     val density = LocalDensity.current
-    val statusBarTop = WindowInsets.statusBars.getTop(density).toFloat()
 
     Popup(
         popupPositionProvider = fullscreenPositionProvider,
         properties = PopupProperties(focusable = true),
         onDismissRequest = { finish() },
     ) {
+        // 팝업 창은 기본적으로 시스템 바(상태바·내비바) 영역을 침범하지 않아 dim이 그 영역을 못 덮는다.
+        // FLAG_LAYOUT_NO_LIMITS로 창을 화면 전체(시스템 바 뒤까지)로 확장 → dim이 끝까지 채워진다.
+        // 이렇게 하면 팝업 원점이 edge-to-edge 메인 창 원점과 일치하므로 구멍 좌표 보정이 필요 없어진다.
+        val popupView = LocalView.current
+        LaunchedEffect(popupView) {
+            val root = popupView.rootView
+            val lp = root.layoutParams as? WindowManager.LayoutParams ?: return@LaunchedEffect
+            lp.flags = lp.flags or WindowManager.LayoutParams.FLAG_LAYOUT_NO_LIMITS
+            (popupView.context.getSystemService(Context.WINDOW_SERVICE) as WindowManager)
+                .updateViewLayout(root, lp)
+        }
         BoxWithConstraints(modifier = Modifier.fillMaxSize().graphicsLayer { alpha = overlayAlpha.value }) {
             val screenH = constraints.maxHeight.toFloat()
 
@@ -246,7 +253,8 @@ fun SpotlightGuide(
                 .reduceOrNull { a, r ->
                     Rect(minOf(a.left, r.left), minOf(a.top, r.top), maxOf(a.right, r.right), maxOf(a.bottom, r.bottom))
                 } ?: return@BoxWithConstraints
-            val rect = rectWindow.translate(0f, -statusBarTop)
+            // 팝업이 FLAG_LAYOUT_NO_LIMITS로 메인 창과 동일한 화면 전체 좌표계를 쓰므로 보정 없이 그대로 사용
+            val rect = rectWindow
 
             // 스텝 전환 시 구멍이 다음 요소로 부드럽게 이동·크기 변화
             val animRect by animateRectAsState(
