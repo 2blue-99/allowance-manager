@@ -289,7 +289,7 @@ private fun homeGuideSteps(
     ),
     GuideStep(
         "expenseIncome",
-        "지출·수입 한눈에",
+        "지출·수입을 한눈에",
         "이번 달 지출과 수입, 하루 권장 지출까지 ${type.label} 관리에 필요한 정보를 모았어요.",
         SpotShape.RECT,
     ),
@@ -301,6 +301,13 @@ private fun homeGuideSteps(
         emphasis = "그중 하나를 눌러 메인으로 등록하면 그 출처 알림이 모두 이번 달 ${type.label}에 반영",
     ),
     GuideStep(
+        keys = listOf("filterChips"),
+        title = "관리는 메인에서",
+        message = "메인 필터를 누르면 관리하고 싶은 내역만 한눈에 볼 수 있어요. 전체에서 필요한 출처를 메인으로 등록한 뒤, 메인에서 관리하는 것을 추천해요.",
+        shape = SpotShape.RECT,
+        emphasis = "전체에서 필요한 출처를 메인으로 등록",
+    ),
+    GuideStep(
         "fab",
         "빠진 내역은 직접 추가",
         "자동으로 안 잡히는 입·출금은 직접 넣을 수 있어요.",
@@ -309,7 +316,7 @@ private fun homeGuideSteps(
     // 위젯 홍보 — 구멍 없이 전체 딤 + 위젯 미리보기. 런처가 고정 요청을 지원하면 "위젯 추가하기", 아니면 안내+"확인".
     GuideStep(
         keys = emptyList(),
-        title = "위젯으로 한눈에!",
+        title = "위젯으로 한눈에",
         message = if (widgetPinSupported) {
             "위젯으로 남은 ${type.label}${type.objectParticle} 빠르게 확인하세요. 과소비를 막는 데 효과적이에요."
         } else {
@@ -510,7 +517,9 @@ private fun BottomContent(
             filter = uiState.filter,
             onFilterChip = onFilterChip,
             allBadge = uiState.showAllBadge,
-            modifier = Modifier.padding(horizontal = AmSpacing.xl, vertical = AmSpacing.md),
+            modifier = Modifier
+                .padding(horizontal = AmSpacing.xl, vertical = AmSpacing.md)
+                .guideTarget("filterChips", guideTargets),
         )
         Box(
             modifier = Modifier
