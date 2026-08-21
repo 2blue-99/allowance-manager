@@ -42,7 +42,7 @@ dependencies {
     ksp(libs.hilt.android.compiler)
     implementation(libs.hilt.navigation.compose)
     implementation(libs.kotlinx.serialization.json)
-    implementation(libs.billing.ktx)
+    implementation(libs.billing)
 
     implementation(libs.timber)
 

@@ -88,9 +88,10 @@ class DonationManager(context: Context) {
                 ),
             )
             .build()
-        client.queryProductDetailsAsync(params) { result, productDetailsList ->
+        // Billing 8.0.0+ : 콜백 2번째 인자가 List<ProductDetails> → QueryProductDetailsResult 로 변경
+        client.queryProductDetailsAsync(params) { result, queryResult ->
             onResult(
-                if (result.responseCode == BillingClient.BillingResponseCode.OK) productDetailsList.firstOrNull()
+                if (result.responseCode == BillingClient.BillingResponseCode.OK) queryResult.productDetailsList.firstOrNull()
                 else null,
             )
         }
