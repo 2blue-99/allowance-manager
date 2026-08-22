@@ -2,6 +2,8 @@ package com.allowance.manager.feature.calendar
 
 import androidx.activity.compose.BackHandler
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectTapGestures
@@ -153,7 +155,7 @@ fun CalendarScreen(
         )
 
         Column(modifier = Modifier.padding(horizontal = AmSpacing.xl)) {
-            SummaryCard(expense = uiState.expense, income = uiState.income)
+            SummaryCard(expense = uiState.expense, income = uiState.income, monthKey = uiState.month)
             Spacer(Modifier.height(12.dp))
             LedgerListHeader(
                 showChips = false,   // 스코프 필터는 아래 trailing에서 단일 '메인' 토글로 제공
@@ -236,16 +238,26 @@ fun CalendarScreen(
 }
 
 // ── 지출/수입 요약 (노출 리스트 기준) ──
+// 진입(최초 컴포지션)·월 변경 시 지출·수입을 0→현재치로 카운트업 (홈 예산 카드와 동일 방식).
 @Composable
-private fun SummaryCard(expense: Long, income: Long) {
+private fun SummaryCard(expense: Long, income: Long, monthKey: Any?) {
+    // 단일 progress(0→1)로 두 값을 동기화 재생
+    val progress = remember { Animatable(0f) }
+    LaunchedEffect(monthKey, expense, income) {
+        progress.snapTo(0f)
+        progress.animateTo(1f, tween(durationMillis = 500))
+    }
+    val shownExpense = (expense * progress.value).toLong()
+    val shownIncome = (income * progress.value).toLong()
+
     AmCard(
         modifier = Modifier.fillMaxWidth(),
         contentPadding = PaddingValues(vertical = 18.dp),
     ) {
         Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-            SummaryCell("지출", "${expense.amountToComma()}원", AmColors.Red, Modifier.weight(1f))
+            SummaryCell("지출", "${shownExpense.amountToComma()}원", AmColors.Red, Modifier.weight(1f))
             Box(Modifier.width(1.dp).height(38.dp).background(AmColors.Divider))
-            SummaryCell("수입", "${income.amountToComma()}원", AmColors.Emerald, Modifier.weight(1f))
+            SummaryCell("수입", "${shownIncome.amountToComma()}원", AmColors.Emerald, Modifier.weight(1f))
         }
     }
 }
