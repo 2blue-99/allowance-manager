@@ -1,7 +1,14 @@
 package com.allowance.manager.feature.setting
 
 import androidx.lifecycle.viewModelScope
+import com.allowance.manager.core.domain.model.AlertFrequency
+import com.allowance.manager.core.domain.model.BudgetAlertSetting
+import com.allowance.manager.core.domain.model.DailyReminderSetting
 import com.allowance.manager.core.domain.model.UserType
+import com.allowance.manager.core.domain.usecase.alert.GetBudgetAlertSettingUseCase
+import com.allowance.manager.core.domain.usecase.alert.GetDailyReminderSettingUseCase
+import com.allowance.manager.core.domain.usecase.alert.SetBudgetAlertSettingUseCase
+import com.allowance.manager.core.domain.usecase.alert.SetDailyReminderSettingUseCase
 import com.allowance.manager.core.domain.usecase.budget.GetMonthlyBudgetUseCase
 import com.allowance.manager.core.domain.usecase.budget.GetPaydayUseCase
 import com.allowance.manager.core.domain.usecase.budget.GetUserTypeUseCase
@@ -26,6 +33,8 @@ data class SettingUiState(
     val payday: Int = 25,       // 0 = 말일
     val statusBarEnabled: Boolean = true,
     val userType: UserType = UserType.Default,
+    val budgetAlert: BudgetAlertSetting = BudgetAlertSetting(),
+    val dailyReminder: DailyReminderSetting = DailyReminderSetting(),
 )
 
 @HiltViewModel
@@ -34,20 +43,31 @@ class SettingViewModel @Inject constructor(
     getPaydayUseCase: GetPaydayUseCase,
     getStatusBarEnabledUseCase: GetStatusBarEnabledUseCase,
     getUserTypeUseCase: GetUserTypeUseCase,
+    getBudgetAlertSettingUseCase: GetBudgetAlertSettingUseCase,
+    getDailyReminderSettingUseCase: GetDailyReminderSettingUseCase,
     private val setMonthlyBudgetUseCase: SetMonthlyBudgetUseCase,
     private val setPaydayUseCase: SetPaydayUseCase,
     private val setStatusBarEnabledUseCase: SetStatusBarEnabledUseCase,
     private val setUserTypeUseCase: SetUserTypeUseCase,
+    private val setBudgetAlertSettingUseCase: SetBudgetAlertSettingUseCase,
+    private val setDailyReminderSettingUseCase: SetDailyReminderSettingUseCase,
     private val analytics: AnalyticsHelper,
 ) : BaseViewModel() {
 
     val uiState: StateFlow<SettingUiState> = combine(
-        getMonthlyBudgetUseCase(),
-        getPaydayUseCase(),
-        getStatusBarEnabledUseCase(),
-        getUserTypeUseCase(),
-    ) { budget, payday, statusBar, userType ->
-        SettingUiState(budget = budget, payday = payday, statusBarEnabled = statusBar, userType = userType)
+        // 기존 4개 그룹을 먼저 묶고(combine 최대 인자 회피), 알림 설정 2개와 다시 결합
+        combine(
+            getMonthlyBudgetUseCase(),
+            getPaydayUseCase(),
+            getStatusBarEnabledUseCase(),
+            getUserTypeUseCase(),
+        ) { budget, payday, statusBar, userType ->
+            SettingUiState(budget = budget, payday = payday, statusBarEnabled = statusBar, userType = userType)
+        },
+        getBudgetAlertSettingUseCase(),
+        getDailyReminderSettingUseCase(),
+    ) { base, budgetAlert, dailyReminder ->
+        base.copy(budgetAlert = budgetAlert, dailyReminder = dailyReminder)
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), SettingUiState())
 
     fun setBudget(amount: Long) {
@@ -69,6 +89,33 @@ class SettingViewModel @Inject constructor(
     fun setUserType(type: UserType) {
         analytics.setUserProperty(AmAnalytics.UserProp.USER_TYPE, type.name.lowercase())
         viewModelScope.launch { setUserTypeUseCase(type) }
+    }
+
+    // ── 예산 소진 알림 ──
+    fun setBudgetAlertEnabled(enabled: Boolean) {
+        viewModelScope.launch {
+            setBudgetAlertSettingUseCase(uiState.value.budgetAlert.copy(enabled = enabled))
+        }
+    }
+
+    // 빈도 선택은 알림을 켠 것으로 간주(enabled = true)
+    fun setBudgetAlertFrequency(freq: AlertFrequency) {
+        viewModelScope.launch {
+            setBudgetAlertSettingUseCase(BudgetAlertSetting(enabled = true, frequency = freq))
+        }
+    }
+
+    // ── 가계부 관리 알림 ──
+    fun setDailyReminderEnabled(enabled: Boolean) {
+        viewModelScope.launch {
+            setDailyReminderSettingUseCase(uiState.value.dailyReminder.copy(enabled = enabled))
+        }
+    }
+
+    fun setDailyReminderTime(hour: Int, minute: Int) {
+        viewModelScope.launch {
+            setDailyReminderSettingUseCase(uiState.value.dailyReminder.copy(hour = hour, minute = minute))
+        }
     }
 }
 

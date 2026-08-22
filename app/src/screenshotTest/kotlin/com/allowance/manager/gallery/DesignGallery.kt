@@ -16,6 +16,7 @@ import com.allowance.manager.feature.calendar.CalendarUiState
 import com.allowance.manager.feature.home.HomeScreen
 import com.allowance.manager.feature.home.HomeUiState
 import com.allowance.manager.feature.intro.IntroScreen
+import com.allowance.manager.feature.onboarding.OnboardingAlertScreen
 import com.allowance.manager.feature.onboarding.OnboardingInfoScreen
 import com.allowance.manager.feature.onboarding.OnboardingPermissionScreen
 import com.allowance.manager.feature.onboarding.OnboardingUiState
@@ -170,6 +171,12 @@ private fun OnboardingPermissionPreview() = AllowanceManagerTheme {
 @Composable
 private fun OnboardingInfoPreview() = AllowanceManagerTheme {
     OnboardingInfoScreen(uiState = OnboardingUiState(payday = 25, paydayInput = "25", budgetInput = "500000"))
+}
+
+@Preview(name = "4-1. 온보딩·알림설정", group = GROUP, showBackground = true, widthDp = 360, heightDp = 740)
+@Composable
+private fun OnboardingAlertPreview() = AllowanceManagerTheme {
+    OnboardingAlertScreen(uiState = OnboardingUiState())
 }
 
 @Preview(name = "5. 홈", group = GROUP, showBackground = true, widthDp = 360, heightDp = 740)

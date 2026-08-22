@@ -3,15 +3,37 @@ package com.allowance.manager.service
 import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
+import com.allowance.manager.core.domain.usecase.alert.GetDailyReminderSettingUseCase
+import dagger.hilt.android.AndroidEntryPoint
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.launch
+import javax.inject.Inject
 
 /**
- * 재부팅 후 상태바 서비스를 재시작한다.
- * (부팅 시점 포그라운드 시작 제한이 있을 수 있어 best-effort — 실패해도 앱 재실행 시 시작됨)
+ * 재부팅 후 상태바 서비스를 재시작하고, 가계부 관리 알림(매일 알람)을 재예약한다.
+ * (알람은 재부팅 시 소실되므로 여기서 다시 건다. 포그라운드 시작 제한은 best-effort)
  */
+@AndroidEntryPoint
 class BootReceiver : BroadcastReceiver() {
+
+    @Inject lateinit var getDailyReminderSettingUseCase: GetDailyReminderSettingUseCase
+    @Inject lateinit var dailyReminderScheduler: DailyReminderScheduler
+
     override fun onReceive(context: Context, intent: Intent?) {
-        if (intent?.action == Intent.ACTION_BOOT_COMPLETED) {
-            StatusBarService.start(context)
+        if (intent?.action != Intent.ACTION_BOOT_COMPLETED) return
+        StatusBarService.start(context)
+
+        val pending = goAsync()
+        CoroutineScope(SupervisorJob() + Dispatchers.IO).launch {
+            try {
+                val setting = getDailyReminderSettingUseCase().first()
+                if (setting.enabled) dailyReminderScheduler.schedule(setting.hour, setting.minute)
+            } finally {
+                pending.finish()
+            }
         }
     }
 }

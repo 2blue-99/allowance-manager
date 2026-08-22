@@ -13,8 +13,11 @@ import androidx.compose.material3.ripple
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.IntrinsicSize
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -27,6 +30,7 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -44,8 +48,10 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.allowance.manager.core.designsystem.component.AmCard
 import com.allowance.manager.core.designsystem.component.AmChevron
 import com.allowance.manager.core.designsystem.component.AmChip
+import com.allowance.manager.core.designsystem.component.amRippleClickable
 import com.allowance.manager.core.analytics.AmAnalytics
 import com.allowance.manager.core.analytics.LocalAnalyticsHelper
 import com.allowance.manager.core.designsystem.component.AmDialog
@@ -55,12 +61,15 @@ import com.allowance.manager.core.designsystem.component.AmSettingGroup
 import com.allowance.manager.core.designsystem.component.AmSettingItem
 import com.allowance.manager.core.designsystem.component.AmTextField
 import com.allowance.manager.core.designsystem.component.AmThousandsTransformation
+import com.allowance.manager.core.designsystem.component.AmTimePickerDialog
 import com.allowance.manager.core.designsystem.theme.AmColors
 import com.allowance.manager.core.designsystem.theme.AmShape
 import com.allowance.manager.core.designsystem.theme.AmSpacing
 import com.allowance.manager.core.designsystem.theme.AmType
+import com.allowance.manager.core.domain.model.AlertFrequency
 import com.allowance.manager.core.domain.model.UserType
 import com.allowance.manager.core.domain.util.amountToComma
+import com.allowance.manager.core.domain.util.formatTimeOfDay
 import com.allowance.manager.core.ui.VerticalSpacer
 
 private const val PAYDAY_EOM = 0
@@ -110,6 +119,10 @@ fun SettingRoute(
         onBudgetChange = viewModel::setBudget,
         onPaydayChange = viewModel::setPayday,
         onUserTypeChange = viewModel::setUserType,
+        onBudgetAlertEnabledChange = viewModel::setBudgetAlertEnabled,
+        onBudgetAlertFrequencyChange = viewModel::setBudgetAlertFrequency,
+        onDailyReminderEnabledChange = viewModel::setDailyReminderEnabled,
+        onReminderTimeChange = viewModel::setDailyReminderTime,
         onSupport = {
             // debug 빌드(onNavigateToDebug != null)에선 미등록 상품이라 결제창이 안 뜸 → 바로 감사 다이얼로그로 결과 확인
             if (onNavigateToDebug != null) {
@@ -177,6 +190,10 @@ fun SettingScreen(
     onBudgetChange: (Long) -> Unit = {},
     onPaydayChange: (Int) -> Unit = {},
     onUserTypeChange: (UserType) -> Unit = {},
+    onBudgetAlertEnabledChange: (Boolean) -> Unit = {},
+    onBudgetAlertFrequencyChange: (AlertFrequency) -> Unit = {},
+    onDailyReminderEnabledChange: (Boolean) -> Unit = {},
+    onReminderTimeChange: (Int, Int) -> Unit = { _, _ -> },
     onSupport: () -> Unit = {},
     onFeedback: () -> Unit = {},
     onRate: () -> Unit = {},
@@ -186,6 +203,8 @@ fun SettingScreen(
     var showBudgetDialog by remember { mutableStateOf(false) }
     var showPaydayDialog by remember { mutableStateOf(false) }
     var showTypeDialog by remember { mutableStateOf(false) }
+    var showFrequencyDialog by remember { mutableStateOf(false) }
+    var showTimePicker by remember { mutableStateOf(false) }
 
     Column(
         modifier = Modifier.fillMaxSize().background(AmColors.ScreenBg).padding(top = AmSpacing.xl).padding(horizontal = AmSpacing.xl),
@@ -248,6 +267,20 @@ fun SettingScreen(
                             }
                         },
                     ),
+                )
+            }
+
+            item {
+                AlertSettingsGroup(
+                    budgetAlertEnabled = uiState.budgetAlert.enabled,
+                    frequencyLabel = uiState.budgetAlert.frequency.label,
+                    frequencySummary = uiState.budgetAlert.frequency.summary,
+                    reminderEnabled = uiState.dailyReminder.enabled,
+                    reminderTime = formatTimeOfDay(uiState.dailyReminder.hour, uiState.dailyReminder.minute),
+                    onBudgetAlertEnabledChange = onBudgetAlertEnabledChange,
+                    onDailyReminderEnabledChange = onDailyReminderEnabledChange,
+                    onFrequencyClick = { showFrequencyDialog = true },
+                    onTimeClick = { showTimePicker = true },
                 )
             }
 
@@ -318,6 +351,117 @@ fun SettingScreen(
             onSave = { onPaydayChange(it); showPaydayDialog = false },
             onDismiss = { showPaydayDialog = false },
         )
+    }
+    if (showFrequencyDialog) {
+        FrequencyDialog(
+            current = uiState.budgetAlert.frequency,
+            onSave = { onBudgetAlertFrequencyChange(it); showFrequencyDialog = false },
+            onDismiss = { showFrequencyDialog = false },
+        )
+    }
+    if (showTimePicker) {
+        AmTimePickerDialog(
+            initialHour = uiState.dailyReminder.hour,
+            initialMinute = uiState.dailyReminder.minute,
+            onDismiss = { showTimePicker = false },
+            onConfirm = { hour, minute -> onReminderTimeChange(hour, minute); showTimePicker = false },
+        )
+    }
+}
+
+// 단일 "알림" 그룹 — 두 기능을 한 카드에 담고, 각 기능의 세부 옵션(빈도/시각)을
+// 들여쓴 하위 행으로 매단다. 토글 OFF면 그 기능의 세부 행만 사라진다.
+@Composable
+private fun AlertSettingsGroup(
+    budgetAlertEnabled: Boolean,
+    frequencyLabel: String,
+    frequencySummary: String,
+    reminderEnabled: Boolean,
+    reminderTime: String,
+    onBudgetAlertEnabledChange: (Boolean) -> Unit,
+    onDailyReminderEnabledChange: (Boolean) -> Unit,
+    onFrequencyClick: () -> Unit,
+    onTimeClick: () -> Unit,
+) {
+    Column(modifier = Modifier.fillMaxWidth()) {
+        Text(
+            text = "알림",
+            style = AmType.size12_black,
+            color = AmColors.TextSecondary,
+            modifier = Modifier.padding(horizontal = 6.dp, vertical = 11.dp),
+        )
+        AmCard(
+            modifier = Modifier.fillMaxWidth(),
+            shape = AmShape.cardSmall,
+            contentPadding = PaddingValues(0.dp),
+        ) {
+            Column {
+                AmSettingItem(title = "예산 소진 알림") {
+                    Switch(checked = budgetAlertEnabled, onCheckedChange = onBudgetAlertEnabledChange)
+                }
+                if (budgetAlertEnabled) {
+                    AlertDetailRow(label = "빈도", subtitle = frequencySummary, value = frequencyLabel, onClick = onFrequencyClick)
+                }
+                HorizontalDivider(thickness = 1.dp, color = AmColors.Divider)
+                AmSettingItem(title = "가계부 관리 알림") {
+                    Switch(checked = reminderEnabled, onCheckedChange = onDailyReminderEnabledChange)
+                }
+                if (reminderEnabled) {
+                    AlertDetailRow(label = "알림 시각", subtitle = "그날 안 본 내역이 있을 때", value = reminderTime, onClick = onTimeClick)
+                }
+            }
+        }
+    }
+}
+
+// 기능에 딸린 세부 옵션 행 — 들여쓰기 + 왼쪽 세로 라인으로 상위 기능 종속을 표현.
+@Composable
+private fun AlertDetailRow(label: String, subtitle: String, value: String, onClick: () -> Unit) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .amRippleClickable(onClick = onClick)
+            .height(IntrinsicSize.Min)
+            .padding(start = 28.dp, end = 16.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Box(
+            modifier = Modifier
+                .width(2.dp)
+                .fillMaxHeight()
+                .clip(AmShape.card)
+                .background(AmColors.BarTrack),
+        )
+        Spacer(Modifier.width(12.dp))
+        Column(modifier = Modifier.weight(1f).padding(vertical = 12.dp)) {
+            Text(label, fontSize = 13.sp, color = AmColors.NeutralBtnText)
+            Text(subtitle, fontSize = 11.sp, color = AmColors.TextTertiary)
+        }
+        Text(value, fontSize = 13.sp, fontWeight = FontWeight.Bold, color = AmColors.Emerald)
+        Spacer(Modifier.width(AmSpacing.xs))
+        AmChevron()
+    }
+}
+
+@Composable
+private fun FrequencyDialog(current: AlertFrequency, onSave: (AlertFrequency) -> Unit, onDismiss: () -> Unit) {
+    var selected by remember { mutableStateOf(current) }
+    AmDialog(
+        title = "알림 빈도",
+        onDismiss = onDismiss,
+        onConfirm = { onSave(selected) },
+    ) {
+        Column(verticalArrangement = Arrangement.spacedBy(AmSpacing.sm)) {
+            AlertFrequency.entries.forEach { freq ->
+                AmSelectableOptionCard(
+                    title = freq.displayLabel,
+                    subtitle = freq.summary,
+                    selected = selected == freq,
+                    onClick = { selected = freq },
+                    subtitleFontSize = 11.sp,
+                )
+            }
+        }
     }
 }
 

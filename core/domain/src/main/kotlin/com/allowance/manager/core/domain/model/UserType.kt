@@ -9,6 +9,7 @@ package com.allowance.manager.core.domain.model
  * - hint: 유형 설명 (온보딩 선택지 보조 문구)
  * - topic: 호칭 뒤 조사 은/는 (예: "월 용돈은 …")
  * - object_: 호칭 뒤 조사 을/를 (예: "용돈을 …" / "생활비를 …")
+ * - subject: 호칭 뒤 조사 이/가 (예: "용돈이 …" / "생활비가 …")
  * - paydayLabel: 수급일 호칭 (학생=용돈 받는 날 / 직장인·일반=월급일). 설정·온보딩 등 풀네임.
  * - paydayShort: 수급일 짧은 호칭 (학생=용돈날 / 직장인·일반=월급일). 홈 D-day 뱃지 등 좁은 공간.
  */
@@ -18,12 +19,13 @@ enum class UserType(
     val hint: String,
     val topic: String,
     val objectParticle: String,
+    val subjectParticle: String,
     val paydayLabel: String,
     val paydayShort: String,
 ) {
-    STUDENT("student", "용돈", "아직 학생이시라면!", "은", "을", "용돈 받는 날", "용돈날"),
-    YOUTH("youth", "생활비", "경제활동을 하고 계시다면!", "는", "를", "월급일", "월급일"),
-    COMMON("common", "예산", "둘 다 애매할 땐!", "은", "을", "월급일", "월급일");
+    STUDENT("student", "용돈", "아직 학생이시라면!", "은", "을", "이", "용돈 받는 날", "용돈날"),
+    YOUTH("youth", "생활비", "경제활동을 하고 계시다면!", "는", "를", "가", "월급일", "월급일"),
+    COMMON("common", "예산", "둘 다 애매할 땐!", "은", "을", "이", "월급일", "월급일");
 
     companion object {
         val Default = COMMON

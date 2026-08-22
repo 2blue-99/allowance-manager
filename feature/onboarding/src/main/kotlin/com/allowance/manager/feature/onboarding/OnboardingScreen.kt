@@ -157,13 +157,22 @@ fun OnboardingRoute(
                 onBudgetChange = viewModel::onBudgetChange,
                 onPaydayInputChange = viewModel::onPaydayInputChange,
                 onPaydaySelect = viewModel::onPaydaySelect,
+                // 기본 정보 입력 완료 → 알림 설정 스텝으로
+                onNext = { step = OnboardingStep.ALERT },
+            )
+            OnboardingStep.ALERT -> OnboardingAlertScreen(
+                uiState = uiState,
+                onBudgetAlertToggle = viewModel::onBudgetAlertToggle,
+                onBudgetAlertFrequencyChange = viewModel::onBudgetAlertFrequencyChange,
+                onDailyReminderToggle = viewModel::onDailyReminderToggle,
+                onReminderTimeChange = viewModel::onReminderTimeChange,
                 onFinish = viewModel::finish,
             )
         }
     }
 }
 
-private enum class OnboardingStep { PERSONAL, PERMISSION, INFO }
+private enum class OnboardingStep { PERSONAL, PERMISSION, INFO, ALERT }
 
 // ── 유형 선택 (온보딩 첫 단계) ─────────────────────────
 // 뱃지(용돈/생활비/예산) + 아래 설명. 선택 후 '다음'에서 유형이 저장·고정된다.
@@ -297,7 +306,7 @@ fun OnboardingInfoScreen(
     onBudgetChange: (String) -> Unit = {},
     onPaydayInputChange: (String) -> Unit = {},
     onPaydaySelect: (Int) -> Unit = {},
-    onFinish: () -> Unit = {},
+    onNext: () -> Unit = {},
 ) {
     // 자동 진행: 월급일 확정 → 용돈 노출 → 용돈 확정 → 계좌(선택) + 시작하기 노출.
     // 새 항목은 위에 추가되고 기존은 아래로 밀림.
@@ -369,8 +378,8 @@ fun OnboardingInfoScreen(
             Column {
                 Spacer(Modifier.height(AmSpacing.md))
                 AmButton(
-                    text = "시작하기",
-                    onClick = onFinish,
+                    text = "다음",
+                    onClick = onNext,
                     enabled = uiState.canFinish,
                     modifier = Modifier.fillMaxWidth(),
                 )

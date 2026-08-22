@@ -45,6 +45,7 @@ fun AmSelectableOptionCard(
     selected: Boolean,
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
+    subtitleFontSize: androidx.compose.ui.unit.TextUnit = 13.sp,
     leading: (@Composable () -> Unit)? = null,
 ) {
     val spec = tween<Color>(durationMillis = 150)
@@ -80,7 +81,7 @@ fun AmSelectableOptionCard(
         Column(modifier = Modifier.weight(1f)) {
             Text(title, fontSize = 15.sp, fontWeight = FontWeight.Bold, color = titleColor)
             Spacer(Modifier.height(2.dp))
-            Text(subtitle, fontSize = 13.sp, color = AmColors.TextSecondary)
+            Text(subtitle, fontSize = subtitleFontSize, color = AmColors.TextSecondary)
         }
         SelectedIndicator(selected)
     }

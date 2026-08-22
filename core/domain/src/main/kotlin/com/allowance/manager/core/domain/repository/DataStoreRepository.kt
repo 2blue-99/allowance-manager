@@ -1,5 +1,8 @@
 package com.allowance.manager.core.domain.repository
 
+import com.allowance.manager.core.domain.model.BudgetAlertSetting
+import com.allowance.manager.core.domain.model.BudgetAlertState
+import com.allowance.manager.core.domain.model.DailyReminderSetting
 import com.allowance.manager.core.domain.model.LedgerFilter
 import com.allowance.manager.core.domain.model.UserType
 import kotlinx.coroutines.flow.Flow
@@ -38,4 +41,24 @@ interface DataStoreRepository {
     /** 새(미등록) 계좌 감지 배지 — 전체 칩 빨간 점. 전체를 보면 해제 */
     fun getHomeNewAccountBadge(): Flow<Boolean>
     suspend fun setHomeNewAccountBadge(show: Boolean)
+
+    /** 예산 소진 알림 설정(켜짐 + 빈도) */
+    fun getBudgetAlertSetting(): Flow<BudgetAlertSetting>
+    suspend fun setBudgetAlertSetting(setting: BudgetAlertSetting)
+
+    /** 가계부 관리 알림(정산 리마인더) 설정(켜짐 + 시각) */
+    fun getDailyReminderSetting(): Flow<DailyReminderSetting>
+    suspend fun setDailyReminderSetting(setting: DailyReminderSetting)
+
+    /** 예산 소진 알림 발송 상태(내부, 중복 발송 방지용) — 1회성 읽기/쓰기 */
+    suspend fun getBudgetAlertState(): BudgetAlertState
+    suspend fun setBudgetAlertState(state: BudgetAlertState)
+
+    /** 가계부 관리 알림 — 마지막 앱 조회 시각 (앱 진입 시 갱신) */
+    suspend fun getReminderLastSeen(): Long
+    suspend fun setReminderLastSeen(timeMs: Long)
+
+    /** 가계부 관리 알림 — 마지막 리마인더 발송 시각 (재알림 방지) */
+    suspend fun getReminderLastNotified(): Long
+    suspend fun setReminderLastNotified(timeMs: Long)
 }

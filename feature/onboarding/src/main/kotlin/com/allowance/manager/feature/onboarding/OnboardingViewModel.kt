@@ -2,8 +2,13 @@ package com.allowance.manager.feature.onboarding
 
 import androidx.lifecycle.viewModelScope
 import com.allowance.manager.core.domain.model.Account
+import com.allowance.manager.core.domain.model.AlertFrequency
+import com.allowance.manager.core.domain.model.BudgetAlertSetting
+import com.allowance.manager.core.domain.model.DailyReminderSetting
 import com.allowance.manager.core.domain.model.UserType
 import com.allowance.manager.core.domain.usecase.account.AddAccountUseCase
+import com.allowance.manager.core.domain.usecase.alert.SetBudgetAlertSettingUseCase
+import com.allowance.manager.core.domain.usecase.alert.SetDailyReminderSettingUseCase
 import com.allowance.manager.core.domain.usecase.budget.SetUserTypeUseCase
 import com.allowance.manager.core.domain.usecase.budget.SetMonthlyBudgetUseCase
 import com.allowance.manager.core.domain.usecase.budget.SetPaydayUseCase
@@ -26,6 +31,12 @@ data class OnboardingUiState(
     val userType: UserType = UserType.Default,   // 사용자 유형(용돈/생활비/예산)
     val payday: Int? = null,       // null = 미선택, 0 = 말일, 1~31 = 해당 일
     val paydayInput: String = "",  // 월급일 직접입력 텍스트(칩과 분리, 자유 편집용)
+    // 알림 설정(마지막 스텝) — 기본 켜짐/중간/오후 9시
+    val budgetAlertEnabled: Boolean = true,
+    val budgetAlertFrequency: AlertFrequency = AlertFrequency.Default,
+    val dailyReminderEnabled: Boolean = true,
+    val reminderHour: Int = 21,
+    val reminderMinute: Int = 0,
     val isFinished: Boolean = false,
 ) {
     val budget: Long get() = budgetInput.filter { it.isDigit() }.toLongOrNull() ?: 0L
@@ -43,6 +54,8 @@ class OnboardingViewModel @Inject constructor(
     private val addAccountUseCase: AddAccountUseCase,
     private val setUserTypeUseCase: SetUserTypeUseCase,
     private val setOnboardingDoneUseCase: SetOnboardingDoneUseCase,
+    private val setBudgetAlertSettingUseCase: SetBudgetAlertSettingUseCase,
+    private val setDailyReminderSettingUseCase: SetDailyReminderSettingUseCase,
     private val analytics: AnalyticsHelper,
 ) : BaseViewModel() {
 
@@ -65,6 +78,14 @@ class OnboardingViewModel @Inject constructor(
         it.copy(payday = day, paydayInput = if (day in 1..31) day.toString() else "")
     }
     fun onUserTypeChange(type: UserType) = _uiState.update { it.copy(userType = type) }
+
+    // ── 알림 설정 스텝 핸들러 ──
+    fun onBudgetAlertToggle(enabled: Boolean) = _uiState.update { it.copy(budgetAlertEnabled = enabled) }
+    fun onBudgetAlertFrequencyChange(freq: AlertFrequency) =
+        _uiState.update { it.copy(budgetAlertFrequency = freq) }
+    fun onDailyReminderToggle(enabled: Boolean) = _uiState.update { it.copy(dailyReminderEnabled = enabled) }
+    fun onReminderTimeChange(hour: Int, minute: Int) =
+        _uiState.update { it.copy(reminderHour = hour, reminderMinute = minute) }
 
     /** 유형 확정(첫 단계 '다음') → DataStore 저장 후 이후 화면 문구가 이 값을 따름 */
     fun confirmUserType() {
@@ -103,6 +124,19 @@ class OnboardingViewModel @Inject constructor(
             }
             setMonthlyBudgetUseCase(state.budget)
             setPaydayUseCase(payday)
+            setBudgetAlertSettingUseCase(
+                BudgetAlertSetting(
+                    enabled = state.budgetAlertEnabled,
+                    frequency = state.budgetAlertFrequency,
+                )
+            )
+            setDailyReminderSettingUseCase(
+                DailyReminderSetting(
+                    enabled = state.dailyReminderEnabled,
+                    hour = state.reminderHour,
+                    minute = state.reminderMinute,
+                )
+            )
             setOnboardingDoneUseCase()
             _uiState.update { it.copy(isFinished = true) }
         }

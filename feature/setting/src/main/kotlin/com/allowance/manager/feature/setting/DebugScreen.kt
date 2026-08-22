@@ -45,6 +45,7 @@ fun DebugRoute(
     viewModel: DebugViewModel = hiltViewModel(),
 ) {
     val homeGuideEnabled by viewModel.homeGuideEnabled.collectAsStateWithLifecycle()
+    val budgetStatusText by viewModel.budgetStatusText.collectAsStateWithLifecycle()
     DebugScreen(
         onBack = onBack,
         onNavigateToIntro = onNavigateToIntro,
@@ -54,6 +55,10 @@ fun DebugRoute(
         onSeedTestData = viewModel::seedTestData,
         onSeedCategories = viewModel::seedCategoriesForMonth,
         onApplyMonthSettings = viewModel::applyMonthSettings,
+        budgetStatusText = budgetStatusText,
+        onSpendTenPercent = viewModel::spendBudgetTenPercent,
+        onResetSpending = viewModel::resetDebugSpending,
+        onTriggerReminder = viewModel::triggerDailyReminderNow,
     )
 }
 
@@ -67,6 +72,10 @@ fun DebugScreen(
     onSeedTestData: () -> Unit = {},
     onSeedCategories: (YearMonth) -> Unit = {},
     onApplyMonthSettings: (YearMonth, Int?, Long?, Long?, Long?) -> Unit = { _, _, _, _, _ -> },
+    budgetStatusText: String = "",
+    onSpendTenPercent: () -> Unit = {},
+    onResetSpending: () -> Unit = {},
+    onTriggerReminder: () -> Unit = {},
 ) {
     // 테스트 데이터 대상 달 (기본 이번 달) — 카테고리 시드·달별 세팅 공용 + 월 피커 노출 여부
     var seedMonth by remember { mutableStateOf(YearMonth.now()) }
@@ -104,6 +113,24 @@ fun DebugScreen(
             Text("홈 가이드 표시", style = AmType.size14_bold, color = AmColors.TextPrimary)
             Switch(checked = homeGuideEnabled, onCheckedChange = onHomeGuideEnabledChange)
         }
+
+        Spacer(Modifier.height(AmSpacing.xl))
+        Text("예산 소진 알림 (A안 테스트)", style = AmType.size12_bold, color = AmColors.TextSecondary)
+        Spacer(Modifier.height(AmSpacing.sm))
+        // 현재 소진/남은 상태 — 소진·되돌리기 때마다 실시간 갱신
+        Text(budgetStatusText, style = AmType.size14_bold, color = AmColors.TextPrimary)
+        Spacer(Modifier.height(AmSpacing.md))
+        // 누를 때마다 예산 10% 소진 → 남은 비율 10%p 하락 → 임계값 관통 시 알림
+        AmButton(text = "예산 10% 소진하기", onClick = onSpendTenPercent, modifier = Modifier.fillMaxWidth())
+        Spacer(Modifier.height(AmSpacing.sm))
+        // 이 화면에서 넣은 디버그 지출을 전부 삭제 → 원래 잔액으로 복구
+        AmButton(text = "원래대로 되돌리기", onClick = onResetSpending, modifier = Modifier.fillMaxWidth())
+
+        Spacer(Modifier.height(AmSpacing.xl))
+        Text("가계부 관리 알림 (B안 테스트)", style = AmType.size12_bold, color = AmColors.TextSecondary)
+        Spacer(Modifier.height(AmSpacing.md))
+        // 리마인더 즉시 발화. "예산 10% 소진" 등으로 새 내역을 만든 뒤 눌러야 "안 본 내역" 판정을 통과해 알림이 뜬다.
+        AmButton(text = "리마인더 지금 실행", onClick = onTriggerReminder, modifier = Modifier.fillMaxWidth())
 
         Spacer(Modifier.height(AmSpacing.xl))
         Text("테스트 데이터", style = AmType.size12_bold, color = AmColors.TextSecondary)

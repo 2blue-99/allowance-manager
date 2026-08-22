@@ -1,6 +1,7 @@
 package com.allowance.manager
 
 import androidx.lifecycle.viewModelScope
+import com.allowance.manager.core.domain.usecase.alert.MarkAppSeenUseCase
 import com.allowance.manager.core.domain.usecase.config.CheckForceUpdateUseCase
 import com.allowance.manager.core.domain.usecase.config.FetchRemoteConfigUseCase
 import com.allowance.manager.core.domain.usecase.config.GetUpdateNoteUseCase
@@ -37,6 +38,7 @@ class MainViewModel @Inject constructor(
     private val fetchRemoteConfigUseCase: FetchRemoteConfigUseCase,
     private val checkForceUpdateUseCase: CheckForceUpdateUseCase,
     private val getUpdateNoteUseCase: GetUpdateNoteUseCase,
+    private val markAppSeenUseCase: MarkAppSeenUseCase,
     getStatusBarEnabledUseCase: GetStatusBarEnabledUseCase,
     getIntroShownUseCase: GetIntroShownUseCase,
     getOnboardingDoneUseCase: GetOnboardingDoneUseCase,
@@ -65,6 +67,11 @@ class MainViewModel @Inject constructor(
 
     init {
         fetchRemoteConfig()
+    }
+
+    /** 앱을 조회한 시각 기록 — 가계부 관리 알림의 "안 본 내역" 판정 기준 갱신. (앱 진입/복귀 시 호출) */
+    fun markAppSeen() {
+        viewModelScope.launch { markAppSeenUseCase() }
     }
 
     private fun fetchRemoteConfig() {

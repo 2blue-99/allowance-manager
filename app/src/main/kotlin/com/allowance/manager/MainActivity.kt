@@ -37,6 +37,12 @@ class MainActivity : ComponentActivity() {
     @javax.inject.Inject
     lateinit var analyticsHelper: AnalyticsHelper
 
+    override fun onResume() {
+        super.onResume()
+        // 앱을 볼 때마다 "본 시각" 갱신 → 가계부 관리 알림이 이미 확인한 내역엔 안 울리게
+        viewModel.markAppSeen()
+    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         val splashScreen = installSplashScreen()
         super.onCreate(savedInstanceState)

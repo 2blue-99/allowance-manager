@@ -26,6 +26,10 @@ interface TransactionDao {
     @Query("SELECT MIN(created_at) FROM transactions")
     suspend fun getFirstTransactionTime(): Long?
 
+    /** 가장 최근 내역 시각 (가계부 관리 알림의 "안 본 내역" 판정). 내역이 없으면 null */
+    @Query("SELECT MAX(created_at) FROM transactions")
+    suspend fun getLastTransactionTime(): Long?
+
     @Query("SELECT * FROM transactions ORDER BY created_at DESC")
     fun observeAll(): Flow<List<TransactionEntity>>
 

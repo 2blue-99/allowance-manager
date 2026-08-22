@@ -1,6 +1,10 @@
 package com.allowance.manager.core.data.repository
 
 import com.allowance.manager.core.datastore.PreferencesDataSource
+import com.allowance.manager.core.domain.model.AlertFrequency
+import com.allowance.manager.core.domain.model.BudgetAlertSetting
+import com.allowance.manager.core.domain.model.BudgetAlertState
+import com.allowance.manager.core.domain.model.DailyReminderSetting
 import com.allowance.manager.core.domain.model.LedgerFilter
 import com.allowance.manager.core.domain.model.UserType
 import com.allowance.manager.core.domain.repository.DataStoreRepository
@@ -46,4 +50,32 @@ class DataStoreRepositoryImpl @Inject constructor(
 
     override fun getHomeNewAccountBadge(): Flow<Boolean> = preferencesDataSource.getHomeNewAccountBadge()
     override suspend fun setHomeNewAccountBadge(show: Boolean) = preferencesDataSource.setHomeNewAccountBadge(show)
+
+    override fun getBudgetAlertSetting(): Flow<BudgetAlertSetting> =
+        preferencesDataSource.getBudgetAlert().map { (enabled, freqKey) ->
+            BudgetAlertSetting(enabled = enabled, frequency = AlertFrequency.fromKey(freqKey))
+        }
+    override suspend fun setBudgetAlertSetting(setting: BudgetAlertSetting) =
+        preferencesDataSource.setBudgetAlert(setting.enabled, setting.frequency.key)
+
+    override fun getDailyReminderSetting(): Flow<DailyReminderSetting> =
+        preferencesDataSource.getDailyReminder().map { (enabled, minutes) ->
+            DailyReminderSetting.fromMinutes(enabled, minutes)
+        }
+    override suspend fun setDailyReminderSetting(setting: DailyReminderSetting) =
+        preferencesDataSource.setDailyReminder(setting.enabled, setting.minutesOfDay)
+
+    override suspend fun getBudgetAlertState(): BudgetAlertState {
+        val (cycleStart, firedCsv) = preferencesDataSource.getBudgetAlertState()
+        val fired = firedCsv.split(',').mapNotNull { it.trim().toIntOrNull() }.toSet()
+        return BudgetAlertState(cycleStart = cycleStart, fired = fired)
+    }
+    override suspend fun setBudgetAlertState(state: BudgetAlertState) =
+        preferencesDataSource.setBudgetAlertState(state.cycleStart, state.fired.sorted().joinToString(","))
+
+    override suspend fun getReminderLastSeen(): Long = preferencesDataSource.getReminderLastSeen()
+    override suspend fun setReminderLastSeen(timeMs: Long) = preferencesDataSource.setReminderLastSeen(timeMs)
+
+    override suspend fun getReminderLastNotified(): Long = preferencesDataSource.getReminderLastNotified()
+    override suspend fun setReminderLastNotified(timeMs: Long) = preferencesDataSource.setReminderLastNotified(timeMs)
 }
