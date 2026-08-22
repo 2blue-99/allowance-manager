@@ -20,7 +20,7 @@ object AmMotion {
     const val DurationMs = 250
 
     /** 빠른 페이드 지속시간(ms) — 바텀 탭 등 잦은 화면 전환용 (크로스페이드 체감 지연 완화) */
-    const val FastDurationMs = 150
+    const val FastDurationMs = 200
 
     /** 화면 페이드 인 (NavHost enter 등) */
     fun fadeEnter(durationMs: Int = DurationMs): EnterTransition =
