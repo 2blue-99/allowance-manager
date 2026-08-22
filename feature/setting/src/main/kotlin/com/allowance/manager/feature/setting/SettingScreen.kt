@@ -13,11 +13,9 @@ import androidx.compose.material3.ripple
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.IntrinsicSize
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -396,50 +394,58 @@ private fun AlertSettingsGroup(
             contentPadding = PaddingValues(0.dp),
         ) {
             Column {
-                AmSettingItem(title = "예산 소진 알림") {
-                    Switch(checked = budgetAlertEnabled, onCheckedChange = onBudgetAlertEnabledChange)
-                }
+                AlertFeatureRow(title = "예산 소진 알림", checked = budgetAlertEnabled, onCheckedChange = onBudgetAlertEnabledChange, hasDetail = budgetAlertEnabled)
                 if (budgetAlertEnabled) {
                     AlertDetailRow(label = "빈도", subtitle = frequencySummary, value = frequencyLabel, onClick = onFrequencyClick)
                 }
                 HorizontalDivider(thickness = 1.dp, color = AmColors.Divider)
-                AmSettingItem(title = "가계부 관리 알림") {
-                    Switch(checked = reminderEnabled, onCheckedChange = onDailyReminderEnabledChange)
-                }
+                AlertFeatureRow(title = "가계부 관리 알림", checked = reminderEnabled, onCheckedChange = onDailyReminderEnabledChange, hasDetail = reminderEnabled)
                 if (reminderEnabled) {
-                    AlertDetailRow(label = "알림 시각", subtitle = "그날 안 본 내역이 있을 때", value = reminderTime, onClick = onTimeClick)
+                    AlertDetailRow(label = "알림 시각", subtitle = "", value = reminderTime, onClick = onTimeClick)
                 }
             }
         }
     }
 }
 
-// 기능에 딸린 세부 옵션 행 — 들여쓰기 + 왼쪽 세로 라인으로 상위 기능 종속을 표현.
+// 기능 on/off 행(제목 + 스위치). 아래 세부 블록이 있으면 하단 여백을 줄여 밀착시킨다.
+@Composable
+private fun AlertFeatureRow(title: String, checked: Boolean, onCheckedChange: (Boolean) -> Unit, hasDetail: Boolean) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(start = 16.dp, end = 16.dp, top = 14.dp, bottom = if (hasDetail) 8.dp else 14.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Text(title, style = AmType.size14_bold, color = AmColors.TextPrimary, modifier = Modifier.weight(1f))
+        Switch(checked = checked, onCheckedChange = onCheckedChange)
+    }
+}
+
+// 기능에 딸린 세부 옵션 — 양옆 여백을 둔 연초록 인셋 블록으로 상위 기능 종속을 표현.
+// 블록의 여백·색이 들여쓰기 역할을 하므로 텍스트를 추가로 들여쓰지 않는다.
 @Composable
 private fun AlertDetailRow(label: String, subtitle: String, value: String, onClick: () -> Unit) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
+            .padding(horizontal = 12.dp)
+            .padding(bottom = 10.dp)
+            .clip(AmShape.cardSmall)
+            .background(AmColors.EmeraldBg)
             .amRippleClickable(onClick = onClick)
-            .height(IntrinsicSize.Min)
-            .padding(start = 28.dp, end = 16.dp),
+            .padding(horizontal = 13.dp, vertical = 10.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        Box(
-            modifier = Modifier
-                .width(2.dp)
-                .fillMaxHeight()
-                .clip(AmShape.card)
-                .background(AmColors.BarTrack),
-        )
-        Spacer(Modifier.width(12.dp))
-        Column(modifier = Modifier.weight(1f).padding(vertical = 12.dp)) {
-            Text(label, fontSize = 13.sp, color = AmColors.NeutralBtnText)
-            Text(subtitle, fontSize = 11.sp, color = AmColors.TextTertiary)
+        Column(modifier = Modifier.weight(1f)) {
+            Text(label, fontSize = 13.sp, fontWeight = FontWeight.Medium, color = AmColors.EmeraldDark)
+            if (subtitle.isNotEmpty()) {
+                Text(subtitle, fontSize = 10.sp, color = AmColors.EmeraldMid)
+            }
         }
-        Text(value, fontSize = 13.sp, fontWeight = FontWeight.Bold, color = AmColors.Emerald)
+        Text(value, fontSize = 13.sp, fontWeight = FontWeight.Bold, color = AmColors.EmeraldDark)
         Spacer(Modifier.width(AmSpacing.xs))
-        AmChevron()
+        Text("›", fontSize = 18.sp, color = AmColors.EmeraldDark)
     }
 }
 

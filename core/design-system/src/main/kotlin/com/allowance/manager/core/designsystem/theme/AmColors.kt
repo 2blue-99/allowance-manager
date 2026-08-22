@@ -13,6 +13,7 @@ object AmColors {
     val Emerald = Color(0xFF10B981)     // 액센트
     val EmeraldDark = Color(0xFF0E9E6E) // 액센트 딥(후원 카드 그라데이션 등)
     val EmeraldBg = Color(0xFFECFDF5)   // 액센트 연한 배경
+    val EmeraldMid = Color(0xFF5DBE9A)  // 연초록 배경 위 보조 텍스트
     val Red = Color(0xFFEF4444)         // 지출·경고
     val RedBg = Color(0xFFFDECEC)
 
