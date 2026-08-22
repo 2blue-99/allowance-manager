@@ -193,18 +193,18 @@ fun AppNavHost(
                 if (initialState.destination.isOn(OnboardingRoute::class) && targetState.destination.isOn(HomeRoute::class)) {
                     AmMotion.slideForwardEnter(durationMs = 350)
                 } else {
-                    AmMotion.fadeEnter()
+                    AmMotion.fadeEnter(AmMotion.FastDurationMs)
                 }
             },
             exitTransition = {
                 if (initialState.destination.isOn(OnboardingRoute::class) && targetState.destination.isOn(HomeRoute::class)) {
                     AmMotion.slideForwardExit(durationMs = 350)
                 } else {
-                    AmMotion.fadeExit()
+                    AmMotion.fadeExit(AmMotion.FastDurationMs)
                 }
             },
-            popEnterTransition = { AmMotion.fadeEnter() },
-            popExitTransition = { AmMotion.fadeExit() },
+            popEnterTransition = { AmMotion.fadeEnter(AmMotion.FastDurationMs) },
+            popExitTransition = { AmMotion.fadeExit(AmMotion.FastDurationMs) },
         ) {
             introScreen(
                 onFinish = {
