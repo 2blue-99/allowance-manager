@@ -82,3 +82,20 @@ data class DailyReminderSetting(
         }
     }
 }
+
+/**
+ * 월급일 알림 설정.
+ *
+ * 실지급일([BudgetCycle.payDate]) 기준으로 **전날·당일** 오후 9시에 알린다. 시각은 고정이라 설정에 없다.
+ * - 전날: 지급일이 다가옴을 알리고, 이번 달 지급일 조정 경로를 안내
+ * - 당일: 새 사이클이 시작됐으니 이번 달 예산 금액을 손볼지 물어봄
+ */
+data class PaydayAlertSetting(
+    val enabled: Boolean = true,
+) {
+    companion object {
+        /** 발송 시각 — 오후 9:00 고정 */
+        const val HOUR = 21
+        const val MINUTE = 0
+    }
+}

@@ -9,21 +9,30 @@ import com.allowance.manager.core.domain.model.Transaction
 import com.allowance.manager.core.domain.model.TransactionCategory
 import com.allowance.manager.core.domain.model.TransactionType
 import com.allowance.manager.core.domain.repository.BudgetRepository
+import com.allowance.manager.core.domain.repository.DataStoreRepository
 import com.allowance.manager.core.domain.repository.TransactionRepository
+import com.allowance.manager.core.domain.usecase.alert.PaydayNoticeDecider
 import com.allowance.manager.core.domain.usecase.budget.ObserveBudgetStatusUseCase
+import com.allowance.manager.core.domain.usecase.budget.ObservePaydayInfoUseCase
+import com.allowance.manager.core.domain.usecase.budget.SetPaydayOverrideUseCase
 import com.allowance.manager.core.domain.usecase.budget.SetPaydayUseCase
 import com.allowance.manager.core.domain.util.amountToComma
 import com.allowance.manager.core.domain.usecase.setting.GetHomeGuideShownUseCase
 import com.allowance.manager.core.domain.usecase.setting.SetHomeGuideShownUseCase
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
+import java.time.LocalDate
 import java.time.YearMonth
+import java.time.format.TextStyle
+import java.util.Locale
 import java.time.ZoneId
 import javax.inject.Inject
 import kotlin.math.roundToInt
@@ -37,6 +46,9 @@ class DebugViewModel @Inject constructor(
     private val transactionRepository: TransactionRepository,
     private val budgetRepository: BudgetRepository,
     private val setPaydayUseCase: SetPaydayUseCase,
+    private val setPaydayOverrideUseCase: SetPaydayOverrideUseCase,
+    private val dataStoreRepository: DataStoreRepository,
+    observePaydayInfoUseCase: ObservePaydayInfoUseCase,
 ) : BaseViewModel() {
 
     /** 예산 소진 알림 테스트용 지출의 출처명(되돌리기 시 이 값으로 필터해 삭제) */
@@ -135,6 +147,83 @@ class DebugViewModel @Inject constructor(
                     ),
                 )
             }
+        }
+    }
+
+    /** 월급일 알림 디버그 텍스트를 다시 읽게 하는 트리거(발송 표식은 Flow가 아니라 1회성 읽기) */
+    private val paydayRefresh = MutableStateFlow(0)
+
+    /**
+     * 월급일 알림 상태 — 규칙일·조정 여부·실지급일·오늘 판정·마지막 발송 표식.
+     * 실지급일은 사이클 경계와 같은 계산에서 나오므로, 이 값이 홈 D-day와 다르면 버그다.
+     */
+    val paydayDebugText: StateFlow<String> =
+        combine(observePaydayInfoUseCase(), paydayRefresh) { info, _ -> info }
+            .map { info ->
+                val today = LocalDate.now()
+                val notice = PaydayNoticeDecider.decide(
+                    today = today,
+                    payday = info.rule,
+                    overrides = info.overrideDay?.let { mapOf(info.month to it) } ?: emptyMap(),
+                    holidays = info.holidays,
+                )
+                val lastSent = dataStoreRepository.getPaydayAlertLastSent().ifEmpty { "없음" }
+                val ruleLabel = if (info.rule <= 0) "말일" else "${info.rule}일"
+                val adjusted = info.overrideDay?.let { "조정 ${it}일" } ?: "조정 없음"
+                buildString {
+                    appendLine("규칙 $ruleLabel · $adjusted")
+                    appendLine("실지급일 ${info.actual.dayLabel()} · 오늘 ${today.dayLabel()}")
+                    append("판정 $notice · 마지막 발송 $lastSent")
+                }
+            }
+            .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), "…")
+
+    private fun LocalDate.dayLabel(): String =
+        "${monthValue}월 ${dayOfMonth}일(${dayOfWeek.getDisplayName(TextStyle.SHORT, Locale.KOREAN)})"
+
+    /**
+     * 테스트용(월급일 알림): 지급일을 오늘 + [offsetDays] 로 지정.
+     * 0 = 오늘(당일 알림 확인), 1 = 내일(전날 알림 확인). 달을 넘어가면 그 날짜가 속한 달에 지정한다.
+     */
+    fun setPaydayForTest(offsetDays: Long) {
+        viewModelScope.launch {
+            val target = LocalDate.now().plusDays(offsetDays)
+            setPaydayOverrideUseCase(YearMonth.from(target), target.dayOfMonth)
+            paydayRefresh.value++
+        }
+    }
+
+    /** 테스트용: 이번 달·다음 달 지급일 지정을 해제해 규칙일로 되돌린다. */
+    fun clearPaydayForTest() {
+        viewModelScope.launch {
+            val now = YearMonth.now()
+            setPaydayOverrideUseCase(now, null)
+            setPaydayOverrideUseCase(now.plusMonths(1), null)
+            paydayRefresh.value++
+        }
+    }
+
+    /**
+     * 테스트용: 월급일 알림 리시버를 지금 즉시 발화.
+     * [force]가 null이면 실제 경로(설정·판정·중복검사)를 그대로 탄다 — 오늘이 지급일 전날/당일이 아니면 아무것도 안 뜬다.
+     * 값을 주면 판정·중복검사를 건너뛰고 그 문구만 보낸다(발송 표식도 남기지 않음).
+     * (app 모듈 클래스를 직접 참조할 수 없어 명시적 ComponentName으로 브로드캐스트)
+     */
+    fun triggerPaydayAlertNow(force: PaydayNoticeDecider.Notice? = null) {
+        val intent = Intent("com.allowance.manager.action.PAYDAY_ALERT")
+            .setComponent(
+                ComponentName(appContext.packageName, "com.allowance.manager.service.PaydayAlarmReceiver"),
+            )
+        if (force != null) intent.putExtra("force_notice", force.name)
+        appContext.sendBroadcast(intent)
+        paydayRefresh.value++
+    }
+
+    /** 테스트용: 중복 발송 방지 표식을 지워 같은 날 다시 실제 경로로 발송할 수 있게 한다. */
+    fun clearPaydayAlertSentMark() {
+        viewModelScope.launch {
+            dataStoreRepository.setPaydayAlertLastSent("")
+            paydayRefresh.value++
         }
     }
 

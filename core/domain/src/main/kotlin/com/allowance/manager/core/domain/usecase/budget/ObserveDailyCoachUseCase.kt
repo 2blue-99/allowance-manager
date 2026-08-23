@@ -4,6 +4,7 @@ import com.allowance.manager.core.domain.model.BudgetCycle
 import com.allowance.manager.core.domain.model.DailyCoach
 import com.allowance.manager.core.domain.repository.BudgetRepository
 import com.allowance.manager.core.domain.repository.DataStoreRepository
+import com.allowance.manager.core.domain.repository.RemoteConfigRepository
 import com.allowance.manager.core.domain.repository.TransactionRepository
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.Flow
@@ -24,6 +25,7 @@ class ObserveDailyCoachUseCase @Inject constructor(
     private val budgetRepository: BudgetRepository,
     private val dataStoreRepository: DataStoreRepository,
     private val transactionRepository: TransactionRepository,
+    private val remoteConfigRepository: RemoteConfigRepository,
 ) {
     @OptIn(ExperimentalCoroutinesApi::class)
     operator fun invoke(
@@ -33,9 +35,10 @@ class ObserveDailyCoachUseCase @Inject constructor(
         combine(
             budgetRepository.observeBudgetForMonth(YearMonth.from(today)),
             dataStoreRepository.getPayday(),
-        ) { budget, payday -> budget to payday }
-            .flatMapLatest { (budget, payday) ->
-                val cycle = BudgetCycle.of(payday, today)
+            dataStoreRepository.getPaydayOverrides(),
+        ) { budget, payday, overrides -> Triple(budget, payday, overrides) }
+            .flatMapLatest { (budget, payday, overrides) ->
+                val cycle = BudgetCycle.of(payday, today, remoteConfigRepository.getHolidays(), overrides)
                 val todayStart = today.atStartOfDay(zone).toInstant().toEpochMilli()
                 val todayEnd = today.plusDays(1).atStartOfDay(zone).toInstant().toEpochMilli() - 1
 

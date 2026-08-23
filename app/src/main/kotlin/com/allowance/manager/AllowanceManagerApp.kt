@@ -3,10 +3,12 @@ package com.allowance.manager
 import android.app.Application
 import com.allowance.manager.core.domain.usecase.alert.GetBudgetAlertSettingUseCase
 import com.allowance.manager.core.domain.usecase.alert.GetDailyReminderSettingUseCase
+import com.allowance.manager.core.domain.usecase.alert.GetPaydayAlertSettingUseCase
 import com.allowance.manager.core.domain.usecase.budget.GetUserTypeUseCase
 import com.allowance.manager.core.domain.usecase.budget.ObserveBudgetStatusUseCase
 import com.allowance.manager.service.BudgetAlertNotifier
 import com.allowance.manager.service.DailyReminderScheduler
+import com.allowance.manager.service.PaydayAlarmScheduler
 import com.allowance.manager.feature.widget.refreshBalanceWidget
 import dagger.hilt.android.HiltAndroidApp
 import kotlinx.coroutines.CoroutineScope
@@ -28,6 +30,8 @@ class AllowanceManagerApp : Application() {
     @Inject lateinit var budgetAlertNotifier: BudgetAlertNotifier
     @Inject lateinit var getDailyReminderSettingUseCase: GetDailyReminderSettingUseCase
     @Inject lateinit var dailyReminderScheduler: DailyReminderScheduler
+    @Inject lateinit var getPaydayAlertSettingUseCase: GetPaydayAlertSettingUseCase
+    @Inject lateinit var paydayAlarmScheduler: PaydayAlarmScheduler
 
     private val appScope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
 
@@ -37,6 +41,7 @@ class AllowanceManagerApp : Application() {
         observeAndRefreshWidget()
         observeBudgetAlert()
         observeDailyReminder()
+        observePaydayAlert()
     }
 
     /**
@@ -51,6 +56,22 @@ class AllowanceManagerApp : Application() {
                     runCatching {
                         if (setting.enabled) dailyReminderScheduler.schedule(setting.hour, setting.minute)
                         else dailyReminderScheduler.cancel()
+                    }
+                }
+        }
+    }
+
+    /**
+     * 월급일 알림 설정을 관찰해 매일 알람을 예약/해제.
+     * 알람은 매일 오후 9시 1개뿐이고, 그날 알릴지는 리시버가 판정한다 → 월급일·조정값이 바뀌어도 재예약이 없다.
+     */
+    private fun observePaydayAlert() {
+        appScope.launch {
+            getPaydayAlertSettingUseCase()
+                .distinctUntilChanged()
+                .collect { setting ->
+                    runCatching {
+                        if (setting.enabled) paydayAlarmScheduler.schedule() else paydayAlarmScheduler.cancel()
                     }
                 }
         }

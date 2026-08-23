@@ -21,6 +21,8 @@ class PreferencesDataSource @Inject constructor(
     companion object {
         // 월 예산(용돈)은 budget_history 테이블로 이관 (월별 이력)
         val PAYDAY = intPreferencesKey("payday")                    // 수급일. 1~31, 0 = 말일
+        // 달별 월급일 지정("이번 달 월급일 조정"). "2026-08:21,2026-09:23" — 최근 12개월만 보존
+        val PAYDAY_OVERRIDES = stringPreferencesKey("payday_overrides")
         val INTRO_SHOWN = booleanPreferencesKey("intro_shown")
         val ONBOARDING_DONE = booleanPreferencesKey("onboarding_done")
         val STATUS_BAR_ENABLED = booleanPreferencesKey("status_bar_enabled")
@@ -37,6 +39,9 @@ class PreferencesDataSource @Inject constructor(
         // 가계부 관리 알림(정산 리마인더) — 켜짐 여부 + 시각(하루 분 단위, 0~1439)
         val DAILY_REMINDER_ENABLED = booleanPreferencesKey("daily_reminder_enabled")
         val DAILY_REMINDER_MINUTES = intPreferencesKey("daily_reminder_minutes")
+        // 월급일 알림 — 켜짐 여부 + 마지막 발송 표식("2026-08-24:TODAY", 같은 날 중복 발송 방지용)
+        val PAYDAY_ALERT_ENABLED = booleanPreferencesKey("payday_alert_enabled")
+        val PAYDAY_ALERT_LAST_SENT = stringPreferencesKey("payday_alert_last_sent")
         // 예산 소진 알림 발송 상태(내부) — 사이클 시작 millis + 발송한 임계값 CSV
         val BUDGET_ALERT_CYCLE = longPreferencesKey("budget_alert_cycle")
         val BUDGET_ALERT_FIRED = stringPreferencesKey("budget_alert_fired")
@@ -52,6 +57,10 @@ class PreferencesDataSource @Inject constructor(
 
     fun getPayday(): Flow<Int> = get(PAYDAY, DEFAULT_PAYDAY)
     suspend fun setPayday(day: Int) = set(PAYDAY, day)
+
+    // 달별 월급일 지정 — 파싱·직렬화는 도메인(PaydayOverrides)이 담당하고 여기선 문자열만 다룬다.
+    fun getPaydayOverrides(): Flow<String> = get(PAYDAY_OVERRIDES, "")
+    suspend fun setPaydayOverrides(raw: String) = set(PAYDAY_OVERRIDES, raw)
 
     fun getUserType(): Flow<String> = get(USER_TYPE, DEFAULT_USER_TYPE)
     suspend fun setUserType(key: String) = set(USER_TYPE, key)
@@ -115,6 +124,12 @@ class PreferencesDataSource @Inject constructor(
             it[DAILY_REMINDER_MINUTES] = minutesOfDay
         }
     }
+
+    // 월급일 알림 — 켜짐 여부는 Flow, 마지막 발송 표식은 1회성 읽기/쓰기
+    fun getPaydayAlertEnabled(): Flow<Boolean> = get(PAYDAY_ALERT_ENABLED, true)
+    suspend fun setPaydayAlertEnabled(enabled: Boolean) = set(PAYDAY_ALERT_ENABLED, enabled)
+    suspend fun getPaydayAlertLastSent(): String = dataStore.data.first()[PAYDAY_ALERT_LAST_SENT] ?: ""
+    suspend fun setPaydayAlertLastSent(stamp: String) = set(PAYDAY_ALERT_LAST_SENT, stamp)
 
     // 예산 소진 알림 발송 상태 — 한 번만 읽고 쓰는 내부 상태(Flow 아님). Pair = (사이클 millis, 발송 CSV)
     suspend fun getBudgetAlertState(): Pair<Long, String> {

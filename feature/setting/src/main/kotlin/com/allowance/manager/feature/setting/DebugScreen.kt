@@ -30,6 +30,7 @@ import com.allowance.manager.core.designsystem.component.AmTextField
 import com.allowance.manager.core.designsystem.theme.AmColors
 import com.allowance.manager.core.designsystem.theme.AmSpacing
 import com.allowance.manager.core.designsystem.theme.AmType
+import com.allowance.manager.core.domain.usecase.alert.PaydayNoticeDecider
 import com.allowance.manager.core.ui.month.MonthPickerDialog
 import java.time.YearMonth
 
@@ -46,6 +47,7 @@ fun DebugRoute(
 ) {
     val homeGuideEnabled by viewModel.homeGuideEnabled.collectAsStateWithLifecycle()
     val budgetStatusText by viewModel.budgetStatusText.collectAsStateWithLifecycle()
+    val paydayDebugText by viewModel.paydayDebugText.collectAsStateWithLifecycle()
     DebugScreen(
         onBack = onBack,
         onNavigateToIntro = onNavigateToIntro,
@@ -59,6 +61,11 @@ fun DebugRoute(
         onSpendTenPercent = viewModel::spendBudgetTenPercent,
         onResetSpending = viewModel::resetDebugSpending,
         onTriggerReminder = viewModel::triggerDailyReminderNow,
+        paydayDebugText = paydayDebugText,
+        onSetPaydayForTest = viewModel::setPaydayForTest,
+        onClearPaydayForTest = viewModel::clearPaydayForTest,
+        onTriggerPaydayAlert = viewModel::triggerPaydayAlertNow,
+        onClearPaydaySentMark = viewModel::clearPaydayAlertSentMark,
     )
 }
 
@@ -76,6 +83,11 @@ fun DebugScreen(
     onSpendTenPercent: () -> Unit = {},
     onResetSpending: () -> Unit = {},
     onTriggerReminder: () -> Unit = {},
+    paydayDebugText: String = "",
+    onSetPaydayForTest: (Long) -> Unit = {},
+    onClearPaydayForTest: () -> Unit = {},
+    onTriggerPaydayAlert: (PaydayNoticeDecider.Notice?) -> Unit = {},
+    onClearPaydaySentMark: () -> Unit = {},
 ) {
     // 테스트 데이터 대상 달 (기본 이번 달) — 카테고리 시드·달별 세팅 공용 + 월 피커 노출 여부
     var seedMonth by remember { mutableStateOf(YearMonth.now()) }
@@ -131,6 +143,50 @@ fun DebugScreen(
         Spacer(Modifier.height(AmSpacing.md))
         // 리마인더 즉시 발화. "예산 10% 소진" 등으로 새 내역을 만든 뒤 눌러야 "안 본 내역" 판정을 통과해 알림이 뜬다.
         AmButton(text = "리마인더 지금 실행", onClick = onTriggerReminder, modifier = Modifier.fillMaxWidth())
+
+        Spacer(Modifier.height(AmSpacing.xl))
+        Text("월급일 알림 (C안 테스트)", style = AmType.size12_bold, color = AmColors.TextSecondary)
+        Spacer(Modifier.height(AmSpacing.sm))
+        // 규칙일·조정값·실지급일·오늘 판정·마지막 발송 — 아래 버튼을 누를 때마다 갱신
+        Text(paydayDebugText, style = AmType.size14_bold, color = AmColors.TextPrimary)
+        Spacer(Modifier.height(AmSpacing.md))
+        // 지급일을 오늘/내일로 지정하면 실제 경로(판정 포함)로 알림을 확인할 수 있다
+        AmButton(
+            text = "지급일을 내일로 지정 (전날 알림용)",
+            onClick = { onSetPaydayForTest(1L) },
+            modifier = Modifier.fillMaxWidth(),
+        )
+        Spacer(Modifier.height(AmSpacing.sm))
+        AmButton(
+            text = "지급일을 오늘로 지정 (당일 알림용)",
+            onClick = { onSetPaydayForTest(0L) },
+            modifier = Modifier.fillMaxWidth(),
+        )
+        Spacer(Modifier.height(AmSpacing.sm))
+        AmButton(text = "지급일 지정 해제", onClick = onClearPaydayForTest, modifier = Modifier.fillMaxWidth())
+        Spacer(Modifier.height(AmSpacing.md))
+        // 실제 경로 — 오늘이 지급일 전날/당일이 아니면 아무것도 안 뜬다
+        AmButton(
+            text = "월급일 알림 지금 실행 (실제 판정)",
+            onClick = { onTriggerPaydayAlert(null) },
+            modifier = Modifier.fillMaxWidth(),
+        )
+        Spacer(Modifier.height(AmSpacing.sm))
+        // 중복 방지 표식 때문에 같은 날 두 번째부터 안 뜨므로, 다시 테스트할 땐 이걸 누른다
+        AmButton(text = "발송 기록 지우기", onClick = onClearPaydaySentMark, modifier = Modifier.fillMaxWidth())
+        Spacer(Modifier.height(AmSpacing.md))
+        // 문구만 확인 — 판정·중복검사를 건너뛴다
+        AmButton(
+            text = "전날 문구 강제 발송",
+            onClick = { onTriggerPaydayAlert(PaydayNoticeDecider.Notice.TOMORROW) },
+            modifier = Modifier.fillMaxWidth(),
+        )
+        Spacer(Modifier.height(AmSpacing.sm))
+        AmButton(
+            text = "당일 문구 강제 발송",
+            onClick = { onTriggerPaydayAlert(PaydayNoticeDecider.Notice.TODAY) },
+            modifier = Modifier.fillMaxWidth(),
+        )
 
         Spacer(Modifier.height(AmSpacing.xl))
         Text("테스트 데이터", style = AmType.size12_bold, color = AmColors.TextSecondary)

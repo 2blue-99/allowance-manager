@@ -2,6 +2,7 @@ package com.allowance.manager.core.domain.usecase.alert
 
 import com.allowance.manager.core.domain.model.BudgetAlertSetting
 import com.allowance.manager.core.domain.model.DailyReminderSetting
+import com.allowance.manager.core.domain.model.PaydayAlertSetting
 import com.allowance.manager.core.domain.repository.DataStoreRepository
 import kotlinx.coroutines.flow.Flow
 import javax.inject.Inject
@@ -30,6 +31,19 @@ class SetDailyReminderSettingUseCase @Inject constructor(
 ) {
     suspend operator fun invoke(setting: DailyReminderSetting) =
         dataStoreRepository.setDailyReminderSetting(setting)
+}
+
+class GetPaydayAlertSettingUseCase @Inject constructor(
+    private val dataStoreRepository: DataStoreRepository,
+) {
+    operator fun invoke(): Flow<PaydayAlertSetting> = dataStoreRepository.getPaydayAlertSetting()
+}
+
+class SetPaydayAlertSettingUseCase @Inject constructor(
+    private val dataStoreRepository: DataStoreRepository,
+) {
+    suspend operator fun invoke(setting: PaydayAlertSetting) =
+        dataStoreRepository.setPaydayAlertSetting(setting)
 }
 
 /** 앱을 조회한 시각을 기록 — 가계부 관리 알림의 "안 본 내역" 판정 기준(lastSeen) 갱신. */

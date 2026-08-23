@@ -3,9 +3,11 @@ package com.allowance.manager.core.domain.usecase.transaction
 import com.allowance.manager.core.domain.model.BudgetCycle
 import com.allowance.manager.core.domain.model.Transaction
 import com.allowance.manager.core.domain.repository.DataStoreRepository
+import com.allowance.manager.core.domain.repository.RemoteConfigRepository
 import com.allowance.manager.core.domain.repository.TransactionRepository
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.flatMapLatest
 import javax.inject.Inject
 
@@ -15,11 +17,20 @@ import javax.inject.Inject
 class ObserveCurrentTransactionsUseCase @Inject constructor(
     private val dataStoreRepository: DataStoreRepository,
     private val transactionRepository: TransactionRepository,
+    private val remoteConfigRepository: RemoteConfigRepository,
 ) {
     @OptIn(ExperimentalCoroutinesApi::class)
     operator fun invoke(): Flow<List<Transaction>> =
-        dataStoreRepository.getPayday().flatMapLatest { payday ->
-            val cycle = BudgetCycle.of(payday)
-            transactionRepository.observeBetween(cycle.startMillis(), cycle.endMillis())
-        }
+        combine(
+            dataStoreRepository.getPayday(),
+            dataStoreRepository.getPaydayOverrides(),
+        ) { payday, overrides -> payday to overrides }
+            .flatMapLatest { (payday, overrides) ->
+                val cycle = BudgetCycle.of(
+                    payday = payday,
+                    holidays = remoteConfigRepository.getHolidays(),
+                    overrides = overrides,
+                )
+                transactionRepository.observeBetween(cycle.startMillis(), cycle.endMillis())
+            }
 }

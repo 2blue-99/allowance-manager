@@ -4,14 +4,25 @@ import com.allowance.manager.core.domain.model.BudgetAlertSetting
 import com.allowance.manager.core.domain.model.BudgetAlertState
 import com.allowance.manager.core.domain.model.DailyReminderSetting
 import com.allowance.manager.core.domain.model.LedgerFilter
+import com.allowance.manager.core.domain.model.PaydayAlertSetting
 import com.allowance.manager.core.domain.model.UserType
 import kotlinx.coroutines.flow.Flow
+import java.time.YearMonth
 
 interface DataStoreRepository {
     // 용돈(월 예산)은 budget_history 테이블(월별 이력)로 이관 — BudgetRepository 참조
 
     fun getPayday(): Flow<Int>          // 1~31, 0 = 말일
     suspend fun setPayday(day: Int)
+
+    /**
+     * 달별 월급일 지정("이번 달 월급일 조정"). 키 = 명목 월, 값 = 1~31.
+     * 규칙일(payday)과 달리 영업일 보정을 하지 않는다 — [com.allowance.manager.core.domain.model.PaydayOverrides] 참고.
+     */
+    fun getPaydayOverrides(): Flow<Map<YearMonth, Int>>
+
+    /** 그 달의 월급일 지정. [day]가 null이면 지정 해제(= 규칙일로 계산) */
+    suspend fun setPaydayOverride(month: YearMonth, day: Int?)
 
     /** 사용자 유형(student/youth/common) — 온보딩·설정에서 선택, 개인화에 사용 */
     fun getUserType(): Flow<UserType>
@@ -49,6 +60,14 @@ interface DataStoreRepository {
     /** 가계부 관리 알림(정산 리마인더) 설정(켜짐 + 시각) */
     fun getDailyReminderSetting(): Flow<DailyReminderSetting>
     suspend fun setDailyReminderSetting(setting: DailyReminderSetting)
+
+    /** 월급일 알림 설정(켜짐) */
+    fun getPaydayAlertSetting(): Flow<PaydayAlertSetting>
+    suspend fun setPaydayAlertSetting(setting: PaydayAlertSetting)
+
+    /** 월급일 알림 — 마지막 발송 표식("2026-08-24:TODAY"). 같은 날 같은 종류 재발송 방지 */
+    suspend fun getPaydayAlertLastSent(): String
+    suspend fun setPaydayAlertLastSent(stamp: String)
 
     /** 예산 소진 알림 발송 상태(내부, 중복 발송 방지용) — 1회성 읽기/쓰기 */
     suspend fun getBudgetAlertState(): BudgetAlertState
