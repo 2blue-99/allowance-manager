@@ -22,6 +22,8 @@ import com.allowance.manager.feature.onboarding.OnboardingPermissionScreen
 import com.allowance.manager.feature.onboarding.OnboardingUiState
 import com.allowance.manager.feature.setting.IgnoredAccountScreen
 import com.allowance.manager.feature.setting.IgnoredAccountUiState
+import com.allowance.manager.core.domain.model.PaydayInfo
+import java.time.LocalDate
 import com.allowance.manager.feature.setting.SettingScreen
 import com.allowance.manager.feature.setting.SettingUiState
 import com.allowance.manager.feature.splash.SplashScreen
@@ -194,7 +196,23 @@ private fun StatsPreview() = AllowanceManagerTheme { StatsScreen(uiState = sampl
 @Preview(name = "8. 설정", group = GROUP, showBackground = true, widthDp = 360, heightDp = 740)
 @Composable
 private fun SettingPreview() = AllowanceManagerTheme {
-    SettingScreen(uiState = SettingUiState(budget = 2_000_000L, payday = 25, statusBarEnabled = true), versionName = "1.0.0", versionCode = 3)
+    SettingScreen(
+        uiState = SettingUiState(
+            budget = 2_000_000L,
+            payday = 25,
+            statusBarEnabled = true,
+            // "이번 달 월급일 조정" 행이 값 없이 비어 보이지 않게 실지급일 샘플을 준다
+            paydayInfo = PaydayInfo(
+                month = YearMonth.of(2026, 8),
+                rule = 25,
+                overrideDay = null,
+                actual = LocalDate.of(2026, 8, 25),
+                holidays = emptySet(),
+            ),
+        ),
+        versionName = "1.0.0",
+        versionCode = 3,
+    )
 }
 
 @Preview(name = "9. 계좌 관리", group = GROUP, showBackground = true, widthDp = 360, heightDp = 740)

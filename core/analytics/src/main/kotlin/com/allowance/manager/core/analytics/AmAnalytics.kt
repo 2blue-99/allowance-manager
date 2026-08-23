@@ -112,6 +112,7 @@ object AmAnalytics {
         const val IGNORE_REMOVE = "ignore_remove"
         const val BUDGET = "budget"
         const val PAYDAY = "payday"
+        const val PAYDAY_OVERRIDE = "payday_override"
         const val USERTYPE = "usertype"
         const val ACCOUNT_EDIT = "account_edit"
         const val FORCE_UPDATE = "force_update"
