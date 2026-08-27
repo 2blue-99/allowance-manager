@@ -216,45 +216,59 @@ fun TransactionFormSheet(
                     Spacer(Modifier.height(20.dp))
                 }
 
-                // 관리 카드(유형 위) — 예산 반영(추가·수정 공통) + 메인등록·무시(수정 전용)
+                // 유형(지출/수입/이체) — 최상단. 가로 꽉 채움(각 weight 1). 이체는 지출·수입 어디에도 안 잡히는 중립 타입.
+                // 선택 색은 홈 금액색 규칙과 통일: 지출=빨강 / 수입=메인(에메랄드) / 이체=중립 회색.
+                // 주요 선택 컨트롤이라 일반 칩보다 살짝 높게(44dp) — 배경은 꽉 차고 라벨은 중앙 유지
+                val typeChipModifier = Modifier.weight(1f).height(44.dp)
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    AmChip("지출", type == TransactionType.EXPENSE, selectedColor = AmColors.Red, modifier = typeChipModifier) { type = TransactionType.EXPENSE }
+                    AmChip("수입", type == TransactionType.INCOME, selectedColor = AmColors.Emerald, modifier = typeChipModifier) { type = TransactionType.INCOME }
+                    AmChip("이체", type == TransactionType.TRANSFER, selectedColor = AmColors.TextSecondary, modifier = typeChipModifier) { type = TransactionType.TRANSFER }
+                }
+
+                // 관리 카드(유형 아래) — 예산 반영(추가·수정 공통) + 메인등록·무시(수정 전용)
                 // 이체는 어떤 집계에도 안 잡혀 예산 반영 선택이 의미 없음 → 숨김(애니메이션)
                 val showScope = type != TransactionType.TRANSFER
                 // 수동 입력은 이미 집계 대상 → '메인 계좌로 등록' 불필요. 추가 모드엔 없음
                 val showPromote = editTx != null && !editTx.isManual
                 AnimatedVisibility(visible = showScope || showPromote) {
-                    AmCard(
-                        modifier = Modifier.fillMaxWidth(),
-                        color = AmColors.ScreenBg,
-                        contentPadding = PaddingValues(horizontal = AmSpacing.lg, vertical = AmSpacing.xs),
-                    ) {
-                        Column(modifier = Modifier.fillMaxWidth()) {
-                            AnimatedVisibility(visible = showScope) {
-                                Column(modifier = Modifier.fillMaxWidth()) {
-                                    SheetScopeSelector(
-                                        scope = txScope,
-                                        budgetName = budgetName,
-                                        onScope = { txScope = it; if (editTx == null) scopeTouched = true },
-                                    )
-                                    // 아래 토글이 함께 있을 때만 구분선 (scope와 함께 접힘)
-                                    if (showPromote) {
-                                        Box(
-                                            modifier = Modifier
-                                                .fillMaxWidth()
-                                                .padding(vertical = 5.dp)
-                                                .height(1.5.dp)
-                                                .background(AmColors.BarTrack),
+                    Column(modifier = Modifier.fillMaxWidth()) {
+                        // 유형과의 간격 (카드와 함께 접힘)
+                        Spacer(Modifier.height(16.dp))
+                        AmCard(
+                            modifier = Modifier.fillMaxWidth(),
+                            color = AmColors.ScreenBg,
+                            contentPadding = PaddingValues(horizontal = AmSpacing.lg, vertical = AmSpacing.xs),
+                        ) {
+                            Column(modifier = Modifier.fillMaxWidth()) {
+                                AnimatedVisibility(visible = showScope) {
+                                    Column(modifier = Modifier.fillMaxWidth()) {
+                                        SheetScopeSelector(
+                                            scope = txScope,
+                                            budgetName = budgetName,
+                                            onScope = { txScope = it; if (editTx == null) scopeTouched = true },
                                         )
+                                        // 아래 토글이 함께 있을 때만 구분선 (scope와 함께 접힘)
+                                        if (showPromote) {
+                                            Box(
+                                                modifier = Modifier
+                                                    .fillMaxWidth()
+                                                    .padding(vertical = 5.dp)
+                                                    .height(1.5.dp)
+                                                    .background(AmColors.BarTrack),
+                                            )
+                                        }
                                     }
                                 }
-                            }
-                            if (editTx != null && !editTx.isManual) {
-                                SheetToggleRow(
-                                    title = "메인 계좌로 등록",
-                                    // 계좌번호가 있으면 번호를, 없으면 출처(사용처)를 안내
-                                    subtitle = editTx.extractedAccount?.takeIf { it.isNotBlank() } ?: source,
-                                    checked = promote,
-                                    onCheckedChange = { promote = it },
-                                )
+                                if (editTx != null && !editTx.isManual) {
+                                    SheetToggleRow(
+                                        title = "메인 계좌로 등록",
+                                        // 계좌번호가 있으면 번호를, 없으면 출처(사용처)를 안내
+                                        subtitle = editTx.extractedAccount?.takeIf { it.isNotBlank() } ?: source,
+                                        checked = promote,
+                                        onCheckedChange = { promote = it },
+                                    )
+                                }
                             }
                         }
                     }
@@ -269,19 +283,7 @@ fun TransactionFormSheet(
                     )
                 }
 
-                // 관리 카드/무시가 하나라도 보이면 유형과 간격
-                AnimatedVisibility(visible = showScope || showPromote || (editTx != null && !editTx.isMain && !editTx.isManual)) {
-                    Spacer(Modifier.height(24.dp))
-                }
-
-                // 유형(지출/수입/이체) — 가로 꽉 채움(각 weight 1). 이체는 지출·수입 어디에도 안 잡히는 중립 타입.
-                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    AmChip("지출", type == TransactionType.EXPENSE, modifier = Modifier.weight(1f)) { type = TransactionType.EXPENSE }
-                    AmChip("수입", type == TransactionType.INCOME, modifier = Modifier.weight(1f)) { type = TransactionType.INCOME }
-                    AmChip("이체", type == TransactionType.TRANSFER, modifier = Modifier.weight(1f)) { type = TransactionType.TRANSFER }
-                }
-
-                Spacer(Modifier.height(20.dp))
+                Spacer(Modifier.height(24.dp))
                 SheetLabel("금액")
                 Spacer(Modifier.height(10.dp))
                 AmTextField(
@@ -464,10 +466,9 @@ private fun defaultScopeFor(type: TransactionType): TxScope =
 @Composable
 private fun SheetScopeSelector(scope: TxScope, budgetName: String, onScope: (TxScope) -> Unit) {
     Column(modifier = Modifier.fillMaxWidth().padding(vertical = 6.dp)) {
-        Text("예산 반영", style = AmType.size14_bold, color = AmColors.TextPrimary)
-        Spacer(Modifier.height(10.dp))
+        // 제목 없이 칩(호칭 반영)이 곧 라벨 역할 — 아래 안내문이 의미 보강
         Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-            AmChip("예산 반영", scope == TxScope.BUDGET, modifier = Modifier.weight(1f)) { onScope(TxScope.BUDGET) }
+            AmChip("${budgetName} 반영", scope == TxScope.BUDGET, modifier = Modifier.weight(1f)) { onScope(TxScope.BUDGET) }
             AmChip("가계부만", scope == TxScope.LEDGER_ONLY, modifier = Modifier.weight(1f)) { onScope(TxScope.LEDGER_ONLY) }
             AmChip("제외", scope == TxScope.EXCLUDED, modifier = Modifier.weight(1f)) { onScope(TxScope.EXCLUDED) }
         }
