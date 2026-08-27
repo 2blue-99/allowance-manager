@@ -1,5 +1,6 @@
 package com.allowance.manager.core.config.di
 
+import com.allowance.manager.core.config.BuildConfig
 import com.google.firebase.Firebase
 import com.google.firebase.remoteconfig.FirebaseRemoteConfig
 import com.google.firebase.remoteconfig.remoteConfig
@@ -19,7 +20,8 @@ object RemoteConfigModule {
     fun provideFirebaseRemoteConfig(): FirebaseRemoteConfig = Firebase.remoteConfig.apply {
         setConfigSettingsAsync(
             remoteConfigSettings {
-                minimumFetchIntervalInSeconds = 3600
+                // debug은 값 확인이 잦으니 1초, release는 과도한 조회를 막아 10분(600초).
+                minimumFetchIntervalInSeconds = if (BuildConfig.DEBUG) 1 else 600
             }
         )
     }

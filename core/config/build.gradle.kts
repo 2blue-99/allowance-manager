@@ -20,6 +20,9 @@ android {
     kotlinOptions {
         jvmTarget = "17"
     }
+    buildFeatures {
+        buildConfig = true   // BuildConfig.DEBUG → fetch 간격을 debug/release로 분기
+    }
 }
 
 dependencies {
