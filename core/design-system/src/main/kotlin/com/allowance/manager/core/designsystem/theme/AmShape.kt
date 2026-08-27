@@ -1,6 +1,7 @@
 package com.allowance.manager.core.designsystem.theme
 
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 
 /**
@@ -16,8 +17,11 @@ object AmShape {
     /** 설정 행 등 작은 카드 */
     val cardSmall = RoundedCornerShape(9.dp)
 
+    /** 기본 카드 모서리 반경 (스와이프 시 한쪽 모서리 보간 등에 사용) */
+    val cardRadius: Dp = 12.dp
+
     /** 기본 카드 */
-    val card = RoundedCornerShape(12.dp)
+    val card = RoundedCornerShape(cardRadius)
 
     /** 강조 카드(홈 예산 요약 등) */
     val cardLarge = RoundedCornerShape(18.dp)

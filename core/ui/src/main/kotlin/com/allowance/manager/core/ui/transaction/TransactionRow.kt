@@ -17,12 +17,14 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.allowance.manager.core.designsystem.component.AmCard
 import com.allowance.manager.core.designsystem.theme.AmColors
+import com.allowance.manager.core.designsystem.theme.AmShape
 import com.allowance.manager.core.designsystem.theme.AmType
 import com.allowance.manager.core.domain.model.Transaction
 import com.allowance.manager.core.domain.model.TransactionType
@@ -34,7 +36,12 @@ import com.allowance.manager.core.domain.model.TxScope
  * EXCLUDED 회색 카드 + '미등록'(자동)·'제외'(사용자) 태그. (취소선 없음)
  */
 @Composable
-fun TransactionRow(tx: Transaction, budgetName: String = "예산", onClick: () -> Unit) {
+fun TransactionRow(
+    tx: Transaction,
+    budgetName: String = "예산",
+    shape: Shape = AmShape.card,
+    onClick: () -> Unit,
+) {
     val excluded = tx.scope == TxScope.EXCLUDED
     val ledgerOnly = tx.scope == TxScope.LEDGER_ONLY
     val isUnregistered = !tx.isMain && !tx.isManual   // 자동감지 · 계좌 미등록
@@ -52,6 +59,7 @@ fun TransactionRow(tx: Transaction, budgetName: String = "예산", onClick: () -
         modifier = Modifier.fillMaxWidth(),
         // EXCLUDED(미등록·제외)만 회색 카드 → 합계에서 빠졌음을 표현. LEDGER_ONLY는 정상 흰색.
         color = if (excluded) AmColors.HiddenBg else AmColors.CardBg,
+        shape = shape,
         contentPadding = PaddingValues(14.dp),
         onClick = onClick,
     ) {

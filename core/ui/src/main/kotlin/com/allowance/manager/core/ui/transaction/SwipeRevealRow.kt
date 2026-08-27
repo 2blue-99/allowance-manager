@@ -17,6 +17,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Delete
 import androidx.compose.material.icons.outlined.Visibility
@@ -30,6 +31,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.Dp
@@ -44,6 +46,9 @@ import kotlin.math.roundToInt
 /**
  * 왼쪽으로 밀면 숨김·삭제 액션을 드러내는 행 (draggable + Animatable, 안정 API).
  * 홈·월별 등 내역 리스트에서 공통으로 사용한다.
+ *
+ * content 슬롯에는 밀림 진행도에 맞춰 계산된 전경 카드 [Shape]를 전달한다.
+ * 밀수록 오른쪽 모서리를 직각으로 좁혀(왼쪽은 유지) 제외 버튼과 딱 붙게 한다.
  */
 @Composable
 fun SwipeRevealRow(
@@ -51,13 +56,23 @@ fun SwipeRevealRow(
     onToggleHidden: () -> Unit,
     onDelete: () -> Unit,
     modifier: Modifier = Modifier,
-    content: @Composable () -> Unit,
+    content: @Composable (Shape) -> Unit,
 ) {
     val density = LocalDensity.current
     val actionWidth = 68.dp
     val maxReveal = with(density) { (actionWidth * 2).toPx() }
     val offsetX = remember { Animatable(0f) }
     val scope = rememberCoroutineScope()
+
+    // 밀림 진행도(0=닫힘 · 1=완전 열림) → 오른쪽 모서리 반경만 12dp→0으로 보간
+    val progress = (-offsetX.value / maxReveal).coerceIn(0f, 1f)
+    val trailingRadius = AmShape.cardRadius * (1f - progress)
+    val cardShape = RoundedCornerShape(
+        topStart = AmShape.cardRadius,
+        bottomStart = AmShape.cardRadius,
+        topEnd = trailingRadius,
+        bottomEnd = trailingRadius,
+    )
 
     Box(modifier = modifier.clip(AmShape.card)) {
         // 배경: 오른쪽에 제외·삭제
@@ -91,7 +106,7 @@ fun SwipeRevealRow(
                         offsetX.animateTo(target)
                     },
                 ),
-        ) { content() }
+        ) { content(cardShape) }
     }
 }
 

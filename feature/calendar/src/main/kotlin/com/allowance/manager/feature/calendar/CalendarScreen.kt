@@ -411,8 +411,8 @@ private fun TransactionList(
                         onToggleHidden = { onToggleHidden(tx) },
                         onDelete = { onRequestDelete(tx) },
                         modifier = Modifier.animateItem(),
-                    ) {
-                        TransactionRow(tx = tx, budgetName = budgetName, onClick = { onSelect(tx) })
+                    ) { cardShape ->
+                        TransactionRow(tx = tx, budgetName = budgetName, shape = cardShape, onClick = { onSelect(tx) })
                     }
                 }
             }
