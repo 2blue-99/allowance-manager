@@ -1,5 +1,6 @@
 package com.allowance.manager.core.domain.usecase.alert
 
+import com.allowance.manager.core.domain.model.Holidays
 import org.junit.Assert.assertEquals
 import org.junit.Test
 import java.time.LocalDate
@@ -30,7 +31,7 @@ class PaydayNoticeDeciderTest {
     @Test
     fun `공휴일 보정도 실지급일에 반영된다`() {
         // 8/25(화)를 공휴일로 지정 → 실지급일 8/24(월), 그 전날은 8/23
-        val holidays = setOf(LocalDate.of(2026, 8, 25))
+        val holidays = Holidays(mapOf(LocalDate.of(2026, 8, 25) to "임시공휴일"))
         assertEquals(
             PaydayNoticeDecider.Notice.TOMORROW,
             PaydayNoticeDecider.decide(LocalDate.of(2026, 8, 23), payday = 25, holidays = holidays),

@@ -22,6 +22,7 @@ import com.allowance.manager.feature.onboarding.OnboardingPermissionScreen
 import com.allowance.manager.feature.onboarding.OnboardingUiState
 import com.allowance.manager.feature.setting.IgnoredAccountScreen
 import com.allowance.manager.feature.setting.IgnoredAccountUiState
+import com.allowance.manager.core.domain.model.Holidays
 import com.allowance.manager.core.domain.model.PaydayInfo
 import java.time.LocalDate
 import com.allowance.manager.feature.setting.SettingScreen
@@ -207,7 +208,7 @@ private fun SettingPreview() = AllowanceManagerTheme {
                 rule = 25,
                 overrideDay = null,
                 actual = LocalDate.of(2026, 8, 25),
-                holidays = emptySet(),
+                holidays = Holidays.EMPTY,
             ),
         ),
         versionName = "1.0.0",

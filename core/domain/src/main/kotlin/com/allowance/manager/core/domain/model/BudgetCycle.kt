@@ -39,10 +39,10 @@ data class BudgetCycle(
 
         /**
          * 지급일이 주말·공휴일이면 직전 영업일로 당긴다. (급여는 비영업일 전날 지급)
-         * @param holidays 공휴일·은행 휴무일 집합. Remote Config(`kr_holidays`)에서 주입 — [KrHolidays] 참고.
+         * @param holidays 공휴일·은행 휴무일 목록. Remote Config(`kr_holidays`)에서 주입 — [KrHolidays] 참고.
          * 비어 있으면 주말만 보정한다.
          */
-        fun adjustToBusinessDay(date: LocalDate, holidays: Set<LocalDate> = emptySet()): LocalDate {
+        fun adjustToBusinessDay(date: LocalDate, holidays: Holidays = Holidays.EMPTY): LocalDate {
             var d = date
             while (d.dayOfWeek == DayOfWeek.SATURDAY || d.dayOfWeek == DayOfWeek.SUNDAY || d in holidays) {
                 d = d.minusDays(1)
@@ -64,7 +64,7 @@ data class BudgetCycle(
             ym: YearMonth,
             payday: Int,
             overrides: Map<YearMonth, Int> = emptyMap(),
-            holidays: Set<LocalDate> = emptySet(),
+            holidays: Holidays = Holidays.EMPTY,
         ): LocalDate {
             val override = overrides[ym]
             if (override != null) return dateOf(ym, override)
@@ -74,7 +74,7 @@ data class BudgetCycle(
         fun of(
             payday: Int,
             today: LocalDate = LocalDate.now(),
-            holidays: Set<LocalDate> = emptySet(),
+            holidays: Holidays = Holidays.EMPTY,
             overrides: Map<YearMonth, Int> = emptyMap(),
         ): BudgetCycle {
             // 월(月) 판단은 오늘이 속한 달로 하고, 경계 값은 그 달의 실지급일로 만든다.

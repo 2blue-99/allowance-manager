@@ -14,7 +14,7 @@ class PaydayInfoTest {
         month: YearMonth = YearMonth.of(2026, 8),
         rule: Int = 25,
         overrideDay: Int? = null,
-        holidays: Set<LocalDate> = setOf(LocalDate.of(2026, 8, 31)),
+        holidays: Holidays = Holidays(mapOf(LocalDate.of(2026, 8, 31) to "추석")),
     ) = PaydayInfo(
         month = month,
         rule = rule,
@@ -32,7 +32,10 @@ class PaydayInfoTest {
     @Test
     fun `공휴일을 입력하면 공휴일 경고`() {
         val warning = info().warningFor(31)
-        assertEquals(PaydayWarning(LocalDate.of(2026, 8, 31), PaydayWarning.Kind.HOLIDAY), warning)
+        assertEquals(
+            PaydayWarning(LocalDate.of(2026, 8, 31), PaydayWarning.Kind.HOLIDAY, holidayName = "추석"),
+            warning,
+        )
     }
 
     @Test
@@ -45,7 +48,7 @@ class PaydayInfoTest {
     @Test
     fun `공휴일과 주말이 겹치면 공휴일 경고가 우선`() {
         // 2026-08-22는 토요일 — 공휴일로도 지정
-        val warning = info(holidays = setOf(LocalDate.of(2026, 8, 22))).warningFor(22)
+        val warning = info(holidays = Holidays(mapOf(LocalDate.of(2026, 8, 22) to "추석 연휴"))).warningFor(22)
         assertEquals(PaydayWarning.Kind.HOLIDAY, warning?.kind)
     }
 
@@ -63,7 +66,7 @@ class PaydayInfoTest {
     @Test
     fun `그 달에 없는 날짜는 말일로 보고 판정한다`() {
         // 2026-02-31 → 2/28(토) → 주말 경고
-        val warning = info(month = YearMonth.of(2026, 2), holidays = emptySet()).warningFor(31)
+        val warning = info(month = YearMonth.of(2026, 2), holidays = Holidays.EMPTY).warningFor(31)
         assertEquals(PaydayWarning(LocalDate.of(2026, 2, 28), PaydayWarning.Kind.WEEKEND), warning)
     }
 }

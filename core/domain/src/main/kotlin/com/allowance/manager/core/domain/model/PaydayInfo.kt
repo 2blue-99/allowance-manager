@@ -19,7 +19,7 @@ data class PaydayInfo(
     val rule: Int,
     val overrideDay: Int?,
     val actual: LocalDate,
-    val holidays: Set<LocalDate>,
+    val holidays: Holidays,
 ) {
     /** 그 달만 조정된 상태인지 */
     val isAdjusted: Boolean get() = overrideDay != null
@@ -32,7 +32,7 @@ data class PaydayInfo(
         if (day !in 1..31) return null
         val date = BudgetCycle.dateOf(month, day)
         return when {
-            date in holidays -> PaydayWarning(date, PaydayWarning.Kind.HOLIDAY)
+            date in holidays -> PaydayWarning(date, PaydayWarning.Kind.HOLIDAY, holidays.nameOf(date))
             date.dayOfWeek == DayOfWeek.SATURDAY || date.dayOfWeek == DayOfWeek.SUNDAY ->
                 PaydayWarning(date, PaydayWarning.Kind.WEEKEND)
             else -> null
@@ -40,10 +40,14 @@ data class PaydayInfo(
     }
 }
 
-/** 입력한 지급일이 급여가 들어오기 어려운 날일 때의 안내(에러 아님). 문구는 화면에서 만든다. */
+/**
+ * 입력한 지급일이 급여가 들어오기 어려운 날일 때의 안내(에러 아님). 문구는 화면에서 만든다.
+ * @param holidayName 공휴일 이름(예: "추석"). 이름을 알면 "…은 추석이에요"처럼 구체적으로 말할 수 있다.
+ */
 data class PaydayWarning(
     val date: LocalDate,
     val kind: Kind,
+    val holidayName: String? = null,
 ) {
     enum class Kind { HOLIDAY, WEEKEND }
 }

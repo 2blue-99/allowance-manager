@@ -10,8 +10,10 @@ import com.allowance.manager.core.domain.model.TransactionCategory
 import com.allowance.manager.core.domain.model.TransactionType
 import com.allowance.manager.core.domain.repository.BudgetRepository
 import com.allowance.manager.core.domain.repository.DataStoreRepository
+import com.allowance.manager.core.domain.repository.RemoteConfigRepository
 import com.allowance.manager.core.domain.repository.TransactionRepository
 import com.allowance.manager.core.domain.usecase.alert.PaydayNoticeDecider
+import com.allowance.manager.core.domain.usecase.config.FetchRemoteConfigUseCase
 import com.allowance.manager.core.domain.usecase.budget.ObserveBudgetStatusUseCase
 import com.allowance.manager.core.domain.usecase.budget.ObservePaydayInfoUseCase
 import com.allowance.manager.core.domain.usecase.budget.SetPaydayOverrideUseCase
@@ -48,6 +50,8 @@ class DebugViewModel @Inject constructor(
     private val setPaydayUseCase: SetPaydayUseCase,
     private val setPaydayOverrideUseCase: SetPaydayOverrideUseCase,
     private val dataStoreRepository: DataStoreRepository,
+    private val remoteConfigRepository: RemoteConfigRepository,
+    private val fetchRemoteConfigUseCase: FetchRemoteConfigUseCase,
     observePaydayInfoUseCase: ObservePaydayInfoUseCase,
 ) : BaseViewModel() {
 
@@ -147,6 +151,43 @@ class DebugViewModel @Inject constructor(
                     ),
                 )
             }
+        }
+    }
+
+    /** Remote Config 표시를 다시 읽게 하는 트리거(원격 값은 Flow가 아니라 동기 읽기) */
+    private val configRefresh = MutableStateFlow(0)
+
+    /**
+     * Remote Config 현재 값 — 강제 업데이트 버전·업데이트 노트·공휴일 데이터.
+     *
+     * 공휴일은 version이 0이면 원격을 못 받아 **내장 폴백**을 쓰는 중이라는 뜻이다.
+     * 실기기에서 "Remote Config가 실제로 붙었는지"를 이걸로 구분한다.
+     */
+    val remoteConfigText: StateFlow<String> = configRefresh
+        .map {
+            val holidays = remoteConfigRepository.getHolidays()
+            val source = if (holidays.version == 0) "내장 폴백" else "원격 v${holidays.version}"
+            val upcoming = holidays.byDate.entries
+                .filter { e -> !e.key.isBefore(LocalDate.now()) }
+                .sortedBy { e -> e.key }
+                .take(3)
+                .joinToString(", ") { e -> "${e.key.monthValue}/${e.key.dayOfMonth} ${e.value}" }
+                .ifEmpty { "없음" }
+            buildString {
+                appendLine("공휴일 $source · ${holidays.count}건")
+                appendLine("다가오는: $upcoming")
+                appendLine("강제 업데이트 버전: ${remoteConfigRepository.getForcedUpdateVersion().ifEmpty { "(없음)" }}")
+                append("업데이트 노트: ${remoteConfigRepository.getUpdateNote().ifEmpty { "(없음)" }}")
+            }
+        }
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), "…")
+
+    /** Remote Config를 지금 fetch·활성화하고 표시를 갱신. (최소 fetch 간격 때문에 값이 안 바뀔 수 있다) */
+    fun fetchRemoteConfig() {
+        viewModelScope.launch {
+            runCatching { fetchRemoteConfigUseCase() }
+            configRefresh.value++
+            paydayRefresh.value++
         }
     }
 

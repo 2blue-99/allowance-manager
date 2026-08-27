@@ -550,11 +550,11 @@ private fun PaydayOverrideDialog(
     }
 }
 
-/** 경고 문구 — "8월 31일은 공휴일이에요" / "8월 23일은 일요일이에요" */
+/** 경고 문구 — 이름을 알면 "8월 31일은 추석이에요", 모르면 "…은 공휴일이에요" */
 private fun PaydayWarning.message(month: Int): String {
     val dayText = "${month}월 ${date.dayOfMonth}일"
     return when (kind) {
-        PaydayWarning.Kind.HOLIDAY -> "${dayText}은 공휴일이에요"
+        PaydayWarning.Kind.HOLIDAY -> "${dayText}은 ${holidayName ?: "공휴일"}이에요"
         PaydayWarning.Kind.WEEKEND ->
             if (date.dayOfWeek == DayOfWeek.SATURDAY) "${dayText}은 토요일이에요" else "${dayText}은 일요일이에요"
     }

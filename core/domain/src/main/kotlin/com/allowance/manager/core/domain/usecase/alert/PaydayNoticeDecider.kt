@@ -1,6 +1,7 @@
 package com.allowance.manager.core.domain.usecase.alert
 
 import com.allowance.manager.core.domain.model.BudgetCycle
+import com.allowance.manager.core.domain.model.Holidays
 import java.time.LocalDate
 import java.time.YearMonth
 
@@ -22,7 +23,7 @@ object PaydayNoticeDecider {
         today: LocalDate,
         payday: Int,
         overrides: Map<YearMonth, Int> = emptyMap(),
-        holidays: Set<LocalDate> = emptySet(),
+        holidays: Holidays = Holidays.EMPTY,
     ): Notice {
         val thisYm = YearMonth.from(today)
         val payDates = listOf(thisYm.minusMonths(1), thisYm, thisYm.plusMonths(1))

@@ -48,6 +48,7 @@ fun DebugRoute(
     val homeGuideEnabled by viewModel.homeGuideEnabled.collectAsStateWithLifecycle()
     val budgetStatusText by viewModel.budgetStatusText.collectAsStateWithLifecycle()
     val paydayDebugText by viewModel.paydayDebugText.collectAsStateWithLifecycle()
+    val remoteConfigText by viewModel.remoteConfigText.collectAsStateWithLifecycle()
     DebugScreen(
         onBack = onBack,
         onNavigateToIntro = onNavigateToIntro,
@@ -66,6 +67,8 @@ fun DebugRoute(
         onClearPaydayForTest = viewModel::clearPaydayForTest,
         onTriggerPaydayAlert = viewModel::triggerPaydayAlertNow,
         onClearPaydaySentMark = viewModel::clearPaydayAlertSentMark,
+        remoteConfigText = remoteConfigText,
+        onFetchRemoteConfig = viewModel::fetchRemoteConfig,
     )
 }
 
@@ -88,6 +91,8 @@ fun DebugScreen(
     onClearPaydayForTest: () -> Unit = {},
     onTriggerPaydayAlert: (PaydayNoticeDecider.Notice?) -> Unit = {},
     onClearPaydaySentMark: () -> Unit = {},
+    remoteConfigText: String = "",
+    onFetchRemoteConfig: () -> Unit = {},
 ) {
     // 테스트 데이터 대상 달 (기본 이번 달) — 카테고리 시드·달별 세팅 공용 + 월 피커 노출 여부
     var seedMonth by remember { mutableStateOf(YearMonth.now()) }
@@ -143,6 +148,14 @@ fun DebugScreen(
         Spacer(Modifier.height(AmSpacing.md))
         // 리마인더 즉시 발화. "예산 10% 소진" 등으로 새 내역을 만든 뒤 눌러야 "안 본 내역" 판정을 통과해 알림이 뜬다.
         AmButton(text = "리마인더 지금 실행", onClick = onTriggerReminder, modifier = Modifier.fillMaxWidth())
+
+        Spacer(Modifier.height(AmSpacing.xl))
+        Text("Remote Config", style = AmType.size12_bold, color = AmColors.TextSecondary)
+        Spacer(Modifier.height(AmSpacing.sm))
+        // 공휴일이 "내장 폴백"으로 나오면 원격 값을 못 받은 상태다
+        Text(remoteConfigText, style = AmType.size14_bold, color = AmColors.TextPrimary)
+        Spacer(Modifier.height(AmSpacing.md))
+        AmButton(text = "지금 다시 받기 (fetch)", onClick = onFetchRemoteConfig, modifier = Modifier.fillMaxWidth())
 
         Spacer(Modifier.height(AmSpacing.xl))
         Text("월급일 알림 (C안 테스트)", style = AmType.size12_bold, color = AmColors.TextSecondary)

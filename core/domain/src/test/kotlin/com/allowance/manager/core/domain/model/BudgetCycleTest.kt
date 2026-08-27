@@ -79,7 +79,7 @@ class BudgetCycleTest {
         val cycle = BudgetCycle.of(
             payday = 25,
             today = LocalDate.of(2026, 8, 30),
-            holidays = setOf(LocalDate.of(2026, 8, 25)),
+            holidays = Holidays(mapOf(LocalDate.of(2026, 8, 25) to "임시공휴일")),
         )
         assertEquals(LocalDate.of(2026, 8, 24), cycle.start)
         assertEquals(LocalDate.of(2026, 9, 25), cycle.endExclusive) // 9-25(금)는 그대로
