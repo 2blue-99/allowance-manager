@@ -48,6 +48,10 @@ class PreferencesDataSource @Inject constructor(
         // 가계부 관리 알림(내부) — 마지막 앱 조회 시각 / 마지막 리마인더 발송 시각
         val REMINDER_LAST_SEEN = longPreferencesKey("reminder_last_seen")
         val REMINDER_LAST_NOTIFIED = longPreferencesKey("reminder_last_notified")
+        // 홈 공지 — 마지막으로 확인(닫음)한 공지 id (같은 공지 재노출 방지)
+        val LAST_SEEN_ANNOUNCEMENT_ID = stringPreferencesKey("last_seen_announcement_id")
+        // 추천 업데이트 팝업 — 마지막으로 띄운 날짜(yyyy-MM-dd). 하루 1회 노출 판정용.
+        val RECOMMEND_UPDATE_LAST_SHOWN = stringPreferencesKey("recommend_update_last_shown")
 
         private const val DEFAULT_PAYDAY = 25
         private const val DEFAULT_USER_TYPE = "common"              // UserType.Default.key
@@ -148,6 +152,14 @@ class PreferencesDataSource @Inject constructor(
     suspend fun setReminderLastSeen(timeMs: Long) = set(REMINDER_LAST_SEEN, timeMs)
     suspend fun getReminderLastNotified(): Long = dataStore.data.first()[REMINDER_LAST_NOTIFIED] ?: 0L
     suspend fun setReminderLastNotified(timeMs: Long) = set(REMINDER_LAST_NOTIFIED, timeMs)
+
+    // 홈 공지 — 마지막으로 확인한 공지 id (1회성 읽기/쓰기)
+    suspend fun getLastSeenAnnouncementId(): String = dataStore.data.first()[LAST_SEEN_ANNOUNCEMENT_ID] ?: ""
+    suspend fun setLastSeenAnnouncementId(id: String) = set(LAST_SEEN_ANNOUNCEMENT_ID, id)
+
+    // 추천 업데이트 팝업 — 마지막으로 띄운 날짜 (1회성 읽기/쓰기)
+    suspend fun getRecommendUpdateLastShown(): String = dataStore.data.first()[RECOMMEND_UPDATE_LAST_SHOWN] ?: ""
+    suspend fun setRecommendUpdateLastShown(date: String) = set(RECOMMEND_UPDATE_LAST_SHOWN, date)
 
     private fun <T> get(key: Preferences.Key<T>, defaultValue: T): Flow<T> =
         dataStore.data.map { it[key] ?: defaultValue }

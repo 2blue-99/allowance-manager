@@ -2,6 +2,7 @@ package com.allowance.manager.core.data.repository
 
 import com.allowance.manager.core.config.RemoteConfigDataSource
 import com.allowance.manager.core.config.RemoteConfigKeys
+import com.allowance.manager.core.domain.model.Announcement
 import com.allowance.manager.core.domain.model.Holidays
 import com.allowance.manager.core.domain.model.KrHolidays
 import com.allowance.manager.core.domain.repository.RemoteConfigRepository
@@ -17,10 +18,10 @@ class RemoteConfigRepositoryImpl @Inject constructor(
         remoteConfigDataSource.fetchAndActivate()
 
     override fun getForcedUpdateVersion(): String =
-        remoteConfigDataSource.getString(RemoteConfigKeys.FORCED_UPDATE_VERSION)
+        remoteConfigDataSource.getString(RemoteConfigKeys.UPDATE_FORCED_VERSION)
 
-    override fun getUpdateNote(): String =
-        remoteConfigDataSource.getString(RemoteConfigKeys.UPDATE_NOTE)
+    override fun getRecommendUpdateVersion(): String =
+        remoteConfigDataSource.getString(RemoteConfigKeys.UPDATE_RECOMMEND_VERSION)
 
     // 파싱 결과 캐시 — getHolidays()는 사이클을 계산하는 Flow 안에서 매 emit마다 불린다.
     // 원격 문자열이 그대로면 재파싱하지 않는다. (JSON 파싱을 거래 한 건 바뀔 때마다 반복하면 낭비)
@@ -37,4 +38,8 @@ class RemoteConfigRepositoryImpl @Inject constructor(
         }
         return cached
     }
+
+    // 값이 없거나 active=false거나 파싱 실패면 null → 호출부가 다이얼로그를 안 띄운다.
+    override fun getAnnouncement(): Announcement? =
+        Announcement.parse(remoteConfigDataSource.getString(RemoteConfigKeys.NOTICE))
 }

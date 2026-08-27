@@ -100,4 +100,12 @@ class DataStoreRepositoryImpl @Inject constructor(
 
     override suspend fun getReminderLastNotified(): Long = preferencesDataSource.getReminderLastNotified()
     override suspend fun setReminderLastNotified(timeMs: Long) = preferencesDataSource.setReminderLastNotified(timeMs)
+
+    override suspend fun getLastSeenAnnouncementId(): String = preferencesDataSource.getLastSeenAnnouncementId()
+    override suspend fun setLastSeenAnnouncementId(id: String) =
+        preferencesDataSource.setLastSeenAnnouncementId(id)
+
+    override suspend fun getRecommendUpdateLastShown(): String = preferencesDataSource.getRecommendUpdateLastShown()
+    override suspend fun setRecommendUpdateLastShown(date: String) =
+        preferencesDataSource.setRecommendUpdateLastShown(date)
 }

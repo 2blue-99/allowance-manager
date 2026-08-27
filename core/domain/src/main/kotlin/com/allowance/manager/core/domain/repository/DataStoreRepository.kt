@@ -80,4 +80,12 @@ interface DataStoreRepository {
     /** 가계부 관리 알림 — 마지막 리마인더 발송 시각 (재알림 방지) */
     suspend fun getReminderLastNotified(): Long
     suspend fun setReminderLastNotified(timeMs: Long)
+
+    /** 홈 공지 — 마지막으로 확인한 공지 id (같은 공지 재노출 방지) */
+    suspend fun getLastSeenAnnouncementId(): String
+    suspend fun setLastSeenAnnouncementId(id: String)
+
+    /** 추천 업데이트 팝업 — 마지막으로 띄운 날짜(yyyy-MM-dd). 하루 1회 노출 판정용. */
+    suspend fun getRecommendUpdateLastShown(): String
+    suspend fun setRecommendUpdateLastShown(date: String)
 }

@@ -1,7 +1,10 @@
 package com.allowance.manager.feature.home
 
 import androidx.lifecycle.viewModelScope
+import com.allowance.manager.core.domain.model.Announcement
 import com.allowance.manager.core.domain.model.Transaction
+import com.allowance.manager.core.domain.usecase.config.GetPendingAnnouncementUseCase
+import com.allowance.manager.core.domain.usecase.config.MarkAnnouncementSeenUseCase
 import com.allowance.manager.core.domain.usecase.account.ObserveAccountsUseCase
 import com.allowance.manager.core.domain.usecase.budget.GetUserTypeUseCase
 import com.allowance.manager.core.domain.usecase.budget.ObserveBudgetStatusUseCase
@@ -84,11 +87,17 @@ class HomeViewModel @Inject constructor(
     private val setHomeGuideShownUseCase: SetHomeGuideShownUseCase,
     private val getHomeNewAccountBadgeUseCase: GetHomeNewAccountBadgeUseCase,
     private val setHomeNewAccountBadgeUseCase: SetHomeNewAccountBadgeUseCase,
+    private val getPendingAnnouncementUseCase: GetPendingAnnouncementUseCase,
+    private val markAnnouncementSeenUseCase: MarkAnnouncementSeenUseCase,
     private val analytics: AnalyticsHelper,
 ) : BaseViewModel() {
 
     private val _uiState = MutableStateFlow(HomeUiState())
     val uiState: StateFlow<HomeUiState> = _uiState.asStateFlow()
+
+    // 홈 진입 시 띄울 공지(Remote Config). 없으면 null → 다이얼로그 안 뜸.
+    private val _announcement = MutableStateFlow<Announcement?>(null)
+    val announcement: StateFlow<Announcement?> = _announcement.asStateFlow()
 
     // 필터는 로컬 상태가 소스(즉시 반영) — 저장은 부수효과. 저장 왕복 지연으로 인한 버벅임 방지.
     private val filterState = MutableStateFlow(LedgerFilter.Home)
@@ -102,9 +111,19 @@ class HomeViewModel @Inject constructor(
         viewModelScope.launch { setHomeGuideShownUseCase(true) }
     }
 
+    /** 공지 확인/닫음 — 그 id를 저장해 다시 안 뜨게 하고, 다이얼로그를 내린다. */
+    fun onAnnouncementDismissed() {
+        val id = _announcement.value?.id ?: return
+        _announcement.value = null
+        viewModelScope.launch { markAnnouncementSeenUseCase(id) }
+    }
+
     init {
         // 저장된 필터로 1회 초기화(이후엔 로컬이 소스)
         viewModelScope.launch { filterState.value = getHomeFilterUseCase().first() }
+
+        // 홈 진입 시 Remote Config 공지 조회 — 안 본 공지면 다이얼로그로 노출
+        viewModelScope.launch { _announcement.value = getPendingAnnouncementUseCase() }
 
         // 전체를 보는 중이면(배지 && 전체선택) '새 계좌' 배지 자동 해제 (B안)
         viewModelScope.launch {

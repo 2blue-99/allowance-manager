@@ -23,6 +23,7 @@ import com.allowance.manager.core.analytics.LocalAnalyticsHelper
 import com.allowance.manager.core.designsystem.theme.AllowanceManagerTheme
 import com.allowance.manager.core.designsystem.theme.AmColors
 import com.allowance.manager.core.designsystem.theme.AmType
+import com.allowance.manager.core.domain.model.UpdateType
 import com.allowance.manager.navigation.AppNavHost
 import com.allowance.manager.service.StatusBarService
 import com.google.firebase.messaging.FirebaseMessaging
@@ -77,12 +78,14 @@ class MainActivity : ComponentActivity() {
                         analytics = analyticsHelper,
                     )
 
-                    if (uiState.showForceUpdateDialog) {
+                    uiState.pendingUpdate?.let { type ->
+                        val forced = type == UpdateType.FORCED
                         AmDialog(
-                            title = "업데이트 안내",
-                            // 강제 업데이트 → 닫기/뒤로로 닫히지 않음(무동작), 업데이트만 진행
-                            onDismiss = {},
+                            title = "알림",
+                            // 강제는 닫기/뒤로로 안 닫힘(무동작). 추천은 확인/바깥탭으로 닫힘.
+                            onDismiss = { if (!forced) viewModel.onUpdateDialogDismissed() },
                             onConfirm = {
+                                if (!forced) viewModel.onUpdateDialogDismissed()
                                 startActivity(
                                     Intent(
                                         Intent.ACTION_VIEW,
@@ -91,10 +94,15 @@ class MainActivity : ComponentActivity() {
                                 )
                             },
                             confirmText = "업데이트",
-                            dismissText = "닫기",
-                            analyticsTag = AmAnalytics.Dialog.FORCE_UPDATE,
+                            // 강제는 업데이트 버튼 하나(dismissText 비움), 추천은 확인/업데이트 두 버튼.
+                            dismissText = if (forced) "" else "확인",
+                            analyticsTag = if (forced) AmAnalytics.Dialog.FORCE_UPDATE else AmAnalytics.Dialog.RECOMMEND_UPDATE,
                         ) {
-                            Text(uiState.updateNote, style = AmType.size14_medium, color = AmColors.TextSecondary)
+                            Text(
+                                if (forced) "필수 업데이트가 있어요!" else "최신 업데이트가 있어요!",
+                                style = AmType.size14_medium,
+                                color = AmColors.TextSecondary,
+                            )
                         }
                     }
                     }

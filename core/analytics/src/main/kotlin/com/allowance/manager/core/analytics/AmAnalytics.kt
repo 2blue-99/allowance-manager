@@ -94,6 +94,7 @@ object AmAnalytics {
         const val DIALOG = "dialog"
         const val BY = "by"
         const val STEP = "step"
+        const val ID = "id"
     }
 
     /** User Property 키 */
@@ -116,6 +117,8 @@ object AmAnalytics {
         const val USERTYPE = "usertype"
         const val ACCOUNT_EDIT = "account_edit"
         const val FORCE_UPDATE = "force_update"
+        const val RECOMMEND_UPDATE = "recommend_update"
         const val DONATE_THANKS = "donate_thanks"
+        const val ANNOUNCEMENT = "announcement"
     }
 }

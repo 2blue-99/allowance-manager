@@ -177,7 +177,7 @@ class DebugViewModel @Inject constructor(
                 appendLine("공휴일 $source · ${holidays.count}건")
                 appendLine("다가오는: $upcoming")
                 appendLine("강제 업데이트 버전: ${remoteConfigRepository.getForcedUpdateVersion().ifEmpty { "(없음)" }}")
-                append("업데이트 노트: ${remoteConfigRepository.getUpdateNote().ifEmpty { "(없음)" }}")
+                append("추천 업데이트 버전: ${remoteConfigRepository.getRecommendUpdateVersion().ifEmpty { "(없음)" }}")
             }
         }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), "…")

@@ -73,6 +73,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.allowance.manager.core.domain.model.Announcement
 import com.allowance.manager.core.domain.model.LedgerFilter
 import com.allowance.manager.core.domain.model.LedgerFilterChip
 import com.allowance.manager.core.domain.model.Transaction
@@ -127,9 +128,12 @@ fun HomeRoute(
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val showGuide by viewModel.showGuide.collectAsStateWithLifecycle()
+    val announcement by viewModel.announcement.collectAsStateWithLifecycle()
     HomeScreen(
         uiState = uiState,
         guideTargets = guideTargets,
+        announcement = announcement,
+        onAnnouncementDismissed = viewModel::onAnnouncementDismissed,
         onFilterChip = viewModel::onFilterChip,
         onSetHidden = viewModel::onSetHidden,
         onSetScope = viewModel::onSetScope,
@@ -152,6 +156,8 @@ fun HomeScreen(
     uiState: HomeUiState,
     // 바텀 네비(월별/통계)까지 가리키려면 좌표 저장소를 상위(AppNavHost)에서 공유받는다
     guideTargets: SnapshotStateMap<String, Rect> = rememberGuideTargets(),
+    announcement: Announcement? = null,
+    onAnnouncementDismissed: () -> Unit = {},
     onFilterChip: (LedgerFilterChip) -> Unit = {},
     onSetHidden: (Long, Boolean) -> Unit = { _, _ -> },
     onSetScope: (Long, TxScope) -> Unit = { _, _ -> },
@@ -237,6 +243,21 @@ fun HomeScreen(
                 confirmColor = AmColors.Red,
             ) {
                 Text("삭제하면 되돌릴 수 없어요.", style = AmType.size14_medium, color = AmColors.TextSecondary)
+            }
+        }
+
+        // 홈 진입 공지(Remote Config) — 확인 버튼으로만 닫힘. 바깥탭/뒤로는 무동작(닫히지 않음).
+        announcement?.let { noti ->
+            AmDialog(
+                title = noti.title,
+                onDismiss = {},
+                onConfirm = onAnnouncementDismissed,
+                confirmText = "확인",
+                dismissText = "",
+                analyticsTag = AmAnalytics.Dialog.ANNOUNCEMENT,
+                analyticsParams = mapOf(AmAnalytics.Param.ID to noti.id),
+            ) {
+                Text(noti.body, style = AmType.size14_medium, color = AmColors.TextSecondary)
             }
         }
 
@@ -552,8 +573,8 @@ private fun BottomContent(
                             onToggleHidden = { onToggleHidden(tx) },
                             onDelete = { onRequestDelete(tx) },
                             modifier = rowModifier,
-                        ) {
-                            TransactionRow(tx = tx, budgetName = uiState.userType.label, onClick = { onSelect(tx) })
+                        ) { cardShape ->
+                            TransactionRow(tx = tx, budgetName = uiState.userType.label, shape = cardShape, onClick = { onSelect(tx) })
                         }
                     }
                 }

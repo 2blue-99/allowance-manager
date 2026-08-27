@@ -1,10 +1,11 @@
 package com.allowance.manager
 
 import androidx.lifecycle.viewModelScope
+import com.allowance.manager.core.domain.model.UpdateType
 import com.allowance.manager.core.domain.usecase.alert.MarkAppSeenUseCase
-import com.allowance.manager.core.domain.usecase.config.CheckForceUpdateUseCase
+import com.allowance.manager.core.domain.usecase.config.CheckAppUpdateUseCase
 import com.allowance.manager.core.domain.usecase.config.FetchRemoteConfigUseCase
-import com.allowance.manager.core.domain.usecase.config.GetUpdateNoteUseCase
+import com.allowance.manager.core.domain.usecase.config.MarkRecommendUpdateShownUseCase
 import com.allowance.manager.core.domain.usecase.onboarding.GetIntroShownUseCase
 import com.allowance.manager.core.domain.usecase.onboarding.GetOnboardingDoneUseCase
 import com.allowance.manager.core.domain.usecase.setting.GetStatusBarEnabledUseCase
@@ -29,15 +30,15 @@ enum class StartDestination { INTRO, ONBOARDING, HOME }
 private const val MIN_SPLASH_MS = 900L
 
 data class MainUiState(
-    val showForceUpdateDialog: Boolean = false,
-    val updateNote: String = "",
+    // null = 팝업 없음. FORCED = 강제(닫기 불가), RECOMMEND = 추천(확인/업데이트).
+    val pendingUpdate: UpdateType? = null,
 )
 
 @HiltViewModel
 class MainViewModel @Inject constructor(
     private val fetchRemoteConfigUseCase: FetchRemoteConfigUseCase,
-    private val checkForceUpdateUseCase: CheckForceUpdateUseCase,
-    private val getUpdateNoteUseCase: GetUpdateNoteUseCase,
+    private val checkAppUpdateUseCase: CheckAppUpdateUseCase,
+    private val markRecommendUpdateShownUseCase: MarkRecommendUpdateShownUseCase,
     private val markAppSeenUseCase: MarkAppSeenUseCase,
     getStatusBarEnabledUseCase: GetStatusBarEnabledUseCase,
     getIntroShownUseCase: GetIntroShownUseCase,
@@ -77,19 +78,20 @@ class MainViewModel @Inject constructor(
     private fun fetchRemoteConfig() {
         viewModelScope.launch {
             runCatching { fetchRemoteConfigUseCase() }
-                .onSuccess { checkForceUpdate() }
+                .onSuccess { checkAppUpdate() }
                 .onFailure { setError(it.message) }
         }
     }
 
-    private fun checkForceUpdate() {
-        if (checkForceUpdateUseCase()) {
-            _uiState.update {
-                it.copy(
-                    showForceUpdateDialog = true,
-                    updateNote = getUpdateNoteUseCase(),
-                )
-            }
-        }
+    private suspend fun checkAppUpdate() {
+        val type = checkAppUpdateUseCase() ?: return
+        _uiState.update { it.copy(pendingUpdate = type) }
+        // 추천은 하루 1회 — 띄운 순간 오늘 날짜를 기록해 같은 날 재노출 방지.
+        if (type == UpdateType.RECOMMEND) markRecommendUpdateShownUseCase()
+    }
+
+    /** 추천 업데이트 팝업 '확인'/닫음 — 팝업만 내린다. (강제는 닫히지 않음) */
+    fun onUpdateDialogDismissed() {
+        _uiState.update { it.copy(pendingUpdate = null) }
     }
 }
