@@ -69,10 +69,10 @@ class AllowanceManagerApp : Application() {
         appScope.launch {
             getPaydayAlertSettingUseCase()
                 .distinctUntilChanged()
-                .collect { setting ->
-                    runCatching {
-                        if (setting.enabled) paydayAlarmScheduler.schedule() else paydayAlarmScheduler.cancel()
-                    }
+                .collect {
+                    // 월급일 알림 기능 일시 중지 — 설정과 무관하게 항상 해제(기존 사용자의 기존 예약도 취소).
+                    // 복구 시: if (it.enabled) paydayAlarmScheduler.schedule() else paydayAlarmScheduler.cancel()
+                    runCatching { paydayAlarmScheduler.cancel() }
                 }
         }
     }

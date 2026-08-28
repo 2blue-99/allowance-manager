@@ -34,7 +34,8 @@ class BootReceiver : BroadcastReceiver() {
             try {
                 val setting = getDailyReminderSettingUseCase().first()
                 if (setting.enabled) dailyReminderScheduler.schedule(setting.hour, setting.minute)
-                if (getPaydayAlertSettingUseCase().first().enabled) paydayAlarmScheduler.schedule()
+                // 월급일 알림 기능 일시 중지 — 부팅 시 재예약하지 않음.
+                // 복구 시: if (getPaydayAlertSettingUseCase().first().enabled) paydayAlarmScheduler.schedule()
             } finally {
                 pending.finish()
             }

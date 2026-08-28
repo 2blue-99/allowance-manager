@@ -447,17 +447,17 @@ private fun AlertSettingsGroup(
                 if (reminderEnabled) {
                     AlertDetailRow(label = "알림 시각", subtitle = "", value = reminderTime, onClick = onTimeClick)
                 }
-                HorizontalDivider(thickness = 1.dp, color = AmColors.Divider)
-                AlertFeatureRow(title = "$paydayShort 알림", checked = paydayAlertEnabled, onCheckedChange = onPaydayAlertEnabledChange, hasDetail = paydayAlertEnabled)
-                if (paydayAlertEnabled) {
-                    // 시각은 고정이라 누를 수 없다 — 공휴일 보정된 실지급일 기준이라는 점만 알려준다
-                    AlertDetailRow(
-                        label = "전날 · 당일",
-                        subtitle = "공휴일이면 실제 지급일 기준으로 알려드려요",
-                        value = paydayAlertTime,
-                        onClick = null,
-                    )
-                }
+                // 월급일 알림 기능 일시 중지 — 행 숨김(스케줄러도 중지). 복구 시 이 블록만 되살리면 됨.
+                // HorizontalDivider(thickness = 1.dp, color = AmColors.Divider)
+                // AlertFeatureRow(title = "$paydayShort 알림", checked = paydayAlertEnabled, onCheckedChange = onPaydayAlertEnabledChange, hasDetail = paydayAlertEnabled)
+                // if (paydayAlertEnabled) {
+                //     AlertDetailRow(
+                //         label = "전날 · 당일",
+                //         subtitle = "공휴일이면 실제 지급일 기준으로 알려드려요",
+                //         value = paydayAlertTime,
+                //         onClick = null,
+                //     )
+                // }
             }
         }
     }
