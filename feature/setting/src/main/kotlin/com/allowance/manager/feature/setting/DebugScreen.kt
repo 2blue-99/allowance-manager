@@ -26,7 +26,7 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.allowance.manager.core.designsystem.component.AmButton
 import com.allowance.manager.core.designsystem.component.AmScreenHeader
-import com.allowance.manager.core.designsystem.component.AmTextField
+import com.allowance.manager.core.designsystem.component.AmLineTextField
 import com.allowance.manager.core.designsystem.theme.AmColors
 import com.allowance.manager.core.designsystem.theme.AmSpacing
 import com.allowance.manager.core.designsystem.theme.AmType
@@ -225,34 +225,34 @@ fun DebugScreen(
         Text("달별 세팅 (대상 달 기준)", style = AmType.size12_bold, color = AmColors.TextSecondary)
         Spacer(Modifier.height(AmSpacing.md))
         // 월급일은 앱 전역 설정이라 달과 무관하게 전역 적용. 지출/수입은 그 달에 1건씩 추가.
-        AmTextField(
+        AmLineTextField(
             value = paydayInput,
             onValueChange = { v -> paydayInput = v.filter { it.isDigit() } },
-            label = "월급일 (1~31, 0=말일 · 전역)",
+            hint = "월급일 (1~31, 0=말일 · 전역)",
             keyboardType = KeyboardType.Number,
             modifier = Modifier.fillMaxWidth(),
         )
         Spacer(Modifier.height(AmSpacing.sm))
-        AmTextField(
+        AmLineTextField(
             value = budgetInput,
             onValueChange = { v -> budgetInput = v.filter { it.isDigit() } },
-            label = "예산(용돈) 금액",
+            hint = "예산(용돈) 금액",
             keyboardType = KeyboardType.Number,
             modifier = Modifier.fillMaxWidth(),
         )
         Spacer(Modifier.height(AmSpacing.sm))
-        AmTextField(
+        AmLineTextField(
             value = expenseInput,
             onValueChange = { v -> expenseInput = v.filter { it.isDigit() } },
-            label = "지출 금액 (1건 추가)",
+            hint = "지출 금액 (1건 추가)",
             keyboardType = KeyboardType.Number,
             modifier = Modifier.fillMaxWidth(),
         )
         Spacer(Modifier.height(AmSpacing.sm))
-        AmTextField(
+        AmLineTextField(
             value = incomeInput,
             onValueChange = { v -> incomeInput = v.filter { it.isDigit() } },
-            label = "수입 금액 (1건 추가)",
+            hint = "수입 금액 (1건 추가)",
             keyboardType = KeyboardType.Number,
             modifier = Modifier.fillMaxWidth(),
         )

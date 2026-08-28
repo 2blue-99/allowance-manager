@@ -40,8 +40,8 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.allowance.manager.core.designsystem.component.AmButton
 import com.allowance.manager.core.designsystem.component.AmCard
 import com.allowance.manager.core.designsystem.component.AmDialog
+import com.allowance.manager.core.designsystem.component.AmLineTextField
 import com.allowance.manager.core.designsystem.component.AmScreenHeader
-import com.allowance.manager.core.designsystem.component.AmTextField
 import com.allowance.manager.core.designsystem.theme.AmColors
 import com.allowance.manager.core.designsystem.theme.AmShape
 import com.allowance.manager.core.designsystem.theme.AmSpacing
@@ -178,17 +178,16 @@ private fun AddAccountForm(onAdd: (String, String) -> Unit) {
     AmCard(modifier = Modifier.fillMaxWidth(), shape = AmShape.cardSmall) {
         Column(verticalArrangement = Arrangement.spacedBy(AmSpacing.sm)) {
             Text("계좌 추가", fontSize = 13.sp, fontWeight = FontWeight.Bold, color = AmColors.TextPrimary)
-            AmTextField(
+            AmLineTextField(
                 value = bankName,
                 onValueChange = { bankName = it },
-                label = "은행/앱 이름",
+                hint = "예) 국민은행",
                 modifier = Modifier.fillMaxWidth(),
             )
-            AmTextField(
+            AmLineTextField(
                 value = pattern,
                 onValueChange = { pattern = it },
-                label = "계좌 패턴",
-                supportingText = "ex. 941111-11-111111 (\"-\" 제외)",
+                hint = "예) 941111-11-111111 (\"-\" 제외)",
                 modifier = Modifier.fillMaxWidth(),
             )
             AmButton(

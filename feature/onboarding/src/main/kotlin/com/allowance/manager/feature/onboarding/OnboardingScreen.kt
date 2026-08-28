@@ -416,7 +416,7 @@ private fun AccountSection(
             AmLineTextField(
                 value = bankName,
                 onValueChange = onBankNameChange,
-                hint = "ex. 국민은행",
+                hint = "예) 국민은행",
                 imeAction = ImeAction.Done,
                 modifier = Modifier.fillMaxWidth(),
             )
@@ -424,7 +424,7 @@ private fun AccountSection(
                 value = accountPattern,
                 // 숫자와 구분자(-)만 입력 허용. 저장 시 도메인에서 숫자만 남긴다.
                 onValueChange = { v -> onAccountPatternChange(v.filter { it.isDigit() || it == '-' }) },
-                hint = "ex. 941111-11-111111 (\"-\" 제외)",
+                hint = "예) 941111-11-111111 (\"-\" 제외)",
                 keyboardType = KeyboardType.Number,
                 imeAction = ImeAction.Done,
                 modifier = Modifier.fillMaxWidth(),
@@ -448,7 +448,7 @@ private fun BudgetSection(
             AmLineTextField(
                 value = budgetInput,
                 onValueChange = { onBudgetChange(it.filter { c -> c.isDigit() }) },
-                hint = "ex. 500,000",
+                hint = "예) 500,000",
                 keyboardType = KeyboardType.Number,
                 imeAction = ImeAction.Done,
                 // 값이 있을 때만 다음 단계로 (입력 중 조기 진행 방지)
@@ -488,7 +488,7 @@ private fun PaydaySection(
                 // 텍스트는 입력값을 그대로 표시 → 자유롭게 지우고 수정 가능(스냅백 없음)
                 value = paydayInput,
                 onValueChange = onInputChange,
-                hint = "직접 입력",
+                hint = "예) 25",
                 keyboardType = KeyboardType.Number,
                 imeAction = ImeAction.Done,
                 // 값이 유효(1~31)할 때만 다음 단계로

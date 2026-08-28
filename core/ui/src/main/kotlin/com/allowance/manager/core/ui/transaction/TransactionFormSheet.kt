@@ -4,6 +4,7 @@ import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -40,6 +41,8 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -50,6 +53,7 @@ import com.allowance.manager.core.designsystem.component.AmButton
 import com.allowance.manager.core.designsystem.component.AmCard
 import com.allowance.manager.core.designsystem.component.AmChip
 import com.allowance.manager.core.designsystem.component.AmDialog
+import com.allowance.manager.core.designsystem.component.AmLineTextField
 import com.allowance.manager.core.designsystem.component.AmSecondaryButton
 import com.allowance.manager.core.designsystem.component.AmTextField
 import com.allowance.manager.core.designsystem.component.AmThousandsTransformation
@@ -102,6 +106,7 @@ fun TransactionFormSheet(
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
     val scope = rememberCoroutineScope()
     val analytics = LocalAnalyticsHelper.current
+    val focusManager = LocalFocusManager.current
 
     // 편집 로컬 상태(취소 시 버려짐, 저장 시 반영). 수정 모드는 기존 값, 추가 모드는 기본값.
     val stateKey = editTx?.id ?: 0L
@@ -140,7 +145,12 @@ fun TransactionFormSheet(
         sheetState = sheetState,
         containerColor = AmColors.CardBg,
     ) {
-        Column(modifier = Modifier.fillMaxHeight(0.94f)) {
+        Column(
+            modifier = Modifier
+                .fillMaxHeight(0.94f)
+                // 빈 영역(필드 밖) 탭 시 포커스 해제 → 키보드 내림. 자식 클릭/스크롤은 그대로.
+                .pointerInput(Unit) { detectTapGestures(onTap = { focusManager.clearFocus() }) },
+        ) {
             // ── 스크롤 콘텐츠 (작은 화면 대응) ──
             Column(
                 modifier = Modifier
@@ -148,6 +158,8 @@ fun TransactionFormSheet(
                     .verticalScroll(rememberScrollState())
                     .padding(horizontal = 20.dp),
             ) {
+                // 시트 섹션(유형/금액/사용처/분류/메모…) 사이 세로 간격 — 여기 한 값만 바꾸면 전체 반영
+                val sectionGap = 30.dp
                 if (editTx == null) {
                     // 추가 모드: 슬림 헤더(➕ 아이콘 + 제목) — 수정 모드 헤더와 톤 통일
                     Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
@@ -165,7 +177,7 @@ fun TransactionFormSheet(
                         Spacer(Modifier.width(14.dp))
                         Text("내역 추가", style = AmType.size14_bold, color = AmColors.TextPrimary)
                     }
-                    Spacer(Modifier.height(20.dp))
+                    Spacer(Modifier.height(sectionGap))
                 } else {
                     // 수정 모드: 슬림 헤더(아이콘 + 시간 + 삭제). 아이콘 이모지는 분류를 즉시 반영.
                     Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
@@ -213,7 +225,7 @@ fun TransactionFormSheet(
                                 .size(22.dp),
                         )
                     }
-                    Spacer(Modifier.height(20.dp))
+                    Spacer(Modifier.height(sectionGap))
                 }
 
                 // 유형(지출/수입/이체) — 최상단. 가로 꽉 채움(각 weight 1). 이체는 지출·수입 어디에도 안 잡히는 중립 타입.
@@ -233,7 +245,7 @@ fun TransactionFormSheet(
                 val showPromote = editTx != null && !editTx.isManual
                 AnimatedVisibility(visible = showScope || showPromote) {
                     Column(modifier = Modifier.fillMaxWidth()) {
-                        // 유형과의 간격 (카드와 함께 접힘)
+                        // 유형 ↔ 예산 반영 카드 간격 — sectionGap과 무관하게 20 고정 (카드와 함께 접힘)
                         Spacer(Modifier.height(16.dp))
                         AmCard(
                             modifier = Modifier.fillMaxWidth(),
@@ -283,33 +295,30 @@ fun TransactionFormSheet(
                     )
                 }
 
-                Spacer(Modifier.height(24.dp))
+                Spacer(Modifier.height(sectionGap))
                 SheetLabel("금액")
-                Spacer(Modifier.height(10.dp))
-                AmTextField(
-                    value = amountText,
+                AmLineTextField(
+                    value = amountText, 
                     onValueChange = { v -> amountText = v.filter { it.isDigit() } },
-                    label = "금액 (원)",
+                    hint = "예) 15,000",
                     keyboardType = KeyboardType.Number,
                     // 저장값은 숫자만, 화면에는 천 단위 콤마로 표시
                     visualTransformation = AmThousandsTransformation(),
                     modifier = Modifier.fillMaxWidth(),
                 )
 
-                Spacer(Modifier.height(20.dp))
+                Spacer(Modifier.height(sectionGap))
                 SheetLabel("사용처")
-                Spacer(Modifier.height(10.dp))
-                AmTextField(
+                AmLineTextField(
                     value = merchant,
                     onValueChange = { merchant = it },
-                    // 출처(은행)는 헤더에 이미 보이므로, 사용처 칸은 빈 칸 느낌의 일반 힌트만.
-                    label = "예: 스타벅스",
+                    hint = "예) 스타벅스",
                     modifier = Modifier.fillMaxWidth(),
                 )
 
                 // 이체는 분류 개념이 없음 → 분류 섹션 숨김(저장 시 category=null)
                 if (type != TransactionType.TRANSFER) {
-                    Spacer(Modifier.height(24.dp))
+                    Spacer(Modifier.height(sectionGap))
                     SheetLabel("분류")
                     Spacer(Modifier.height(10.dp))
                     FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -325,14 +334,15 @@ fun TransactionFormSheet(
                     }
                 }
 
-                Spacer(Modifier.height(24.dp))
+                Spacer(Modifier.height(sectionGap))
                 SheetLabel("메모")
-                Spacer(Modifier.height(10.dp))
+                Spacer(Modifier.height(6.dp))
                 AmTextField(
                     value = memo,
                     // 줄바꿈 허용 + 최대 500자
                     onValueChange = { if (it.length <= MEMO_MAX) memo = it },
-                    label = "메모를 남겨보세요",
+                    // 위 SheetLabel("메모")이 있으니 필드 라벨은 비움
+                    label = "",
                     singleLine = false,
                     minLines = 4,
                     modifier = Modifier.fillMaxWidth(),

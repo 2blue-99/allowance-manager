@@ -39,6 +39,9 @@ fun AmLineTextField(
     onFocusLost: () -> Unit = {},
     visualTransformation: VisualTransformation = VisualTransformation.None,
     fontSize: androidx.compose.ui.unit.TextUnit = 16.sp,
+    // 입력창 아래 보조문구(안내·경고). 색 미지정 시 회색, 경고는 빨강 등으로 지정.
+    supportingText: String? = null,
+    supportingTextColor: Color? = null,
 ) {
     // 한 번 포커스를 받았다가 빠지는 경우만 onFocusLost 호출
     var hadFocus by remember { mutableStateOf(false) }
@@ -50,6 +53,9 @@ fun AmLineTextField(
         placeholder = { Text(hint, fontSize = fontSize, color = AmColors.TextTertiary) },
         singleLine = true,
         visualTransformation = visualTransformation,
+        supportingText = supportingText?.let { text ->
+            { Text(text, color = supportingTextColor ?: AmColors.TextSecondary) }
+        },
         textStyle = TextStyle(fontSize = fontSize, fontWeight = FontWeight.Medium, color = AmColors.TextPrimary),
         keyboardOptions = KeyboardOptions(keyboardType = keyboardType, imeAction = imeAction),
         // '완료/확인' 계열은 항상 포커스를 풀어 키보드를 내린다(값 유효성과 무관).

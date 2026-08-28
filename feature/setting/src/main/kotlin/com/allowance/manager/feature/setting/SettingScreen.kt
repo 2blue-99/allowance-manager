@@ -57,7 +57,7 @@ import com.allowance.manager.core.designsystem.component.AmScreenHeader
 import com.allowance.manager.core.designsystem.component.AmSelectableOptionCard
 import com.allowance.manager.core.designsystem.component.AmSettingGroup
 import com.allowance.manager.core.designsystem.component.AmSettingItem
-import com.allowance.manager.core.designsystem.component.AmTextField
+import com.allowance.manager.core.designsystem.component.AmLineTextField
 import com.allowance.manager.core.designsystem.component.AmThousandsTransformation
 import com.allowance.manager.core.designsystem.component.AmTimePickerDialog
 import com.allowance.manager.core.designsystem.theme.AmColors
@@ -538,13 +538,18 @@ private fun PaydayOverrideDialog(
                 fontSize = 12.sp,
                 color = AmColors.TextSecondary,
             )
-            AmTextField(
+            AmLineTextField(
                 value = input,
-                onValueChange = { v -> input = v.filter { it.isDigit() }.take(2) },
-                label = "기본 ${paydayLabel(info.rule)}",
+                // 1~31만 허용(비우면 지정 해제 → 규칙일 복귀). 0·32+ 등은 무시.
+                onValueChange = { v ->
+                    val digits = v.filter { it.isDigit() }.take(2)
+                    input = digits.toIntOrNull()?.coerceIn(1, 31)?.toString() ?: ""
+                },
+                hint = "현재 ${paydayLabel(info.rule)}",
                 keyboardType = KeyboardType.Number,
                 supportingText = warning?.message(info.month.monthValue),
                 supportingTextColor = AmColors.Red,
+                modifier = Modifier.fillMaxWidth(),
             )
         }
     }
@@ -673,45 +678,56 @@ private fun BudgetDialog(current: Long, label: String, onSave: (Long) -> Unit, o
         confirmEnabled = amount > 0,
         analyticsTag = AmAnalytics.Dialog.BUDGET,
     ) {
-        AmTextField(
+        AmLineTextField(
             value = input,
             onValueChange = { v -> input = v.filter { it.isDigit() } },
-            label = "월 $label (원)",
+            hint = "예) 500,000",
             keyboardType = KeyboardType.Number,
             visualTransformation = AmThousandsTransformation(),
+            modifier = Modifier.fillMaxWidth(),
         )
     }
 }
 
 @Composable
 private fun PaydayDialog(current: Int, title: String, onSave: (Int) -> Unit, onDismiss: () -> Unit) {
-    var payday by remember { mutableIntStateOf(current) }
+    // 말일(EOM)은 31일과 동일하게 매월 마지막 날로 clamp됨 → 필드엔 대표값 "31"을 보여준다.
+    // 원본 문자열을 그대로 표시(스냅백 없음, 온보딩과 동일). 저장된 말일이면 "31"로 프리필.
+    var input by remember { mutableStateOf(if (current in 1..31) current.toString() else "31") }
+    // 말일 선택 여부(칩 표시·저장 시 EOM 라벨 유지용). 직접 입력하면 해제.
+    var isEom by remember { mutableStateOf(current == PAYDAY_EOM) }
+    val day = input.toIntOrNull()?.takeIf { it in 1..31 }
     AmDialog(
         title = title,
         onDismiss = onDismiss,
-        onConfirm = { onSave(payday) },
+        // 말일 선택이면 EOM으로 저장(라벨 "말일" 유지), 아니면 입력한 일자.
+        onConfirm = { (if (isEom) PAYDAY_EOM else day)?.let(onSave) },
+        // 저장 버튼 활성화는 오직 입력창 값 기준 (빈 값이면 비활성)
+        confirmEnabled = day != null,
         analyticsTag = AmAnalytics.Dialog.PAYDAY,
-        analyticsParams = mapOf(AmAnalytics.Param.PAYDAY to payday),
+        analyticsParams = mapOf(AmAnalytics.Param.PAYDAY to (if (isEom) PAYDAY_EOM else (day ?: -1))),
     ) {
         Column(verticalArrangement = Arrangement.spacedBy(AmSpacing.md)) {
-            // 온보딩과 동일한 칩 구성 (15/20/25/말일)
-            Row(horizontalArrangement = Arrangement.spacedBy(AmSpacing.sm)) {
-                AmChip("15일", payday == 15) { payday = 15 }
-                AmChip("20일", payday == 20) { payday = 20 }
-                AmChip("25일", payday == 25) { payday = 25 }
-                AmChip("말일", payday == PAYDAY_EOM) { payday = PAYDAY_EOM }
-            }
-            AmTextField(
-                value = if (payday in 1..31) payday.toString() else "",
+            // 저장된 월급일 프리필. 1~31만 허용, 자유 삭제 가능.
+            AmLineTextField(
+                value = input,
                 onValueChange = { v ->
-                    val day = v.filter { it.isDigit() }.toIntOrNull()?.coerceIn(1, 31)
-                    if (day != null) payday = day
+                    val digits = v.filter { it.isDigit() }.take(2)
+                    input = digits.toIntOrNull()?.coerceIn(1, 31)?.toString() ?: ""
+                    isEom = false   // 직접 입력하면 말일 해제
                 },
-                label = "직접 입력 (1~31)",
+                hint = "예) 25",
                 keyboardType = KeyboardType.Number,
+                modifier = Modifier.fillMaxWidth(),
             )
-            // 선택 요약 — 말일처럼 직접입력칸이 비어도 현재 선택을 분명히 표기
-            Text("매월 ${paydayLabel(payday)}에 받아요", fontSize = 12.sp, color = AmColors.TextSecondary)
+            // 온보딩과 동일한 칩 구성 (15/20/25/말일) — 입력 필드 아래로
+            Row(horizontalArrangement = Arrangement.spacedBy(AmSpacing.sm)) {
+                AmChip("15일", !isEom && day == 15) { input = "15"; isEom = false }
+                AmChip("20일", !isEom && day == 20) { input = "20"; isEom = false }
+                AmChip("25일", !isEom && day == 25) { input = "25"; isEom = false }
+                // 말일 = 매월 마지막 날(=31 clamp) → 필드엔 대표값 31 표시
+                AmChip("말일", isEom) { input = "31"; isEom = true }
+            }
         }
     }
 }

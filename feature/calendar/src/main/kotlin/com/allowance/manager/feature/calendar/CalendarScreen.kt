@@ -55,7 +55,8 @@ import com.allowance.manager.core.designsystem.component.AmCard
 import com.allowance.manager.core.designsystem.component.AmChip
 import com.allowance.manager.core.designsystem.component.AmDialog
 import com.allowance.manager.core.designsystem.component.AmSegmented
-import com.allowance.manager.core.designsystem.component.AmTextField
+import com.allowance.manager.core.designsystem.component.AmLineTextField
+import androidx.compose.ui.text.input.ImeAction
 import com.allowance.manager.core.designsystem.theme.AmColors
 import com.allowance.manager.core.designsystem.theme.AmShape
 import com.allowance.manager.core.designsystem.theme.AmSpacing
@@ -321,12 +322,12 @@ private fun SearchAndFilter(
         contentPadding = PaddingValues(AmSpacing.lg),
     ) {
         Column(modifier = Modifier.fillMaxWidth()) {
-            AmTextField(
+            AmLineTextField(
                 value = query,
                 onValueChange = onQueryChange,
-                label = "출처·사용처·메모 검색",
-                dense = true,
-                // 검색어가 있을 때 IME '완료' = 검색 확정으로 계측(검색어 텍스트는 미포함)
+                hint = "출처·사용처·메모 검색",
+                imeAction = ImeAction.Search,
+                // 검색어가 있을 때 IME '검색' = 검색 확정으로 계측(검색어 텍스트는 미포함)
                 onImeAction = { if (query.isNotBlank()) onSubmitSearch() },
                 modifier = Modifier.fillMaxWidth().onFocusChanged { searchFocused = it.isFocused },
             )
