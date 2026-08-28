@@ -23,9 +23,9 @@ enum class UserType(
     val paydayLabel: String,
     val paydayShort: String,
 ) {
-    STUDENT("student", "용돈", "아직 학생이시라면!", "은", "을", "이", "용돈 받는 날", "용돈날"),
-    YOUTH("youth", "생활비", "경제활동을 하고 계시다면!", "는", "를", "가", "월급일", "월급일"),
-    COMMON("common", "예산", "둘 다 애매할 땐!", "은", "을", "이", "월급일", "월급일");
+    STUDENT("student", "용돈", "아직 학생이시라면,", "은", "을", "이", "용돈 받는 날", "용돈날"),
+    YOUTH("youth", "생활비", "경제활동을 하고 계시다면,", "는", "를", "가", "월급일", "월급일"),
+    COMMON("common", "예산", "둘 다 애매할 땐,", "은", "을", "이", "월급일", "월급일");
 
     companion object {
         val Default = COMMON

@@ -237,8 +237,6 @@ fun OnboardingPermissionScreen(
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
         Spacer(Modifier.weight(1f))
-        Text("🔔", fontSize = 56.sp)
-        Spacer(Modifier.height(24.dp))
         Text("필수 권한 허용이 필요해요", fontSize = 22.sp, fontWeight = FontWeight.ExtraBold, color = TextPrimary, textAlign = TextAlign.Center)
         Spacer(Modifier.height(12.dp))
         Text(
