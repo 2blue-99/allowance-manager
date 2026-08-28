@@ -473,7 +473,7 @@ private fun SummaryCell(label: String, value: String, valueColor: Color, modifie
     Column(modifier = modifier, horizontalAlignment = Alignment.CenterHorizontally) {
         Text(label, style = AmType.size10_medium, color = AmColors.TextSecondary)
         Spacer(Modifier.height(5.dp))
-        Text(value, style = AmType.size14_black, color = valueColor)
+        Text(value, style = AmType.size14_bold, color = valueColor)
     }
 }
 
@@ -507,7 +507,7 @@ private fun StatCell(value: String, label: String, modifier: Modifier = Modifier
         modifier = modifier.padding(vertical = 12.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
-        Text(value, style = AmType.size14_black, color = valueColor)
+        Text(value, style = AmType.size14_bold, color = valueColor)
         Spacer(Modifier.height(3.dp))
         Text(label, style = AmType.size10_medium, color = AmColors.TextSecondary)
     }

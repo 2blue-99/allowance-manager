@@ -124,7 +124,7 @@ fun TransactionRow(
             Spacer(Modifier.width(10.dp))
             Text(
                 text = signedAmount(tx),
-                style = AmType.size12_black,
+                style = AmType.size12_bold,
                 color = amountColor(tx, dim),
                 maxLines = 1,
             )
