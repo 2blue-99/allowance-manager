@@ -308,10 +308,6 @@ private fun BarChart(bars: List<MonthBar>, onSelectMonth: (YearMonth) -> Unit) {
 private fun SummaryCard(summary: MonthSummary, label: String, onOpenMonth: () -> Unit) {
     AmCard(modifier = Modifier.fillMaxWidth()) {
         Column {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Text("요약", style = AmType.size12_black, color = AmColors.TextPrimary)
-            }
-            Spacer(Modifier.height(12.dp))
             Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
                 // 생활비=검정, 지출=경고색(항상 Red), 수입=메인색(Emerald)
                 SummaryCell(label, "${summary.budget.amountToComma()}원", AmColors.TextPrimary, Modifier.weight(1f))
@@ -345,7 +341,8 @@ private fun SummaryCell(label: String, value: String, valueColor: Color, modifie
     Column(modifier = modifier, horizontalAlignment = Alignment.CenterHorizontally) {
         Text(label, style = AmType.size10_medium, color = AmColors.TextSecondary)
         Spacer(Modifier.height(5.dp))
-        Text(value, style = AmType.size13_black, color = valueColor)
+        // 홈 요약 숫자와 동일 스타일(size14_bold)
+        Text(value, style = AmType.size14_bold, color = valueColor)
     }
 }
 
@@ -354,8 +351,6 @@ private fun SummaryCell(label: String, value: String, valueColor: Color, modifie
 private fun CategoryCard(categories: List<CategorySlice>, total: Long) {
     AmCard(modifier = Modifier.fillMaxWidth()) {
         Column {
-            Text("카테고리 분포", style = AmType.size12_black, color = AmColors.TextPrimary)
-            Spacer(Modifier.height(16.dp))
             if (categories.isEmpty()) {
                 Box(modifier = Modifier.fillMaxWidth().padding(vertical = 20.dp), contentAlignment = Alignment.Center) {
                     Text("이 달 지출 내역이 없어요", style = AmType.size11_medium, color = AmColors.TextSecondary)
