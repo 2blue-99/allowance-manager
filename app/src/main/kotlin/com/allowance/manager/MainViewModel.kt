@@ -48,7 +48,12 @@ class MainViewModel @Inject constructor(
     private val _uiState = MutableStateFlow(MainUiState())
     val uiState: StateFlow<MainUiState> = _uiState.asStateFlow()
 
-    val statusBarEnabled: StateFlow<Boolean> = getStatusBarEnabledUseCase()
+    // 상태바 고정 알림은 "설정 켜짐 && 온보딩 완료"일 때만 시작한다.
+    // (온보딩 중 알림 권한만 허용된 시점에 반쪽짜리 알림이 먼저 뜨는 것 방지)
+    val statusBarEnabled: StateFlow<Boolean> = combine(
+        getStatusBarEnabledUseCase(),
+        getOnboardingDoneUseCase(),
+    ) { enabled, onboardingDone -> enabled && onboardingDone }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), false)
 
      // null = 아직 판정 중 → 시스템 스플래시 유지. 최소 표시 시간이 지나야 실제 목적지 방출.
