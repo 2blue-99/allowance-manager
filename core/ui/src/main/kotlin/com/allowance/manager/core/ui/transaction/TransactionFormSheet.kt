@@ -352,6 +352,13 @@ fun TransactionFormSheet(
             }
 
             // ── 하단 고정: 취소 / 추가·저장 ──
+            // 스크롤 콘텐츠와 푸터를 나누는 얇은 구분선
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(1.dp)
+                    .background(AmColors.BarTrack),
+            )
             Row(
                 modifier = Modifier.fillMaxWidth().padding(horizontal = 20.dp).padding(vertical = 10.dp),
                 horizontalArrangement = Arrangement.spacedBy(12.dp),
