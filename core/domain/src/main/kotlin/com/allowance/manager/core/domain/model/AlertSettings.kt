@@ -16,9 +16,9 @@ enum class AlertFrequency(
     val hint: String,
     val remainingThresholds: List<Int>,
 ) {
-    LOW("low", "낮음", "꼭 필요할 때만", listOf(50, 10, 0)),
-    MEDIUM("medium", "중간", "적당하게", listOf(70, 50, 30, 10, 0)),
-    HIGH("high", "높음", "촘촘하게", listOf(90, 70, 50, 30, 20, 10, 0));
+    LOW("low", "낮음", "꼭 필요할 때만,", listOf(50, 10, 0)),
+    MEDIUM("medium", "중간", "적당하게,", listOf(70, 50, 30, 10, 0)),
+    HIGH("high", "높음", "촘촘하게,", listOf(90, 70, 50, 30, 20, 10, 0));
 
     /** 기본(추천) 여부 */
     val recommended: Boolean get() = this == Default
@@ -28,7 +28,7 @@ enum class AlertFrequency(
 
     /** 선택지 보조 문구 — "적당하게 · 70·50·30·10% · 다 씀" */
     val summary: String
-        get() = "$hint · ${remainingThresholds.filter { it > 0 }.joinToString("·")}% · 다 씀"
+        get() = "$hint ${remainingThresholds.joinToString(" · ")}%"
 
     companion object {
         val Default = MEDIUM
