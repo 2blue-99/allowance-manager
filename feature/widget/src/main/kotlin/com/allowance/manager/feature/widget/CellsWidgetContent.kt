@@ -33,7 +33,7 @@ internal data class CellData(val label: String, val value: String, val color: Co
  * 오늘 코치·가계부 공용 — 회색 디바이더로 나뉜 균등 셀 행. (카드 배경 + 앱 열기 포함)
  */
 @Composable
-internal fun CellsWidgetContent(cells: List<CellData>) {
+internal fun CellsWidgetContent(cells: List<CellData>, valueBase: Int = 16) {
     val context = LocalContext.current
     Row(
         modifier = GlanceModifier
@@ -63,7 +63,7 @@ internal fun CellsWidgetContent(cells: List<CellData>) {
                     text = cell.value,
                     style = TextStyle(
                         color = ColorProvider(cell.color),
-                        fontSize = moneySp(cell.value, 16),
+                        fontSize = moneySp(cell.value, valueBase),
                         fontWeight = FontWeight.Bold,
                         textAlign = TextAlign.Center,
                     ),

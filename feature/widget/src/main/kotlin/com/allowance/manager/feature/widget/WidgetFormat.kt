@@ -46,7 +46,7 @@ internal fun moneySp(text: String, base: Int): TextUnit {
 internal fun ringBitmap(sizePx: Int, progress: Float, over: Boolean): Bitmap {
     val bmp = Bitmap.createBitmap(sizePx, sizePx, Bitmap.Config.ARGB_8888)
     val canvas = Canvas(bmp)
-    val stroke = sizePx * 0.11f
+    val stroke = sizePx * 0.08f
     val pad = stroke / 2f + sizePx * 0.02f
     val rect = RectF(pad, pad, sizePx - pad, sizePx - pad)
 

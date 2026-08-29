@@ -27,6 +27,7 @@ class LedgerWidget : GlanceAppWidget() {
                         CellData("이번 달 지출", (ledger?.expense ?: 0L).toCompactWon(), AmColors.Red),
                         CellData("이번 달 수입", (ledger?.income ?: 0L).toCompactWon(), AmColors.EmeraldDark),
                     ),
+                    valueBase = 20,
                 )
             }
         }

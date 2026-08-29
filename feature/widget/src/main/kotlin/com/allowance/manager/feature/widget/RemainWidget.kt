@@ -109,8 +109,8 @@ private fun RemainWidgetContent(label: String, budget: Long, spent: Long, remain
 
     // 링을 위젯 실제 크기에 맞춰 크게 (리사이즈 시 함께 커짐). 가장자리 여백을 둬 꽉 차지 않게.
     val size = LocalSize.current
-    val ringMax = maxOf(96.dp, size.width - 40.dp)
-    val ringSide = (size.height - 74.dp).coerceIn(96.dp, ringMax)
+    val ringMax = maxOf(96.dp, size.width - 30.dp)
+    val ringSide = (size.height - 70.dp).coerceIn(96.dp, ringMax)
 
     Column(
         modifier = GlanceModifier
@@ -130,7 +130,7 @@ private fun RemainWidgetContent(label: String, budget: Long, spent: Long, remain
                     text = amount,
                     style = TextStyle(
                         color = ColorProvider(AmColors.Navy),
-                        fontSize = moneySp(amount, 22),
+                        fontSize = moneySp(amount, 26),
                         fontWeight = FontWeight.Bold,
                     ),
                 )
@@ -180,7 +180,7 @@ private fun ToggleSegment(text: String, active: Boolean, onClick: androidx.glanc
             // 두 세그먼트 모두 배경을 줘 반반 폭 전체가 탭되게 (비활성=트랙색으로 사실상 보이지 않음)
             .background(if (active) AmColors.CardBg else AmColors.BarTrack)
             .cornerRadius(15.dp)
-            .padding(vertical = 9.dp)
+            .padding(vertical = 7.dp)
             .clickable(onClick),
         contentAlignment = Alignment.Center,
     ) {
