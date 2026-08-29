@@ -15,6 +15,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.unit.dp
 import com.allowance.manager.core.designsystem.theme.AmColors
 import com.allowance.manager.core.designsystem.theme.AmShape
@@ -33,6 +34,8 @@ fun AmChip(
     modifier: Modifier = Modifier,
     // 선택 시 채움색 — 기본은 브랜드 에메랄드. 카테고리 칩은 각 카테고리색을 넘긴다.
     selectedColor: Color = AmColors.Emerald,
+    // 라벨 스타일 — 기본은 공통 칩 크기. 더 큰 칩(유형 선택 등)에서 오버라이드.
+    textStyle: TextStyle = AmType.size13_bold,
     onClick: () -> Unit,
 ) {
     // 기본 spring이 느긋해 빠른 tween으로 (약 120ms)
@@ -64,7 +67,7 @@ fun AmChip(
         Text(
             text = label,
             color = fg,
-            style = AmType.size13_bold,
+            style = textStyle,
         )
     }
 }

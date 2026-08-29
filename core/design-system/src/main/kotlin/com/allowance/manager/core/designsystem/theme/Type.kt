@@ -60,6 +60,7 @@ object AmType {
     val size12_black = t(12, FontWeight.Black)
 
     // bold (700)
+    val size16_bold = t(16, FontWeight.Bold)
     val size14_bold = t(14, FontWeight.Bold)
     val size13_bold = t(13, FontWeight.Bold)
     val size12_bold = t(12, FontWeight.Bold)
