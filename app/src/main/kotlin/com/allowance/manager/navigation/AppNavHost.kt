@@ -134,6 +134,9 @@ fun AppNavHost(
     }
 
     Scaffold(
+        // 상태바(시스템바) 영역이 각 화면 배경(ScreenBg)과 같은 색으로 보이도록 통일.
+        // (기본 containerColor는 살짝 흰 테마 배경이라 상태바에 흰 띠 경계가 보였음)
+        containerColor = AmColors.ScreenBg,
         bottomBar = {
             // 팝인 대신 슬라이드로 부드럽게 등장/퇴장
             AnimatedVisibility(
