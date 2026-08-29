@@ -69,9 +69,9 @@ fun OnboardingAlertScreen(
             .fillMaxSize()
             .background(ScreenBg)
             .padding(horizontal = 24.dp)
-            .padding(top = 30.dp),
+            .padding(top = 80.dp),
     ) {
-        Text("관리에 도움을 줄 알림이에요", fontSize = 30.sp, fontWeight = FontWeight.ExtraBold, color = TextPrimary)
+        Text("관리에 도움을 줄 알림이에요", fontSize = 30.sp, fontWeight = FontWeight.Bold, color = TextPrimary)
         Spacer(Modifier.height(6.dp))
         Text("설정에서 언제든 바꿀 수 있어요.", fontSize = 16.sp, color = TextSecondary)
         Spacer(Modifier.height(36.dp))

@@ -233,9 +233,9 @@ fun TransactionFormSheet(
                 // 주요 선택 컨트롤이라 일반 칩보다 살짝 높게(44dp) — 배경은 꽉 차고 라벨은 중앙 유지
                 val typeChipModifier = Modifier.weight(1f).height(44.dp)
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    AmChip("지출", type == TransactionType.EXPENSE, selectedColor = AmColors.Red, modifier = typeChipModifier) { type = TransactionType.EXPENSE }
-                    AmChip("수입", type == TransactionType.INCOME, selectedColor = AmColors.Emerald, modifier = typeChipModifier) { type = TransactionType.INCOME }
-                    AmChip("이체", type == TransactionType.TRANSFER, selectedColor = AmColors.TextSecondary, modifier = typeChipModifier) { type = TransactionType.TRANSFER }
+                    AmChip("지출", type == TransactionType.EXPENSE, selectedColor = AmColors.Red, textStyle = AmType.size16_bold, modifier = typeChipModifier) { type = TransactionType.EXPENSE }
+                    AmChip("수입", type == TransactionType.INCOME, selectedColor = AmColors.Emerald, textStyle = AmType.size16_bold, modifier = typeChipModifier) { type = TransactionType.INCOME }
+                    AmChip("이체", type == TransactionType.TRANSFER, selectedColor = AmColors.TextSecondary, textStyle = AmType.size16_bold, modifier = typeChipModifier) { type = TransactionType.TRANSFER }
                 }
 
                 // 관리 카드(유형 아래) — 예산 반영(추가·수정 공통) + 메인등록·무시(수정 전용)

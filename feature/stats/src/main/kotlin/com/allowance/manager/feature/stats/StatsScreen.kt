@@ -361,7 +361,7 @@ private fun CategoryCard(categories: List<CategorySlice>, total: Long) {
                     Spacer(Modifier.width(18.dp))
                     Column(
                         modifier = Modifier.weight(1f),
-                        verticalArrangement = Arrangement.spacedBy(9.dp),
+                        verticalArrangement = Arrangement.spacedBy(12.dp),
                     ) {
                         categories.forEach { slice ->
                             CategoryRow(slice)
@@ -397,7 +397,7 @@ private fun Donut(categories: List<CategorySlice>, total: Long, modifier: Modifi
         }
         Column(horizontalAlignment = Alignment.CenterHorizontally) {
             Text("총지출", style = AmType.size9_medium, color = AmColors.TextSecondary)
-            Text(manWon(total), style = AmType.size13_black, color = AmColors.TextPrimary)
+            Text(manWon(total), style = AmType.size13_bold, color = AmColors.TextPrimary)
         }
     }
 }
@@ -411,7 +411,7 @@ private fun CategoryRow(slice: CategorySlice) {
         Spacer(Modifier.width(6.dp))
         Text("${(slice.ratio * 100).toInt()}%", style = AmType.size11_medium, color = AmColors.TextTertiary)
         Spacer(Modifier.weight(1f))
-        Text("${slice.amount.amountToComma()}원", style = AmType.size11_bold, color = AmColors.TextPrimary)
+        Text("${slice.amount.amountToComma()}원", style = AmType.size14_bold, color = AmColors.TextPrimary)
     }
 }
 

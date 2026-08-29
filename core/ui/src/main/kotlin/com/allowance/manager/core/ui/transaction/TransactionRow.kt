@@ -85,11 +85,11 @@ fun TransactionRow(
                         fontSize = 15.sp,
                     )
                 }
-                Column(modifier = Modifier.weight(1f)) {
+                Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
                     Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(5.dp)) {
                         Text(
                             title,
-                            style = AmType.size12_bold,
+                            style = AmType.size14_bold,
                             color = if (dim) AmColors.TextSecondary else AmColors.TextPrimary,
                             maxLines = 1,
                             overflow = TextOverflow.Ellipsis,

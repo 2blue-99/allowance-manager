@@ -183,9 +183,9 @@ private fun PersonalOnboardingScreen(
     onNext: () -> Unit,
 ) {
     Column(
-        modifier = Modifier.fillMaxSize().background(ScreenBg).padding(horizontal = 24.dp).padding(top = 30.dp, bottom = 24.dp),
+        modifier = Modifier.fillMaxSize().background(ScreenBg).padding(horizontal = 24.dp).padding(top = 80.dp, bottom = 24.dp),
     ) {
-        Text("어떤 단어가 좋으신가요?", fontSize = 30.sp, fontWeight = FontWeight.ExtraBold, color = TextPrimary)
+        Text("어떤 단어가 좋으신가요?", fontSize = 30.sp, fontWeight = FontWeight.Bold, color = TextPrimary)
         Spacer(Modifier.height(8.dp))
         Text("앱에서 사용할 편한 호칭을 골라주세요.", fontSize = 16.sp, color = TextSecondary)
         Spacer(Modifier.height(36.dp))
@@ -237,7 +237,7 @@ fun OnboardingPermissionScreen(
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
         Spacer(Modifier.weight(1f))
-        Text("필수 권한 허용이 필요해요", fontSize = 22.sp, fontWeight = FontWeight.ExtraBold, color = TextPrimary, textAlign = TextAlign.Center)
+        Text("필수 권한 허용이 필요해요", fontSize = 22.sp, fontWeight = FontWeight.Bold, color = TextPrimary, textAlign = TextAlign.Center)
         Spacer(Modifier.height(12.dp))
         Text(
             "앱 사용을 위해 아래 두 권한이 필요해요.\n금융 정보는 기기에만 저장돼요.",
@@ -324,9 +324,9 @@ fun OnboardingInfoScreen(
                 detectTapGestures(onTap = { focusManager.clearFocus() })
             }
             .padding(horizontal = 24.dp)
-            .padding(top = 30.dp),
+            .padding(top = 80.dp),
     ) {
-        Text("기본 정보를 입력해요", fontSize = 30.sp, fontWeight = FontWeight.ExtraBold, color = TextPrimary)
+        Text("기본 정보를 입력해요", fontSize = 30.sp, fontWeight = FontWeight.Bold, color = TextPrimary)
         Spacer(Modifier.height(6.dp))
         Text("설정에서 언제든 바꿀 수 있어요.", fontSize = 16.sp, color = TextSecondary)
         Spacer(Modifier.height(36.dp))
