@@ -5,7 +5,6 @@ import com.allowance.manager.core.domain.model.AlertFrequency
 import com.allowance.manager.core.domain.model.BudgetAlertSetting
 import com.allowance.manager.core.domain.model.DailyReminderSetting
 import com.allowance.manager.core.domain.model.PaydayAlertSetting
-import com.allowance.manager.core.domain.model.PaydayInfo
 import com.allowance.manager.core.domain.model.UserType
 import com.allowance.manager.core.domain.usecase.alert.GetBudgetAlertSettingUseCase
 import com.allowance.manager.core.domain.usecase.alert.GetDailyReminderSettingUseCase
@@ -16,8 +15,6 @@ import com.allowance.manager.core.domain.usecase.alert.SetDailyReminderSettingUs
 import com.allowance.manager.core.domain.usecase.budget.GetMonthlyBudgetUseCase
 import com.allowance.manager.core.domain.usecase.budget.GetPaydayUseCase
 import com.allowance.manager.core.domain.usecase.budget.GetUserTypeUseCase
-import com.allowance.manager.core.domain.usecase.budget.ObservePaydayInfoUseCase
-import com.allowance.manager.core.domain.usecase.budget.SetPaydayOverrideUseCase
 import com.allowance.manager.core.domain.usecase.budget.SetMonthlyBudgetUseCase
 import com.allowance.manager.core.domain.usecase.budget.SetPaydayUseCase
 import com.allowance.manager.core.domain.usecase.budget.SetUserTypeUseCase
@@ -32,7 +29,6 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
-import java.time.YearMonth
 import javax.inject.Inject
 
 data class SettingUiState(
@@ -44,7 +40,6 @@ data class SettingUiState(
     val dailyReminder: DailyReminderSetting = DailyReminderSetting(),
     val paydayAlert: PaydayAlertSetting = PaydayAlertSetting(),
     /** 이번 달 실지급일 정보 — 사이클 경계와 같은 계산에서 온다. 첫 프레임에선 아직 null */
-    val paydayInfo: PaydayInfo? = null,
 )
 
 @HiltViewModel
@@ -56,7 +51,6 @@ class SettingViewModel @Inject constructor(
     getBudgetAlertSettingUseCase: GetBudgetAlertSettingUseCase,
     getDailyReminderSettingUseCase: GetDailyReminderSettingUseCase,
     getPaydayAlertSettingUseCase: GetPaydayAlertSettingUseCase,
-    observePaydayInfoUseCase: ObservePaydayInfoUseCase,
     private val setMonthlyBudgetUseCase: SetMonthlyBudgetUseCase,
     private val setPaydayUseCase: SetPaydayUseCase,
     private val setStatusBarEnabledUseCase: SetStatusBarEnabledUseCase,
@@ -64,7 +58,6 @@ class SettingViewModel @Inject constructor(
     private val setBudgetAlertSettingUseCase: SetBudgetAlertSettingUseCase,
     private val setDailyReminderSettingUseCase: SetDailyReminderSettingUseCase,
     private val setPaydayAlertSettingUseCase: SetPaydayAlertSettingUseCase,
-    private val setPaydayOverrideUseCase: SetPaydayOverrideUseCase,
     private val analytics: AnalyticsHelper,
 ) : BaseViewModel() {
 
@@ -81,13 +74,11 @@ class SettingViewModel @Inject constructor(
         getBudgetAlertSettingUseCase(),
         getDailyReminderSettingUseCase(),
         getPaydayAlertSettingUseCase(),
-        observePaydayInfoUseCase(),
-    ) { base, budgetAlert, dailyReminder, paydayAlert, paydayInfo ->
+    ) { base, budgetAlert, dailyReminder, paydayAlert ->
         base.copy(
             budgetAlert = budgetAlert,
             dailyReminder = dailyReminder,
             paydayAlert = paydayAlert,
-            paydayInfo = paydayInfo,
         )
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), SettingUiState())
 
@@ -144,14 +135,6 @@ class SettingViewModel @Inject constructor(
         viewModelScope.launch {
             setPaydayAlertSettingUseCase(uiState.value.paydayAlert.copy(enabled = enabled))
         }
-    }
-
-    /**
-     * 이번 달 월급일 조정. [day]가 null이면 규칙일로 되돌린다.
-     * 대상 달은 다이얼로그를 열 때 고정한 값을 그대로 받는다 — 자정을 넘겨도 엉뚱한 달에 쓰지 않도록.
-     */
-    fun setPaydayOverride(month: YearMonth, day: Int?) {
-        viewModelScope.launch { setPaydayOverrideUseCase(month, day) }
     }
 }
 

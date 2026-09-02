@@ -28,13 +28,11 @@ class ObserveBudgetStatusUseCase @Inject constructor(
         combine(
             budgetRepository.observeBudgetForMonth(YearMonth.now()),
             dataStoreRepository.getPayday(),
-            dataStoreRepository.getPaydayOverrides(),
-        ) { budget, payday, overrides -> Triple(budget, payday, overrides) }
-            .flatMapLatest { (budget, payday, overrides) ->
+        ) { budget, payday -> budget to payday }
+            .flatMapLatest { (budget, payday) ->
                 val cycle = BudgetCycle.of(
                     payday = payday,
                     holidays = remoteConfigRepository.getHolidays(),
-                    overrides = overrides,
                 )
                 combine(
                     transactionRepository.observeBudgetSpentBetween(cycle.startMillis(), cycle.endMillis()),

@@ -2,7 +2,6 @@ package com.allowance.manager.core.domain.usecase.budget
 
 import com.allowance.manager.core.domain.model.BudgetCycle
 import com.allowance.manager.core.domain.model.MonthlyBudget
-import com.allowance.manager.core.domain.model.PaydayInfo
 import com.allowance.manager.core.domain.model.UserType
 import com.allowance.manager.core.domain.repository.BudgetRepository
 import com.allowance.manager.core.domain.repository.DataStoreRepository
@@ -52,40 +51,6 @@ class SetPaydayUseCase @Inject constructor(
     private val dataStoreRepository: DataStoreRepository,
 ) {
     suspend operator fun invoke(day: Int) = dataStoreRepository.setPayday(day)
-}
-
-/**
- * 이번 달 실지급일 정보 — 설정의 "이번 달 월급일 조정" 행·다이얼로그가 쓴다.
- *
- * [PaydayInfo.actual]은 사이클 경계와 **같은 계산**([BudgetCycle.payDate])에서 나온다.
- * 화면에서 다시 계산하면 홈과 어긋나므로 이 값을 그대로 표시한다.
- */
-class ObservePaydayInfoUseCase @Inject constructor(
-    private val dataStoreRepository: DataStoreRepository,
-    private val remoteConfigRepository: RemoteConfigRepository,
-) {
-    operator fun invoke(month: YearMonth = YearMonth.now()): Flow<PaydayInfo> =
-        combine(
-            dataStoreRepository.getPayday(),
-            dataStoreRepository.getPaydayOverrides(),
-        ) { payday, overrides ->
-            val holidays = remoteConfigRepository.getHolidays()
-            PaydayInfo(
-                month = month,
-                rule = payday,
-                overrideDay = overrides[month],
-                actual = BudgetCycle.payDate(month, payday, overrides, holidays),
-                holidays = holidays,
-            )
-        }
-}
-
-/** 그 달의 월급일 지정/해제. [day]가 null이면 규칙일로 되돌린다. */
-class SetPaydayOverrideUseCase @Inject constructor(
-    private val dataStoreRepository: DataStoreRepository,
-) {
-    suspend operator fun invoke(month: YearMonth, day: Int?) =
-        dataStoreRepository.setPaydayOverride(month, day)
 }
 
 /** 사용자 유형(student/youth/common) 관찰 — 호칭 등 개인화에 사용 */

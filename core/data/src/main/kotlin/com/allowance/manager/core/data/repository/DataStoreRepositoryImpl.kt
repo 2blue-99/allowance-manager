@@ -7,13 +7,11 @@ import com.allowance.manager.core.domain.model.BudgetAlertState
 import com.allowance.manager.core.domain.model.DailyReminderSetting
 import com.allowance.manager.core.domain.model.LedgerFilter
 import com.allowance.manager.core.domain.model.PaydayAlertSetting
-import com.allowance.manager.core.domain.model.PaydayOverrides
 import com.allowance.manager.core.domain.model.UserType
 import com.allowance.manager.core.domain.repository.DataStoreRepository
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
-import java.time.YearMonth
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -24,15 +22,6 @@ class DataStoreRepositoryImpl @Inject constructor(
 
     override fun getPayday(): Flow<Int> = preferencesDataSource.getPayday()
     override suspend fun setPayday(day: Int) = preferencesDataSource.setPayday(day)
-
-    override fun getPaydayOverrides(): Flow<Map<YearMonth, Int>> =
-        preferencesDataSource.getPaydayOverrides().map { PaydayOverrides.parse(it) }
-
-    // 읽고-바꿔-쓰기. 사용자가 다이얼로그에서 저장할 때만 호출되는 단발 액션이라 동시 쓰기 경합은 없다.
-    override suspend fun setPaydayOverride(month: YearMonth, day: Int?) {
-        val current = PaydayOverrides.parse(preferencesDataSource.getPaydayOverrides().first())
-        preferencesDataSource.setPaydayOverrides(PaydayOverrides.format(PaydayOverrides.put(current, month, day)))
-    }
 
     override fun getUserType(): Flow<UserType> =
         preferencesDataSource.getUserType().map { UserType.fromKey(it) }

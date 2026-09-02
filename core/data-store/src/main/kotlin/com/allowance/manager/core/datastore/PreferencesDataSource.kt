@@ -21,8 +21,6 @@ class PreferencesDataSource @Inject constructor(
     companion object {
         // 월 예산(용돈)은 budget_history 테이블로 이관 (월별 이력)
         val PAYDAY = intPreferencesKey("payday")                    // 수급일. 1~31, 0 = 말일
-        // 달별 월급일 지정("이번 달 월급일 조정"). "2026-08:21,2026-09:23" — 최근 12개월만 보존
-        val PAYDAY_OVERRIDES = stringPreferencesKey("payday_overrides")
         val INTRO_SHOWN = booleanPreferencesKey("intro_shown")
         val ONBOARDING_DONE = booleanPreferencesKey("onboarding_done")
         val STATUS_BAR_ENABLED = booleanPreferencesKey("status_bar_enabled")
@@ -61,10 +59,6 @@ class PreferencesDataSource @Inject constructor(
 
     fun getPayday(): Flow<Int> = get(PAYDAY, DEFAULT_PAYDAY)
     suspend fun setPayday(day: Int) = set(PAYDAY, day)
-
-    // 달별 월급일 지정 — 파싱·직렬화는 도메인(PaydayOverrides)이 담당하고 여기선 문자열만 다룬다.
-    fun getPaydayOverrides(): Flow<String> = get(PAYDAY_OVERRIDES, "")
-    suspend fun setPaydayOverrides(raw: String) = set(PAYDAY_OVERRIDES, raw)
 
     fun getUserType(): Flow<String> = get(USER_TYPE, DEFAULT_USER_TYPE)
     suspend fun setUserType(key: String) = set(USER_TYPE, key)

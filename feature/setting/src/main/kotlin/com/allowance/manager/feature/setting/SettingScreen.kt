@@ -65,11 +65,7 @@ import com.allowance.manager.core.designsystem.theme.AmShape
 import com.allowance.manager.core.designsystem.theme.AmSpacing
 import com.allowance.manager.core.designsystem.theme.AmType
 import com.allowance.manager.core.domain.model.AlertFrequency
-import java.time.DayOfWeek
-import java.time.YearMonth
 import com.allowance.manager.core.domain.model.PaydayAlertSetting
-import com.allowance.manager.core.domain.model.PaydayInfo
-import com.allowance.manager.core.domain.model.PaydayWarning
 import com.allowance.manager.core.domain.model.UserType
 import com.allowance.manager.core.domain.util.amountToComma
 import com.allowance.manager.core.domain.util.formatTimeOfDay
@@ -127,7 +123,6 @@ fun SettingRoute(
         onDailyReminderEnabledChange = viewModel::setDailyReminderEnabled,
         onReminderTimeChange = viewModel::setDailyReminderTime,
         onPaydayAlertEnabledChange = viewModel::setPaydayAlertEnabled,
-        onPaydayOverrideSave = viewModel::setPaydayOverride,
         onSupport = {
             // debug 빌드(onNavigateToDebug != null)에선 미등록 상품이라 결제창이 안 뜸 → 바로 감사 다이얼로그로 결과 확인
             if (onNavigateToDebug != null) {
@@ -200,7 +195,6 @@ fun SettingScreen(
     onDailyReminderEnabledChange: (Boolean) -> Unit = {},
     onReminderTimeChange: (Int, Int) -> Unit = { _, _ -> },
     onPaydayAlertEnabledChange: (Boolean) -> Unit = {},
-    onPaydayOverrideSave: (YearMonth, Int?) -> Unit = { _, _ -> },
     onSupport: () -> Unit = {},
     onFeedback: () -> Unit = {},
     onRate: () -> Unit = {},
@@ -212,8 +206,6 @@ fun SettingScreen(
     var showTypeDialog by remember { mutableStateOf(false) }
     var showFrequencyDialog by remember { mutableStateOf(false) }
     var showTimePicker by remember { mutableStateOf(false) }
-    // 이번 달 월급일 조정 — 다이얼로그를 열 때의 PaydayInfo를 고정해 자정을 넘겨도 대상 달이 바뀌지 않게 한다
-    var paydayOverrideTarget by remember { mutableStateOf<PaydayInfo?>(null) }
 
     Column(
         modifier = Modifier.fillMaxSize().background(AmColors.ScreenBg).padding(top = AmSpacing.xl).padding(horizontal = AmSpacing.xl),
@@ -248,22 +240,6 @@ fun SettingScreen(
                         {
                             AmSettingItem(title = uiState.userType.paydayLabel, onClick = { showPaydayDialog = true }) {
                                 Text(paydayLabel(uiState.payday), fontSize = 13.sp, fontWeight = FontWeight.Bold, color = AmColors.Emerald)
-                                Spacer(Modifier.width(AmSpacing.xs))
-                                AmChevron()
-                            }
-                        },
-                        {
-                            // 이번 달만 실제 받은 날로 조정 — 값은 실지급일(공휴일·주말 보정 또는 조정값)
-                            AmSettingItem(
-                                title = "이번 달 ${uiState.userType.paydayShort} 조정",
-                                onClick = { uiState.paydayInfo?.let { paydayOverrideTarget = it } },
-                            ) {
-                                Text(
-                                    uiState.paydayInfo?.actual?.let { "${it.monthValue}월 ${it.dayOfMonth}일" } ?: "",
-                                    fontSize = 13.sp,
-                                    fontWeight = FontWeight.Bold,
-                                    color = AmColors.Emerald,
-                                )
                                 Spacer(Modifier.width(AmSpacing.xs))
                                 AmChevron()
                             }
@@ -381,15 +357,6 @@ fun SettingScreen(
             onDismiss = { showPaydayDialog = false },
         )
     }
-    paydayOverrideTarget?.let { info ->
-        PaydayOverrideDialog(
-            info = info,
-            paydayName = uiState.userType.paydayShort,
-            onSave = { day -> onPaydayOverrideSave(info.month, day); paydayOverrideTarget = null },
-            onDismiss = { paydayOverrideTarget = null },
-        )
-    }
-
     if (showFrequencyDialog) {
         FrequencyDialog(
             current = uiState.budgetAlert.frequency,
@@ -505,68 +472,6 @@ private fun AlertDetailRow(label: String, subtitle: String, value: String, onCli
         }
     }
 }
-
-/**
- * 이번 달만 지급일을 바꾸는 다이얼로그.
- *
- * - 비우고 저장하면 지정 해제(규칙일로 복귀) — 그래서 힌트에 기본일을 적어둔다.
- * - 입력한 날이 공휴일·주말이면 경고만 띄우고 **저장은 막지 않는다.** 실제로 그날 받았을 수 있고,
- *   지정값에는 영업일 보정도 걸지 않는다.
- */
-@Composable
-private fun PaydayOverrideDialog(
-    info: PaydayInfo,
-    paydayName: String,
-    onSave: (Int?) -> Unit,
-    onDismiss: () -> Unit,
-) {
-    var input by remember { mutableStateOf(info.overrideDay?.toString() ?: "") }
-    val day = input.toIntOrNull()?.takeIf { it in 1..31 }
-    val warning = day?.let { info.warningFor(it) }
-    AmDialog(
-        title = "이번 달 $paydayName 조정",
-        onDismiss = onDismiss,
-        onConfirm = { onSave(day) },
-        analyticsTag = AmAnalytics.Dialog.PAYDAY_OVERRIDE,
-    ) {
-        Column(verticalArrangement = Arrangement.spacedBy(AmSpacing.md)) {
-            Text(
-                buildString {
-                    appendLine("${info.month.monthValue}월에만 적용돼요. 다음 달부터는 다시 ${paydayRuleLabel(info.rule)}로 계산해요.")
-                    append("홈에 보이는 이번 달 기간과 지출도 함께 바뀌어요.")
-                },
-                fontSize = 12.sp,
-                color = AmColors.TextSecondary,
-            )
-            AmLineTextField(
-                value = input,
-                // 1~31만 허용(비우면 지정 해제 → 규칙일 복귀). 0·32+ 등은 무시.
-                onValueChange = { v ->
-                    val digits = v.filter { it.isDigit() }.take(2)
-                    input = digits.toIntOrNull()?.coerceIn(1, 31)?.toString() ?: ""
-                },
-                hint = "현재 ${paydayLabel(info.rule)}",
-                keyboardType = KeyboardType.Number,
-                supportingText = warning?.message(info.month.monthValue),
-                supportingTextColor = AmColors.Red,
-                modifier = Modifier.fillMaxWidth(),
-            )
-        }
-    }
-}
-
-/** 경고 문구 — 이름을 알면 "8월 31일은 추석이에요", 모르면 "…은 공휴일이에요" */
-private fun PaydayWarning.message(month: Int): String {
-    val dayText = "${month}월 ${date.dayOfMonth}일"
-    return when (kind) {
-        PaydayWarning.Kind.HOLIDAY -> "${dayText}은 ${holidayName ?: "공휴일"}이에요"
-        PaydayWarning.Kind.WEEKEND ->
-            if (date.dayOfWeek == DayOfWeek.SATURDAY) "${dayText}은 토요일이에요" else "${dayText}은 일요일이에요"
-    }
-}
-
-/** "매월 25일" / "매월 말일" — 조정 다이얼로그 안내문에서 규칙일을 부를 때 */
-private fun paydayRuleLabel(rule: Int): String = "매월 ${paydayLabel(rule)}"
 
 @Composable
 private fun FrequencyDialog(current: AlertFrequency, onSave: (AlertFrequency) -> Unit, onDismiss: () -> Unit) {

@@ -9,8 +9,7 @@ import java.time.ZoneId
  * 월급일 기준 이번달 사이클.
  * payday: 1~31 = 해당 일, 0 = 말일. 해당 월에 없는 날짜(예: 31 → 2월)는 말일로 clamp.
  *
- * 사이클 경계는 항상 [payDate] 한 곳에서만 나온다. 규칙일(payday)을 주말·공휴일 보정하거나,
- * 그 달만 사용자가 직접 지정([overrides])했으면 지정값을 쓴다.
+ * 사이클 경계는 항상 [payDate] 한 곳에서만 나온다. 규칙일(payday)을 주말·공휴일 보정해서 쓴다.
  * 계산을 여기로 모아둔 덕에 홈·위젯·통계·월급일 알림이 같은 날짜를 본다.
  */
 data class BudgetCycle(
@@ -52,47 +51,34 @@ data class BudgetCycle(
 
         /**
          * [ym] 달의 실지급일 — 사이클 경계·D-day·월급일 알림이 공유하는 단일 진입점.
-         *
-         * - [overrides]에 그 달이 있으면 **보정 없이** 그 날짜를 쓴다.
-         *   사용자가 "이 달은 21일에 받았다"고 지정한 걸 앱이 영업일 보정으로 덮어쓰면 안 된다.
-         * - 없으면 규칙일([payday])을 주말·공휴일 보정한다.
-         *
-         * @param overrides 달별 지급일 지정. 키는 **명목 월**(보정된 날짜의 월이 아니라 규칙상 그 지급일이 속한 달),
-         * 값은 1~31. [PaydayOverrides] 참고.
+         * 규칙일([payday])을 주말·공휴일 보정해서 돌려준다.
          */
         fun payDate(
             ym: YearMonth,
             payday: Int,
-            overrides: Map<YearMonth, Int> = emptyMap(),
             holidays: Holidays = Holidays.EMPTY,
-        ): LocalDate {
-            val override = overrides[ym]
-            if (override != null) return dateOf(ym, override)
-            return adjustToBusinessDay(dateOf(ym, payday), holidays)
-        }
+        ): LocalDate = adjustToBusinessDay(dateOf(ym, payday), holidays)
 
         fun of(
             payday: Int,
             today: LocalDate = LocalDate.now(),
             holidays: Holidays = Holidays.EMPTY,
-            overrides: Map<YearMonth, Int> = emptyMap(),
         ): BudgetCycle {
             // 월(月) 판단은 오늘이 속한 달로 하고, 경계 값은 그 달의 실지급일로 만든다.
             val thisYm = YearMonth.from(today)
-            val thisPay = payDate(thisYm, payday, overrides, holidays)
+            val thisPay = payDate(thisYm, payday, holidays)
             return if (!today.isBefore(thisPay)) {
                 // 오늘 >= 이번달 실지급일 → 이번 사이클 = 이번달 ~ 다음달 실지급일
-                val next = payDate(thisYm.plusMonths(1), payday, overrides, holidays)
+                val next = payDate(thisYm.plusMonths(1), payday, holidays)
                 BudgetCycle(thisPay, endAfter(next, thisPay))
             } else {
                 // 오늘 < 이번달 실지급일 → 이번 사이클 = 지난달 ~ 이번달 실지급일
-                val prev = payDate(thisYm.minusMonths(1), payday, overrides, holidays)
+                val prev = payDate(thisYm.minusMonths(1), payday, holidays)
                 BudgetCycle(startBefore(prev, thisPay), thisPay)
             }
         }
 
-        // 경계 단조성 가드 — 오버라이드와 영업일 보정이 겹치면 두 경계가 같은 날이 될 수 있다.
-        // (예: payday=1, 7월 지정 31일, 8/1이 일요일 → 보정으로 7/31 → 시작=끝)
+        // 경계 단조성 가드 — 영업일 보정으로 두 경계가 같은 날이 될 수 있다.
         // 길이 0 사이클은 endMillis < startMillis 가 되어 집계가 통째로 비므로 최소 1일을 보장한다.
         private fun endAfter(candidate: LocalDate, start: LocalDate): LocalDate =
             if (candidate.isAfter(start)) candidate else start.plusDays(1)

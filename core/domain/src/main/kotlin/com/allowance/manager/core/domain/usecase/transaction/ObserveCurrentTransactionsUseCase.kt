@@ -21,15 +21,11 @@ class ObserveCurrentTransactionsUseCase @Inject constructor(
 ) {
     @OptIn(ExperimentalCoroutinesApi::class)
     operator fun invoke(): Flow<List<Transaction>> =
-        combine(
-            dataStoreRepository.getPayday(),
-            dataStoreRepository.getPaydayOverrides(),
-        ) { payday, overrides -> payday to overrides }
-            .flatMapLatest { (payday, overrides) ->
+        dataStoreRepository.getPayday()
+            .flatMapLatest { payday ->
                 val cycle = BudgetCycle.of(
                     payday = payday,
                     holidays = remoteConfigRepository.getHolidays(),
-                    overrides = overrides,
                 )
                 transactionRepository.observeBetween(cycle.startMillis(), cycle.endMillis())
             }

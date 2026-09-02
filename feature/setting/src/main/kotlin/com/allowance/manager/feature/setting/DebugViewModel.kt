@@ -10,13 +10,12 @@ import com.allowance.manager.core.domain.model.TransactionCategory
 import com.allowance.manager.core.domain.model.TransactionType
 import com.allowance.manager.core.domain.repository.BudgetRepository
 import com.allowance.manager.core.domain.repository.DataStoreRepository
+import com.allowance.manager.core.domain.model.BudgetCycle
 import com.allowance.manager.core.domain.repository.RemoteConfigRepository
 import com.allowance.manager.core.domain.repository.TransactionRepository
 import com.allowance.manager.core.domain.usecase.alert.PaydayNoticeDecider
 import com.allowance.manager.core.domain.usecase.config.FetchRemoteConfigUseCase
 import com.allowance.manager.core.domain.usecase.budget.ObserveBudgetStatusUseCase
-import com.allowance.manager.core.domain.usecase.budget.ObservePaydayInfoUseCase
-import com.allowance.manager.core.domain.usecase.budget.SetPaydayOverrideUseCase
 import com.allowance.manager.core.domain.usecase.budget.SetPaydayUseCase
 import com.allowance.manager.core.domain.util.amountToComma
 import com.allowance.manager.core.domain.usecase.setting.GetHomeGuideShownUseCase
@@ -48,11 +47,9 @@ class DebugViewModel @Inject constructor(
     private val transactionRepository: TransactionRepository,
     private val budgetRepository: BudgetRepository,
     private val setPaydayUseCase: SetPaydayUseCase,
-    private val setPaydayOverrideUseCase: SetPaydayOverrideUseCase,
     private val dataStoreRepository: DataStoreRepository,
     private val remoteConfigRepository: RemoteConfigRepository,
     private val fetchRemoteConfigUseCase: FetchRemoteConfigUseCase,
-    observePaydayInfoUseCase: ObservePaydayInfoUseCase,
 ) : BaseViewModel() {
 
     /** 예산 소진 알림 테스트용 지출의 출처명(되돌리기 시 이 값으로 필터해 삭제) */
@@ -199,21 +196,17 @@ class DebugViewModel @Inject constructor(
      * 실지급일은 사이클 경계와 같은 계산에서 나오므로, 이 값이 홈 D-day와 다르면 버그다.
      */
     val paydayDebugText: StateFlow<String> =
-        combine(observePaydayInfoUseCase(), paydayRefresh) { info, _ -> info }
-            .map { info ->
+        combine(dataStoreRepository.getPayday(), paydayRefresh) { payday, _ -> payday }
+            .map { payday ->
                 val today = LocalDate.now()
-                val notice = PaydayNoticeDecider.decide(
-                    today = today,
-                    payday = info.rule,
-                    overrides = info.overrideDay?.let { mapOf(info.month to it) } ?: emptyMap(),
-                    holidays = info.holidays,
-                )
+                val holidays = remoteConfigRepository.getHolidays()
+                val actual = BudgetCycle.payDate(YearMonth.from(today), payday, holidays)
+                val notice = PaydayNoticeDecider.decide(today = today, payday = payday, holidays = holidays)
                 val lastSent = dataStoreRepository.getPaydayAlertLastSent().ifEmpty { "없음" }
-                val ruleLabel = if (info.rule <= 0) "말일" else "${info.rule}일"
-                val adjusted = info.overrideDay?.let { "조정 ${it}일" } ?: "조정 없음"
+                val ruleLabel = if (payday <= 0) "말일" else "${payday}일"
                 buildString {
-                    appendLine("규칙 $ruleLabel · $adjusted")
-                    appendLine("실지급일 ${info.actual.dayLabel()} · 오늘 ${today.dayLabel()}")
+                    appendLine("규칙 $ruleLabel")
+                    appendLine("실지급일 ${actual.dayLabel()} · 오늘 ${today.dayLabel()}")
                     append("판정 $notice · 마지막 발송 $lastSent")
                 }
             }
@@ -223,23 +216,12 @@ class DebugViewModel @Inject constructor(
         "${monthValue}월 ${dayOfMonth}일(${dayOfWeek.getDisplayName(TextStyle.SHORT, Locale.KOREAN)})"
 
     /**
-     * 테스트용(월급일 알림): 지급일을 오늘 + [offsetDays] 로 지정.
-     * 0 = 오늘(당일 알림 확인), 1 = 내일(전날 알림 확인). 달을 넘어가면 그 날짜가 속한 달에 지정한다.
+     * 테스트용(월급일 알림): 규칙일을 오늘 + [offsetDays]의 일(日)로 바꾼다.
+     * 0 = 오늘(당일 알림 확인), 1 = 내일(전날 알림 확인). 영업일 보정은 그대로 걸린다.
      */
     fun setPaydayForTest(offsetDays: Long) {
         viewModelScope.launch {
-            val target = LocalDate.now().plusDays(offsetDays)
-            setPaydayOverrideUseCase(YearMonth.from(target), target.dayOfMonth)
-            paydayRefresh.value++
-        }
-    }
-
-    /** 테스트용: 이번 달·다음 달 지급일 지정을 해제해 규칙일로 되돌린다. */
-    fun clearPaydayForTest() {
-        viewModelScope.launch {
-            val now = YearMonth.now()
-            setPaydayOverrideUseCase(now, null)
-            setPaydayOverrideUseCase(now.plusMonths(1), null)
+            dataStoreRepository.setPayday(LocalDate.now().plusDays(offsetDays).dayOfMonth)
             paydayRefresh.value++
         }
     }

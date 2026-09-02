@@ -35,10 +35,9 @@ class ObserveDailyCoachUseCase @Inject constructor(
         combine(
             budgetRepository.observeBudgetForMonth(YearMonth.from(today)),
             dataStoreRepository.getPayday(),
-            dataStoreRepository.getPaydayOverrides(),
-        ) { budget, payday, overrides -> Triple(budget, payday, overrides) }
-            .flatMapLatest { (budget, payday, overrides) ->
-                val cycle = BudgetCycle.of(payday, today, remoteConfigRepository.getHolidays(), overrides)
+        ) { budget, payday -> budget to payday }
+            .flatMapLatest { (budget, payday) ->
+                val cycle = BudgetCycle.of(payday, today, remoteConfigRepository.getHolidays())
                 val todayStart = today.atStartOfDay(zone).toInstant().toEpochMilli()
                 val todayEnd = today.plusDays(1).atStartOfDay(zone).toInstant().toEpochMilli() - 1
 

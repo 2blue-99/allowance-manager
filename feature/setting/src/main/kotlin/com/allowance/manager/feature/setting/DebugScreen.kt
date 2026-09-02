@@ -64,7 +64,6 @@ fun DebugRoute(
         onTriggerReminder = viewModel::triggerDailyReminderNow,
         paydayDebugText = paydayDebugText,
         onSetPaydayForTest = viewModel::setPaydayForTest,
-        onClearPaydayForTest = viewModel::clearPaydayForTest,
         onTriggerPaydayAlert = viewModel::triggerPaydayAlertNow,
         onClearPaydaySentMark = viewModel::clearPaydayAlertSentMark,
         remoteConfigText = remoteConfigText,
@@ -88,7 +87,6 @@ fun DebugScreen(
     onTriggerReminder: () -> Unit = {},
     paydayDebugText: String = "",
     onSetPaydayForTest: (Long) -> Unit = {},
-    onClearPaydayForTest: () -> Unit = {},
     onTriggerPaydayAlert: (PaydayNoticeDecider.Notice?) -> Unit = {},
     onClearPaydaySentMark: () -> Unit = {},
     remoteConfigText: String = "",
@@ -176,7 +174,6 @@ fun DebugScreen(
             modifier = Modifier.fillMaxWidth(),
         )
         Spacer(Modifier.height(AmSpacing.sm))
-        AmButton(text = "지급일 지정 해제", onClick = onClearPaydayForTest, modifier = Modifier.fillMaxWidth())
         Spacer(Modifier.height(AmSpacing.md))
         // 실제 경로 — 오늘이 지급일 전날/당일이 아니면 아무것도 안 뜬다
         AmButton(

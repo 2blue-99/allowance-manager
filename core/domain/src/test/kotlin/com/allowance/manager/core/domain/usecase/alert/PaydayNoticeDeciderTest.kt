@@ -4,7 +4,6 @@ import com.allowance.manager.core.domain.model.Holidays
 import org.junit.Assert.assertEquals
 import org.junit.Test
 import java.time.LocalDate
-import java.time.YearMonth
 
 class PaydayNoticeDeciderTest {
 
@@ -39,34 +38,6 @@ class PaydayNoticeDeciderTest {
         assertEquals(
             PaydayNoticeDecider.Notice.TODAY,
             PaydayNoticeDecider.decide(LocalDate.of(2026, 8, 24), payday = 25, holidays = holidays),
-        )
-    }
-
-    @Test
-    fun `그 달만 조정한 날짜를 기준으로 판정한다`() {
-        val overrides = mapOf(YearMonth.of(2026, 8) to 21)
-        assertEquals(
-            PaydayNoticeDecider.Notice.TOMORROW,
-            PaydayNoticeDecider.decide(LocalDate.of(2026, 8, 20), payday = 25, overrides = overrides),
-        )
-        assertEquals(
-            PaydayNoticeDecider.Notice.TODAY,
-            PaydayNoticeDecider.decide(LocalDate.of(2026, 8, 21), payday = 25, overrides = overrides),
-        )
-        // 조정했으니 원래 규칙일(25일)엔 알림이 없다
-        assertEquals(
-            PaydayNoticeDecider.Notice.NONE,
-            PaydayNoticeDecider.decide(LocalDate.of(2026, 8, 25), payday = 25, overrides = overrides),
-        )
-    }
-
-    @Test
-    fun `조정한 날짜는 주말이어도 보정하지 않는다`() {
-        // 2026-08-23은 일요일 — 사용자가 그날 받았다고 지정했으면 그대로 쓴다
-        val overrides = mapOf(YearMonth.of(2026, 8) to 23)
-        assertEquals(
-            PaydayNoticeDecider.Notice.TODAY,
-            PaydayNoticeDecider.decide(LocalDate.of(2026, 8, 23), payday = 25, overrides = overrides),
         )
     }
 

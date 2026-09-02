@@ -63,7 +63,6 @@ class PaydayAlarmReceiver : BroadcastReceiver() {
                 val notice = PaydayNoticeDecider.decide(
                     today = today,
                     payday = dataStoreRepository.getPayday().first(),
-                    overrides = dataStoreRepository.getPaydayOverrides().first(),
                     holidays = remoteConfigRepository.getHolidays(),
                 )
                 if (notice == PaydayNoticeDecider.Notice.NONE) return@launch

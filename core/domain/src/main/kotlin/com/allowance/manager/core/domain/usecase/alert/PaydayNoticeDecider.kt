@@ -22,12 +22,11 @@ object PaydayNoticeDecider {
     fun decide(
         today: LocalDate,
         payday: Int,
-        overrides: Map<YearMonth, Int> = emptyMap(),
         holidays: Holidays = Holidays.EMPTY,
     ): Notice {
         val thisYm = YearMonth.from(today)
         val payDates = listOf(thisYm.minusMonths(1), thisYm, thisYm.plusMonths(1))
-            .map { BudgetCycle.payDate(it, payday, overrides, holidays) }
+            .map { BudgetCycle.payDate(it, payday, holidays) }
             .toSet()
 
         // 당일이 전날보다 우선 — 같은 날 둘 다 걸리는 일은 없지만 판정 순서를 못 박아둔다.
