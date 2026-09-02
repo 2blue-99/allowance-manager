@@ -60,7 +60,7 @@ data class HomeUiState(
     val dailyAverage: Long = 0L,        // 하루 평균 지출 (지출 ÷ 경과일수)
     val overPace: Boolean = false,      // 하루 평균 > 권장 → 과속
     val daysUntilPayday: Int = 0,       // 다음 월급일까지 D-day
-    // 이번 사이클 구간(예산 카드 배지) — 끝은 다음 수급일 전날(포함). 로딩 중이면 null
+    // 이번 사이클 구간(예산 카드 머리글) — 받은 날 ~ 다음 받는 날 전날. 로딩 중이면 null
     val cycleStart: LocalDate? = null,
     val cycleEnd: LocalDate? = null,
     val transactions: List<Transaction> = emptyList(),
