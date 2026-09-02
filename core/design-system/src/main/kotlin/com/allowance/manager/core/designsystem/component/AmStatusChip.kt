@@ -8,6 +8,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.unit.dp
 import com.allowance.manager.core.designsystem.theme.AmShape
 import com.allowance.manager.core.designsystem.theme.AmType
@@ -21,6 +22,7 @@ fun AmStatusChip(
     color: Color,
     background: Color,
     modifier: Modifier = Modifier,
+    style: TextStyle = AmType.size11_bold,
 ) {
     Box(
         modifier = modifier
@@ -28,6 +30,6 @@ fun AmStatusChip(
             .background(background)
             .padding(horizontal = 10.dp, vertical = 5.dp),
     ) {
-        Text(text, style = AmType.size11_bold, color = color)
+        Text(text, style = style, color = color)
     }
 }

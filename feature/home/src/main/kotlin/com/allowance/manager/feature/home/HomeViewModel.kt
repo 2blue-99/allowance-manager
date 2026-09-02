@@ -60,6 +60,9 @@ data class HomeUiState(
     val dailyAverage: Long = 0L,        // 하루 평균 지출 (지출 ÷ 경과일수)
     val overPace: Boolean = false,      // 하루 평균 > 권장 → 과속
     val daysUntilPayday: Int = 0,       // 다음 월급일까지 D-day
+    // 이번 사이클 구간(예산 카드 배지) — 끝은 다음 수급일 전날(포함). 로딩 중이면 null
+    val cycleStart: LocalDate? = null,
+    val cycleEnd: LocalDate? = null,
     val transactions: List<Transaction> = emptyList(),
     val filter: LedgerFilter = LedgerFilter.Home,  // 내역 필터 (메인/숨김/전체)
     val userType: UserType = UserType.Default,   // 사용자 유형 → 예산 호칭(용돈/생활비/예산)
@@ -170,6 +173,8 @@ class HomeViewModel @Inject constructor(
                     dailyAverage = dailyAverage,
                     overPace = status.budget > 0 && dailyAverage > dailyBudget,
                     daysUntilPayday = daysUntil,
+                    cycleStart = status.cycle.start,
+                    cycleEnd = status.cycle.endExclusive.minusDays(1),
                     transactions = visible,
                     filter = filter,
                     userType = userType,

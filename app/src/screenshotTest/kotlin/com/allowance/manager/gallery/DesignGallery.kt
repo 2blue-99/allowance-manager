@@ -78,6 +78,8 @@ private val sampleHome = HomeUiState(
     dailyAverage = 42_000L,
     overPace = false,
     daysUntilPayday = 12,
+    cycleStart = java.time.LocalDate.of(2026, 7, 25),
+    cycleEnd = java.time.LocalDate.of(2026, 8, 24),
     transactions = listOf(
         sampleTransaction(1, "스타벅스", 5_600),
         sampleTransaction(2, "급여 입금", 2_400_000, TransactionType.INCOME),

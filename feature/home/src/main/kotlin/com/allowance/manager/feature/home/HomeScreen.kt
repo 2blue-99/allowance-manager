@@ -108,6 +108,7 @@ import com.allowance.manager.core.ui.transaction.TransactionFormSheet
 import com.allowance.manager.core.ui.transaction.TransactionRow
 import com.allowance.manager.core.ui.transaction.TxFormMode
 import kotlinx.coroutines.delay
+import java.time.LocalDate
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withTimeoutOrNull
 import java.time.Instant
@@ -311,7 +312,7 @@ private fun homeGuideSteps(
     GuideStep(
         "expenseIncome",
         "지출·수입을 한눈에",
-        "이번 달 지출과 수입, 하루 권장 지출까지 ${type.label} 관리에 필요한 정보를 모았어요.",
+        "이번 달 들어온 돈과 나간 돈을 한눈에 볼 수 있어요.",
         SpotShape.RECT,
     ),
     GuideStep(
@@ -367,16 +368,18 @@ private fun Hero(
     ) {
         Box(Modifier.fillMaxWidth().guideTarget("hero", guideTargets)) { BudgetCard(uiState = uiState) }
         Spacer(Modifier.height(12.dp))
-        // 가이드 2번: 지출·수입 + 하루 지출 권장 지표까지 하나의 하이라이트로 묶음
+        // 가이드 2번: 하루 지표는 예산 카드로 옮겨져 지출·수입 카드만 하이라이트한다.
         Box(Modifier.fillMaxWidth().guideTarget("expenseIncome", guideTargets)) {
-            Column {
-                ExpenseIncomeCard(uiState = uiState)
-                Spacer(Modifier.height(12.dp))
-                StatsRow(uiState = uiState)
-            }
+            ExpenseIncomeCard(uiState = uiState)
         }
     }
 }
+
+// 예산 카드 머리글(라벨·기간) 투명도 — 주인공인 금액과 대비되게 낮춘 값
+private const val HERO_CAPTION_ALPHA = 0.45f
+
+/** 사이클 표기용 날짜 — "7.25" (연도 생략) */
+private fun LocalDate.toCycleLabel(): String = "$monthValue.$dayOfMonth"
 
 // 이번 달 남은 용돈 — 다크 카드 + 소진율 바 (바 아래 양 끝: 소진율·예산)
 // 진입/클릭 시 금액은 0→현재치 카운트업, 소진율 바는 0→현재치 채움.
@@ -410,12 +413,24 @@ private fun BudgetCard(uiState: HomeUiState) {
             modifier = Modifier.fillMaxWidth(),
             horizontalAlignment = Alignment.CenterHorizontally,
         ) {
-            Text(
-                "이번 달 남은 ${uiState.userType.label}",
-                style = AmType.size12_bold.copy(fontSize = 13.sp),
-                color = Color.White.copy(alpha = 0.6f),
-            )
-            Spacer(Modifier.height(10.dp))
+            // 라벨 | 사이클 기간 — 카드의 주인공은 아래 금액이라 둘 다 같은 톤으로 물러나게 둔다.
+            // 기간을 함께 적어 '이번 달'이 수급일 사이클임을 밝힌다. (월별 화면의 '달력 월'과 구분)
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Text(
+                    "남은 ${uiState.userType.label}",
+                    style = AmType.size12_medium,
+                    color = Color.White.copy(alpha = HERO_CAPTION_ALPHA),
+                )
+                if (uiState.cycleStart != null && uiState.cycleEnd != null) {
+                    HeroCaptionDivider()
+                    Text(
+                        "${uiState.cycleStart.toCycleLabel()} – ${uiState.cycleEnd.toCycleLabel()}",
+                        style = AmType.size12_medium,
+                        color = Color.White.copy(alpha = HERO_CAPTION_ALPHA),
+                    )
+                }
+            }
+            Spacer(Modifier.height(12.dp))
             Text(
                 text = if (uiState.isOver) "-${abs(shownAmount).amountToComma()}원" else "${shownAmount.amountToComma()}원",
                 style = AmType.size36_black,
@@ -449,7 +464,60 @@ private fun BudgetCard(uiState: HomeUiState) {
                     color = Color.White.copy(alpha = 0.6f),
                 )
             }
+            // 하루 권장 | 하루 실지출 | D-day — 전부 예산 사이클에서 나오는 값이라 카드 안으로 들인다.
+            Spacer(Modifier.height(20.dp))
+            Box(
+                Modifier
+                    .fillMaxWidth()
+                    .height(1.dp)
+                    .background(Color.White.copy(alpha = 0.1f)),
+            )
+            Spacer(Modifier.height(15.dp))
+            Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                HeroStat("하루 지출 권장", "${uiState.dailyBudget.amountToComma()}원", Modifier.weight(1f))
+                HeroStat(
+                    "하루 실지출",
+                    "${uiState.dailyAverage.amountToComma()}원",
+                    Modifier.weight(1f),
+                    // 과속(평균>권장)이면 빨강으로 경고
+                    if (uiState.overPace) AmColors.Red else Color.White,
+                )
+                HeroStat(
+                    "${uiState.userType.paydayShort}까지",
+                    if (uiState.daysUntilPayday <= 0) "오늘" else "D-${uiState.daysUntilPayday}",
+                    Modifier.weight(1f),
+                    AmColors.Emerald,
+                )
+            }
         }
+    }
+}
+
+/** 예산 카드 안 한 줄 항목을 잇는 세로 구분선 (머리글·지표 공용) */
+@Composable
+private fun HeroCaptionDivider() {
+    Spacer(Modifier.width(8.dp))
+    Box(
+        Modifier
+            .width(1.dp)
+            .height(11.dp)
+            .background(Color.White.copy(alpha = 0.22f)),
+    )
+    Spacer(Modifier.width(8.dp))
+}
+
+/** 예산 카드 아래 지표 한 칸 — 라벨은 머리글과 같은 톤으로 물러나고 그 아래 값이 선다. */
+@Composable
+private fun HeroStat(
+    label: String,
+    value: String,
+    modifier: Modifier = Modifier,
+    valueColor: Color = Color.White,
+) {
+    Column(modifier = modifier, horizontalAlignment = Alignment.CenterHorizontally) {
+        Text(label, style = AmType.size11_medium, color = Color.White.copy(alpha = HERO_CAPTION_ALPHA))
+        Spacer(Modifier.height(5.dp))
+        Text(value, style = AmType.size14_bold, color = valueColor)
     }
 }
 
@@ -474,42 +542,6 @@ private fun SummaryCell(label: String, value: String, valueColor: Color, modifie
         Text(label, style = AmType.size10_medium, color = AmColors.TextSecondary)
         Spacer(Modifier.height(5.dp))
         Text(value, style = AmType.size16_bold, color = valueColor)
-    }
-}
-
-// 하루 권장 / 하루 평균 / 월급일까지 — 라이트 카드 3칸
-@Composable
-private fun StatsRow(uiState: HomeUiState) {
-    val dday = if (uiState.daysUntilPayday <= 0) "오늘" else "D-${uiState.daysUntilPayday}"
-    AmCard(
-        modifier = Modifier.fillMaxWidth(),
-        contentPadding = PaddingValues(vertical = 4.dp),
-    ) {
-        Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-            StatCell("${uiState.dailyBudget.amountToComma()}원", "하루 지출 권장", Modifier.weight(1f))
-            Box(Modifier.width(1.dp).height(36.dp).background(AmColors.Divider))
-            // 과속(평균>권장)이면 빨강으로 경고
-            StatCell(
-                "${uiState.dailyAverage.amountToComma()}원",
-                "하루 실지출",
-                Modifier.weight(1f),
-                if (uiState.overPace) AmColors.Red else AmColors.TextPrimary,
-            )
-            Box(Modifier.width(1.dp).height(36.dp).background(AmColors.Divider))
-            StatCell(dday, "${uiState.userType.paydayShort}까지", Modifier.weight(1f), AmColors.Emerald)
-        }
-    }
-}
-
-@Composable
-private fun StatCell(value: String, label: String, modifier: Modifier = Modifier, valueColor: Color = AmColors.TextPrimary) {
-    Column(
-        modifier = modifier.padding(vertical = 12.dp),
-        horizontalAlignment = Alignment.CenterHorizontally,
-    ) {
-        Text(value, style = AmType.size14_bold, color = valueColor)
-        Spacer(Modifier.height(3.dp))
-        Text(label, style = AmType.size10_medium, color = AmColors.TextSecondary)
     }
 }
 
