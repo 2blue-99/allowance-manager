@@ -84,10 +84,31 @@ data class BudgetCycle(
         }
 
         /**
+         * [before] 직전 지급일. [nextPayDateAfter]의 반대 방향.
+         *
+         * 이력의 첫 줄보다 과거를 물었을 때 그 규칙으로 거슬러 올라가는 데 쓴다.
+         * 붙어 있는 후보를 건너뛰는 기준([MIN_CYCLE_DAYS])은 전진과 같다.
+         */
+        fun previousPayDateBefore(before: LocalDate, payday: Int, holidays: Holidays = Holidays.EMPTY): LocalDate {
+            var ym = YearMonth.from(before)
+            repeat(MAX_MONTH_PROBE) {
+                val candidate = payDate(ym, payday, holidays)
+                if (candidate.isBefore(before) && ChronoUnit.DAYS.between(candidate, before) >= MIN_CYCLE_DAYS) {
+                    return candidate
+                }
+                ym = ym.minusMonths(1)
+            }
+            return before.minusDays(1)
+        }
+
+        /**
          * 이력 기반 사이클 — [today]가 속한 구간.
          *
          * [rules]는 오래된 → 최신 순. 비어 있으면 [fallbackPayday]로 규칙일 하나만 쓰던
          * 기존 계산([of])과 같은 결과를 준다(온보딩 이전, DB만 초기화된 개발 기기 등).
+         *
+         * 이력의 첫 줄보다 과거를 물으면 그 규칙으로 **거슬러 올라가** 사이클을 만든다.
+         * (온보딩은 그 시점 사이클 한 줄만 심으므로, 역산이 없으면 과거 사이클이 아예 안 나온다)
          */
         fun of(
             rules: List<PaydayRule>,
@@ -98,7 +119,19 @@ data class BudgetCycle(
             if (rules.isEmpty()) return of(fallbackPayday, today, holidays)
 
             val sorted = rules.sortedBy { it.effectiveDate }
-            // today 시점 규칙이 없으면(이력보다 과거) 첫 이력부터 훑는다.
+
+            // 첫 이력 이전 — 그 규칙으로 역산
+            val first = sorted.first()
+            if (today.isBefore(first.effectiveDate)) {
+                var end = first.effectiveDate
+                repeat(MAX_CYCLE_PROBE) {
+                    val begin = previousPayDateBefore(end, first.payday, holidays)
+                    if (!today.isBefore(begin)) return BudgetCycle(begin, end)
+                    end = begin
+                }
+                return BudgetCycle(startBefore(today, end), end)
+            }
+
             val startIndex = sorted.indexOfLast { !it.effectiveDate.isAfter(today) }.coerceAtLeast(0)
 
             var index = startIndex

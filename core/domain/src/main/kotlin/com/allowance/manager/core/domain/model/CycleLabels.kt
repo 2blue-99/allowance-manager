@@ -13,14 +13,31 @@ import java.time.temporal.ChronoUnit
 /** 사이클의 마지막 날 (다음 받는 날 전날) */
 val BudgetCycle.lastDay: java.time.LocalDate get() = endExclusive.minusDays(1)
 
-/** 짧은 표기 — "8.25 – 9.24". 폭이 좁은 홈 카드·위젯용 */
-fun BudgetCycle.toShortPeriodLabel(): String =
-    "${start.monthValue}.${start.dayOfMonth} – ${lastDay.monthValue}.${lastDay.dayOfMonth}"
+/**
+ * 사이클 기간 표기 — **"26. 8. 25 ~ 26. 9. 24"**.
+ *
+ * 월별·통계 헤더용. 과거를 오가는 화면이라 몇 년 것인지 밝혀야 한다.
+ */
+fun BudgetCycle.toPeriodLabel(): String = "${start.dateText()} ~ ${lastDay.dateText()}"
 
-/** 긴 표기 — "26. 8. 25 – 26. 9. 24". 연도까지 밝히는 월별·통계 헤더용 */
-fun BudgetCycle.toPeriodLabel(): String =
-    "${start.year % 100}. ${start.monthValue}. ${start.dayOfMonth}" +
-        " – ${lastDay.year % 100}. ${lastDay.monthValue}. ${lastDay.dayOfMonth}"
+/**
+ * 연도를 뺀 기간 표기 — **"8. 25 ~ 9. 24"**.
+ *
+ * 홈·위젯용. 항상 현재 사이클만 보여주므로 연도가 자명하고, 그만큼 폭이 빠듯하다.
+ */
+fun BudgetCycle.toShortPeriodLabel(): String =
+    "${start.monthValue}. ${start.dayOfMonth} ~ ${lastDay.monthValue}. ${lastDay.dayOfMonth}"
+
+/**
+ * 통계 막대용 두 줄 표기 — "8.25" / "~9.24".
+ *
+ * 막대 하나에 배정되는 폭이 약 50dp라 한 줄로는 잘린다. 연도는 헤더가 보여주므로 뺀다.
+ */
+fun BudgetCycle.toBarLabel(): String =
+    "${start.monthValue}.${start.dayOfMonth}\n~${lastDay.monthValue}.${lastDay.dayOfMonth}"
+
+/** "26. 8. 25" — 두 자리 연도 + 월 + 일 */
+private fun java.time.LocalDate.dateText(): String = "${year % 100}. $monthValue. $dayOfMonth"
 
 /**
  * 사이클의 대표 월 — **중간 날짜가 속한 달**. 월 피커에서 달 ↔ 사이클을 잇는 데 쓴다.

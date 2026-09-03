@@ -26,6 +26,7 @@ object AmColors {
     val ChipBg = Color(0xFFECECEC)      // 옵션 칩·플레이스홀더
     val Divider = Color(0xFFF4F6FA)
     val BarTrack = Color(0xFFE3E7EE)    // 차트 막대 트랙
+    val CalendarRangeBg = Color(0xFFE8EDF4) // 달력에서 사이클 구간 음영
 
     // 텍스트
     val TextPrimary = Navy

@@ -49,6 +49,7 @@ import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.allowance.manager.core.analytics.AmAnalytics
@@ -103,38 +104,50 @@ fun StatsScreen(
         modifier = Modifier
             .fillMaxSize()
             .background(AmColors.ScreenBg)
-            .verticalScroll(rememberScrollState())
-            .padding(AmSpacing.xl),
+            .verticalScroll(rememberScrollState()),
     ) {
-        ChartCard(
-            uiState = uiState,
-            onSelectCycle = onSelectCycle,
-            onOlder = onOlder,
-            onNewer = onNewer,
-            onOpenMonthPicker = { showMonthPicker = true },
+        // 월별 화면과 같은 자리·같은 여백 — 카드 밖 화면 배경 위에 둔다
+        MonthNavBar(
+            // 헤더 중앙은 창의 최신이 아니라 '선택된 사이클'을 보여준다 (막대 탭/이동에 따라 갱신)
+            label = uiState.selected?.toPeriodLabel() ?: "",
+            canGoPrev = uiState.canOlder,
+            canGoNext = uiState.canNewer,
+            onPrev = onOlder,
+            onNext = onNewer,
+            onPickMonth = { showMonthPicker = true },
+            modifier = Modifier.padding(horizontal = AmSpacing.lg, vertical = 10.dp),
+            prevDesc = "이전 6개",
+            nextDesc = "다음 6개",
         )
-        Spacer(Modifier.height(AmSpacing.md))
-        // 선택 월이 바뀌면 요약·파이를 통째로 페이드 인/아웃 (같은 달 데이터 갱신엔 애니메이션 없음)
-        AnimatedContent(
-            targetState = MonthDetail(uiState.selected, uiState.summary, uiState.categories),
-            transitionSpec = { fadeIn(tween(220)) togetherWith fadeOut(tween(180)) },
-            contentKey = { it.cycle?.start },
-            label = "statsDetail",
-        ) { detail ->
-            Column {
-                SummaryCard(
-                    summary = detail.summary,
-                    label = uiState.userType.label,
-                    onOpenMonth = {
-                        analytics.logEvent(AmAnalytics.Event.STATS_OPEN_MONTH_CLICK)
-                        detail.cycle?.let { onOpenMonth(it.representativeMonth) }
-                    },
-                )
-                Spacer(Modifier.height(AmSpacing.md))
-                CategoryCard(categories = detail.categories, total = detail.summary.expense)
-            }
+
+        Column(modifier = Modifier.padding(horizontal = AmSpacing.xl).padding(bottom = AmSpacing.xl)) {
+            ChartCard(
+                uiState = uiState,
+                onSelectCycle = onSelectCycle,
+            )
+            Spacer(Modifier.height(AmSpacing.md))
+            // 선택 월이 바뀌면 요약·파이를 통째로 페이드 인/아웃 (같은 달 데이터 갱신엔 애니메이션 없음)
+            AnimatedContent(
+                targetState = MonthDetail(uiState.selected, uiState.summary, uiState.categories),
+                transitionSpec = { fadeIn(tween(220)) togetherWith fadeOut(tween(180)) },
+                contentKey = { it.cycle?.start },
+                label = "statsDetail",
+            ) { detail ->
+                Column {
+                    SummaryCard(
+                        summary = detail.summary,
+                        label = uiState.userType.label,
+                        onOpenMonth = {
+                            analytics.logEvent(AmAnalytics.Event.STATS_OPEN_MONTH_CLICK)
+                            detail.cycle?.let { onOpenMonth(it.representativeMonth) }
+                        },
+                    )
+                    Spacer(Modifier.height(AmSpacing.md))
+                    CategoryCard(categories = detail.categories, total = detail.summary.expense)
+                }
         }
         Spacer(Modifier.height(AmSpacing.md))
+        }
     }
 
     if (showMonthPicker) {
@@ -166,26 +179,9 @@ private data class MonthDetail(
 private fun ChartCard(
     uiState: StatsUiState,
     onSelectCycle: (BudgetCycle) -> Unit,
-    onOlder: () -> Unit,
-    onNewer: () -> Unit,
-    onOpenMonthPicker: () -> Unit,
 ) {
     AmCard(modifier = Modifier.fillMaxWidth()) {
         Column {
-            // 월별 화면과 동일한 월 네비게이션(‹ 월 ▾ ›). 통계는 화살표가 6개월 창을 3개월씩 이동.
-            MonthNavBar(
-                // 헤더 중앙은 6개월 창의 최신월이 아니라 '선택된 달'을 보여준다 (막대 탭/이동에 따라 갱신)
-                label = uiState.selected?.toPeriodLabel() ?: "",
-                canGoPrev = uiState.canOlder,
-                canGoNext = uiState.canNewer,
-                onPrev = onOlder,
-                onNext = onNewer,
-                onPickMonth = onOpenMonthPicker,
-                prevDesc = "이전 3개월",
-                nextDesc = "다음 3개월",
-            )
-
-            Spacer(Modifier.height(18.dp))
             BarChart(bars = uiState.window, onSelectCycle = onSelectCycle)
 
             Spacer(Modifier.height(10.dp))
@@ -304,12 +300,15 @@ private fun BarChart(bars: List<MonthBar>, onSelectCycle: (BudgetCycle) -> Unit)
     Spacer(Modifier.height(6.dp))
     Row(modifier = Modifier.fillMaxWidth()) {
         bars.forEach { bar ->
+            // 라벨은 "8.10 / ~9.10" 두 줄. 한 줄에 넣으면 막대 폭(약 50dp)을 넘겨 잘린다.
             Text(
                 bar.label,
                 style = AmType.size10_medium,
                 color = if (bar.isSelected) AmColors.TextPrimary else AmColors.TextSecondary,
                 modifier = Modifier.weight(1f),
                 textAlign = androidx.compose.ui.text.style.TextAlign.Center,
+                lineHeight = 12.sp,
+                maxLines = 2,
             )
         }
     }

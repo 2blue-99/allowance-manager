@@ -44,43 +44,27 @@ class InitPaydayRuleUseCase @Inject constructor(
 }
 
 /**
- * 설정에서 월급일 규칙을 바꾼다 — **현재 사이클의 다음 경계부터** 새 규칙이 적용된다.
+ * 월급일 변경 적용 — 시트에서 **규칙일**과 **이번에 받은 날(경계)** 을 함께 받는다.
  *
- * 현재 사이클 이력 줄의 규칙일을 갱신하는 방식이다. 시작일(이미 받은 날)은 사실이므로 그대로 두고,
- * 그 이후 경계만 새 규칙으로 다시 계산한다.
+ * 이력을 이렇게 정리한다.
+ * 1. 아직 오지 않은 예정 이력은 일어나지 않은 일이므로 걷어낸다
+ *    (남기면 9/15·9/18처럼 짧은 사이클이 줄줄이 생긴다)
+ * 2. 경계를 옮겼으면 현재 사이클의 기존 줄을 지운다
+ *    (안 지우면 8/22로 당길 때 8.22~8.24 같은 조각 사이클이 끼어든다)
+ * 3. 새 경계에 규칙일을 기록
  *
- * 미래에 새 줄을 덧붙이면 안 된다 — 기존 규칙의 예정 지급일이 그보다 먼저 와서
- * 사이에 짧은 사이클이 끼어든다. (15일 규칙 중 25일로 바꾸면 9/15~9/23짜리 사이클이 생김)
- *
- * 사용자가 "실제로는 다른 날 받았다"고 경계를 직접 지정하는 건 [SetPaydayRuleUseCase]가 맡는다.
+ * 경계를 그대로 두면 규칙일만 갱신되어, 시작일(이미 받은 날)은 유지되고 끝만 다시 계산된다.
  */
 class ChangePaydayUseCase @Inject constructor(
     private val paydayRepository: PaydayRepository,
     private val dataStoreRepository: DataStoreRepository,
     private val getCycleUseCase: GetCycleUseCase,
 ) {
-    suspend operator fun invoke(payday: Int, today: LocalDate = LocalDate.now()) {
-        // 이전에 예약해둔 변경은 아직 일어나지 않은 일 → 걷어내고 새 규칙으로 대체
+    suspend operator fun invoke(boundary: LocalDate, payday: Int, today: LocalDate = LocalDate.now()) {
+        val current = getCycleUseCase(today)
         paydayRepository.removeRulesAfter(today)
-        // 현재 사이클 줄의 규칙일을 갱신 (같은 effectiveDate면 upsert가 덮어쓴다)
-        val cycle = getCycleUseCase(today)
-        paydayRepository.setRule(cycle.start, payday)
-        dataStoreRepository.setPayday(payday)
-    }
-}
-
-/**
- * 월급일 변경 저장 — [effectiveDate]부터 새 사이클이 시작하고, 이후 경계는 [payday]로 계산한다.
- *
- * 규칙일만 바꾸든(칩), 받은 날만 옮기든(캘린더), 둘 다 하든 이 한 곳으로 들어온다.
- * 규칙일은 DataStore에도 함께 반영해 온보딩·설정 표시와 어긋나지 않게 한다.
- */
-class SetPaydayRuleUseCase @Inject constructor(
-    private val paydayRepository: PaydayRepository,
-    private val dataStoreRepository: DataStoreRepository,
-) {
-    suspend operator fun invoke(effectiveDate: LocalDate, payday: Int) {
-        paydayRepository.setRule(effectiveDate, payday)
+        if (current.start != boundary) paydayRepository.removeRule(current.start)
+        paydayRepository.setRule(boundary, payday)
         dataStoreRepository.setPayday(payday)
     }
 }

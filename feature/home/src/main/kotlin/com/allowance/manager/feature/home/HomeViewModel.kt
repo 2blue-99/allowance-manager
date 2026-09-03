@@ -2,6 +2,7 @@ package com.allowance.manager.feature.home
 
 import androidx.lifecycle.viewModelScope
 import com.allowance.manager.core.domain.model.Announcement
+import com.allowance.manager.core.domain.model.BudgetCycle
 import com.allowance.manager.core.domain.model.Transaction
 import com.allowance.manager.core.domain.usecase.config.GetPendingAnnouncementUseCase
 import com.allowance.manager.core.domain.usecase.config.MarkAnnouncementSeenUseCase
@@ -60,9 +61,8 @@ data class HomeUiState(
     val dailyAverage: Long = 0L,        // 하루 평균 지출 (지출 ÷ 경과일수)
     val overPace: Boolean = false,      // 하루 평균 > 권장 → 과속
     val daysUntilPayday: Int = 0,       // 다음 월급일까지 D-day
-    // 이번 사이클 구간(예산 카드 머리글) — 받은 날 ~ 다음 받는 날 전날. 로딩 중이면 null
-    val cycleStart: LocalDate? = null,
-    val cycleEnd: LocalDate? = null,
+    // 이번 사이클 — 예산 카드 머리글의 기간 표기에 쓴다. 로딩 중이면 null
+    val cycle: BudgetCycle? = null,
     val transactions: List<Transaction> = emptyList(),
     val filter: LedgerFilter = LedgerFilter.Home,  // 내역 필터 (메인/숨김/전체)
     val userType: UserType = UserType.Default,   // 사용자 유형 → 예산 호칭(용돈/생활비/예산)
@@ -173,8 +173,7 @@ class HomeViewModel @Inject constructor(
                     dailyAverage = dailyAverage,
                     overPace = status.budget > 0 && dailyAverage > dailyBudget,
                     daysUntilPayday = daysUntil,
-                    cycleStart = status.cycle.start,
-                    cycleEnd = status.cycle.endExclusive.minusDays(1),
+                    cycle = status.cycle,
                     transactions = visible,
                     filter = filter,
                     userType = userType,

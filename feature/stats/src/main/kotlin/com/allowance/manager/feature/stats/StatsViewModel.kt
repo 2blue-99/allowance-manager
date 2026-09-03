@@ -13,6 +13,8 @@ import com.allowance.manager.core.domain.usecase.budget.GetUserTypeUseCase
 import com.allowance.manager.core.domain.usecase.budget.ObserveBudgetHistoryUseCase
 import com.allowance.manager.core.domain.model.BudgetCycle
 import com.allowance.manager.core.domain.model.lastDay
+import com.allowance.manager.core.domain.model.toBarLabel
+import com.allowance.manager.core.domain.model.toPeriodLabel
 import com.allowance.manager.core.domain.usecase.budget.GetCycleUseCase
 import com.allowance.manager.core.domain.usecase.calendar.GetAdjacentCycleUseCase
 import com.allowance.manager.core.domain.usecase.calendar.ObserveCycleTransactionsUseCase
@@ -35,7 +37,7 @@ private const val PAGE_STEP = 6     // 좌우 이동 단위 = 한 화면씩 통�
 
 data class MonthBar(
     val cycle: BudgetCycle,
-    val label: String,        // "8.25" — 사이클 시작일
+    val label: String,        // 사이클 기간. 개행이 들어간 두 줄 표기 (8.10 / ~9.10)
     val expense: Long,
     val budget: Long,         // 그 사이클 용돈(이월) → 계단식 점선 레벨
     val isOver: Boolean,      // 지출 > 용돈 → 빨강, 이하 → 초록
@@ -69,13 +71,12 @@ data class StatsUiState(
     val userType: UserType = UserType.Default,
     val dataCycles: List<BudgetCycle> = emptyList(), // 거래 있는 사이클 (피커 활성화용)
 ) {
-    /** 창 전체 범위 — "26. 4. 25 – 26. 9. 24" */
+    /** 창 전체 범위 — 첫 사이클 시작 ~ 마지막 사이클 끝 */
     val rangeLabel: String
         get() {
-            val first = window.firstOrNull() ?: return ""
-            val last = window.last().cycle.lastDay
-            return "${first.cycle.start.year % 100}. ${first.cycle.start.monthValue}. ${first.cycle.start.dayOfMonth}" +
-                " – ${last.year % 100}. ${last.monthValue}. ${last.dayOfMonth}"
+            val first = window.firstOrNull()?.cycle ?: return ""
+            val last = window.last().cycle
+            return BudgetCycle(first.start, last.endExclusive).toPeriodLabel()
         }
 }
 
@@ -165,7 +166,9 @@ class StatsViewModel @Inject constructor(
             val budget = budgetFor(cycle.start, p.history)
             MonthBar(
                 cycle = cycle,
-                label = "${cycle.start.monthValue}.${cycle.start.dayOfMonth}",
+                // 막대마다 자기 기간을 그대로 단다. 달 이름을 쓰면 규칙을 바꾼 달에
+                // 두 사이클이 같은 달을 대표해 겹치는데, 기간은 사이클마다 고유하다.
+                label = cycle.toBarLabel(),
                 expense = expense,
                 budget = budget,
                 isOver = budget > 0 && expense > budget,

@@ -116,7 +116,7 @@ fun SettingRoute(
         onNavigateToDebug = onNavigateToDebug,
         onStatusBarEnabledChange = viewModel::setStatusBarEnabled,
         onBudgetChange = viewModel::setBudget,
-        onPaydayChange = viewModel::setPayday,
+        onPaydayRuleChange = viewModel::setPaydayRule,
         onUserTypeChange = viewModel::setUserType,
         onBudgetAlertEnabledChange = viewModel::setBudgetAlertEnabled,
         onBudgetAlertFrequencyChange = viewModel::setBudgetAlertFrequency,
@@ -188,7 +188,7 @@ fun SettingScreen(
     onNavigateToDebug: (() -> Unit)? = null,
     onStatusBarEnabledChange: (Boolean) -> Unit = {},
     onBudgetChange: (Long) -> Unit = {},
-    onPaydayChange: (Int) -> Unit = {},
+    onPaydayRuleChange: (java.time.LocalDate, Int) -> Unit = { _, _ -> },
     onUserTypeChange: (UserType) -> Unit = {},
     onBudgetAlertEnabledChange: (Boolean) -> Unit = {},
     onBudgetAlertFrequencyChange: (AlertFrequency) -> Unit = {},
@@ -214,11 +214,6 @@ fun SettingScreen(
         Spacer(Modifier.height(AmSpacing.xl))
 
         LazyColumn {
-            item {
-                // 후원 — 카테고리 없이 맨 위, 강조 카드
-                SupportCard(onClick = { analytics.logEvent(AmAnalytics.Event.SETTING_DONATE_CLICK); onSupport() })
-            }
-
             item {
                 AmSettingGroup(
                     label = "${uiState.userType.label} 설정",
@@ -314,6 +309,14 @@ fun SettingScreen(
                 )
             }
 
+            item {
+                // 후원 — 목록 맨 아래(디버그 위), 강조 카드
+                Column {
+                    VerticalSpacer(AmSpacing.xl)
+                    SupportCard(onClick = { analytics.logEvent(AmAnalytics.Event.SETTING_DONATE_CLICK); onSupport() })
+                }
+            }
+
             // debug 빌드에서만: 개발자 그룹
             onNavigateToDebug?.let { nav ->
                 item {
@@ -349,14 +352,19 @@ fun SettingScreen(
             onDismiss = { showBudgetDialog = false },
         )
     }
+    // 월급일 변경 — 규칙일(칩)과 이번에 받은 날(캘린더)을 함께 정한다
     if (showPaydayDialog) {
-        PaydayDialog(
-            current = uiState.payday,
-            title = uiState.userType.paydayLabel,
-            onSave = { onPaydayChange(it); showPaydayDialog = false },
-            onDismiss = { showPaydayDialog = false },
-        )
+        uiState.cycle?.let { cycle ->
+            PaydayChangeSheet(
+                currentCycle = cycle,
+                currentPayday = uiState.payday,
+                title = uiState.userType.paydayLabel,
+                onSave = { boundary, day -> onPaydayRuleChange(boundary, day); showPaydayDialog = false },
+                onDismiss = { showPaydayDialog = false },
+            )
+        }
     }
+
     if (showFrequencyDialog) {
         FrequencyDialog(
             current = uiState.budgetAlert.frequency,
@@ -591,48 +599,5 @@ private fun BudgetDialog(current: Long, label: String, onSave: (Long) -> Unit, o
             visualTransformation = AmThousandsTransformation(),
             modifier = Modifier.fillMaxWidth(),
         )
-    }
-}
-
-@Composable
-private fun PaydayDialog(current: Int, title: String, onSave: (Int) -> Unit, onDismiss: () -> Unit) {
-    // 말일(EOM)은 31일과 동일하게 매월 마지막 날로 clamp됨 → 필드엔 대표값 "31"을 보여준다.
-    // 원본 문자열을 그대로 표시(스냅백 없음, 온보딩과 동일). 저장된 말일이면 "31"로 프리필.
-    var input by remember { mutableStateOf(if (current in 1..31) current.toString() else "31") }
-    // 말일 선택 여부(칩 표시·저장 시 EOM 라벨 유지용). 직접 입력하면 해제.
-    var isEom by remember { mutableStateOf(current == PAYDAY_EOM) }
-    val day = input.toIntOrNull()?.takeIf { it in 1..31 }
-    AmDialog(
-        title = title,
-        onDismiss = onDismiss,
-        // 말일 선택이면 EOM으로 저장(라벨 "말일" 유지), 아니면 입력한 일자.
-        onConfirm = { (if (isEom) PAYDAY_EOM else day)?.let(onSave) },
-        // 저장 버튼 활성화는 오직 입력창 값 기준 (빈 값이면 비활성)
-        confirmEnabled = day != null,
-        analyticsTag = AmAnalytics.Dialog.PAYDAY,
-        analyticsParams = mapOf(AmAnalytics.Param.PAYDAY to (if (isEom) PAYDAY_EOM else (day ?: -1))),
-    ) {
-        Column(verticalArrangement = Arrangement.spacedBy(AmSpacing.md)) {
-            // 저장된 월급일 프리필. 1~31만 허용, 자유 삭제 가능.
-            AmLineTextField(
-                value = input,
-                onValueChange = { v ->
-                    val digits = v.filter { it.isDigit() }.take(2)
-                    input = digits.toIntOrNull()?.coerceIn(1, 31)?.toString() ?: ""
-                    isEom = false   // 직접 입력하면 말일 해제
-                },
-                hint = "예) 25",
-                keyboardType = KeyboardType.Number,
-                modifier = Modifier.fillMaxWidth(),
-            )
-            // 온보딩과 동일한 칩 구성 (15/20/25/말일) — 입력 필드 아래로
-            Row(horizontalArrangement = Arrangement.spacedBy(AmSpacing.sm)) {
-                AmChip("15일", !isEom && day == 15) { input = "15"; isEom = false }
-                AmChip("20일", !isEom && day == 20) { input = "20"; isEom = false }
-                AmChip("25일", !isEom && day == 25) { input = "25"; isEom = false }
-                // 말일 = 매월 마지막 날(=31 clamp) → 필드엔 대표값 31 표시
-                AmChip("말일", isEom) { input = "31"; isEom = true }
-            }
-        }
     }
 }

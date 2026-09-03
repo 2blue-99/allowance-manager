@@ -74,6 +74,7 @@ import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.allowance.manager.core.domain.model.Announcement
+import com.allowance.manager.core.domain.model.toShortPeriodLabel
 import com.allowance.manager.core.domain.model.LedgerFilter
 import com.allowance.manager.core.domain.model.LedgerFilterChip
 import com.allowance.manager.core.domain.model.Transaction
@@ -108,7 +109,6 @@ import com.allowance.manager.core.ui.transaction.TransactionFormSheet
 import com.allowance.manager.core.ui.transaction.TransactionRow
 import com.allowance.manager.core.ui.transaction.TxFormMode
 import kotlinx.coroutines.delay
-import java.time.LocalDate
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withTimeoutOrNull
 import java.time.Instant
@@ -378,9 +378,6 @@ private fun Hero(
 // 예산 카드 머리글(라벨·기간) 투명도 — 주인공인 금액과 대비되게 낮춘 값
 private const val HERO_CAPTION_ALPHA = 0.45f
 
-/** 사이클 표기용 날짜 — "7.25" (연도 생략) */
-private fun LocalDate.toCycleLabel(): String = "$monthValue.$dayOfMonth"
-
 // 이번 달 남은 용돈 — 다크 카드 + 소진율 바 (바 아래 양 끝: 소진율·예산)
 // 진입/클릭 시 금액은 0→현재치 카운트업, 소진율 바는 0→현재치 채움.
 @Composable
@@ -421,10 +418,10 @@ private fun BudgetCard(uiState: HomeUiState) {
                     style = AmType.size12_medium,
                     color = Color.White.copy(alpha = HERO_CAPTION_ALPHA),
                 )
-                if (uiState.cycleStart != null && uiState.cycleEnd != null) {
+                uiState.cycle?.let { cycle ->
                     HeroCaptionDivider()
                     Text(
-                        "${uiState.cycleStart.toCycleLabel()} – ${uiState.cycleEnd.toCycleLabel()}",
+                        cycle.toShortPeriodLabel(),
                         style = AmType.size12_medium,
                         color = Color.White.copy(alpha = HERO_CAPTION_ALPHA),
                     )

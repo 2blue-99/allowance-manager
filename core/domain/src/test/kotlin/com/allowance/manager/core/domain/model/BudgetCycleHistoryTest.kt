@@ -38,10 +38,29 @@ class BudgetCycleHistoryTest {
     }
 
     @Test
-    fun `이력 시작일 이전을 물으면 첫 사이클을 준다`() {
+    fun `이력 시작일 이전은 그 규칙으로 거슬러 올라간다`() {
+        // 온보딩은 그 시점 사이클 한 줄만 심는다. 역산이 없으면 과거 사이클이 아예 안 나와
+        // 통계 막대가 하나만 그려지고, 과거 거래도 전부 첫 사이클로 몰린다.
         val rules = listOf(rule("2026-06-10", 10))
-        val cycle = BudgetCycle.of(rules, today = date("2026-05-01"))
-        assertEquals(date("2026-06-10"), cycle.start)
+
+        // 한 사이클 전 — 2026-05-10은 일요일이라 5/8(금)로 보정된다
+        BudgetCycle.of(rules, today = date("2026-05-20")).let {
+            assertEquals(date("2026-05-08"), it.start)
+            assertEquals(date("2026-06-10"), it.endExclusive)
+        }
+        // 두 사이클 전
+        BudgetCycle.of(rules, today = date("2026-04-15")).let {
+            assertEquals(date("2026-04-10"), it.start)
+            assertEquals(date("2026-05-08"), it.endExclusive)
+        }
+    }
+
+    @Test
+    fun `과거로 거슬러도 사이클이 맞물린다`() {
+        val rules = listOf(rule("2026-06-10", 10))
+        val older = BudgetCycle.of(rules, today = date("2026-04-15"))
+        val newer = BudgetCycle.of(rules, today = date("2026-05-20"))
+        assertEquals(older.endExclusive, newer.start)
     }
 
     // ── 규칙 변경 (이력 두 줄) ──

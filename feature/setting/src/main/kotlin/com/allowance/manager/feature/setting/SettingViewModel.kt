@@ -16,7 +16,10 @@ import com.allowance.manager.core.domain.usecase.budget.GetMonthlyBudgetUseCase
 import com.allowance.manager.core.domain.usecase.budget.GetPaydayUseCase
 import com.allowance.manager.core.domain.usecase.budget.GetUserTypeUseCase
 import com.allowance.manager.core.domain.usecase.budget.SetMonthlyBudgetUseCase
+import com.allowance.manager.core.domain.model.BudgetCycle
 import com.allowance.manager.core.domain.usecase.budget.ChangePaydayUseCase
+import com.allowance.manager.core.domain.usecase.budget.ObserveCycleUseCase
+import java.time.LocalDate
 import com.allowance.manager.core.domain.usecase.budget.SetUserTypeUseCase
 import com.allowance.manager.core.domain.usecase.setting.GetStatusBarEnabledUseCase
 import com.allowance.manager.core.domain.usecase.setting.SetStatusBarEnabledUseCase
@@ -39,6 +42,7 @@ data class SettingUiState(
     val budgetAlert: BudgetAlertSetting = BudgetAlertSetting(),
     val dailyReminder: DailyReminderSetting = DailyReminderSetting(),
     val paydayAlert: PaydayAlertSetting = PaydayAlertSetting(),
+    val cycle: BudgetCycle? = null,   // 월급일 변경 시트가 쓰는 현재 사이클
     /** 이번 달 실지급일 정보 — 사이클 경계와 같은 계산에서 온다. 첫 프레임에선 아직 null */
 )
 
@@ -53,6 +57,7 @@ class SettingViewModel @Inject constructor(
     getPaydayAlertSettingUseCase: GetPaydayAlertSettingUseCase,
     private val setMonthlyBudgetUseCase: SetMonthlyBudgetUseCase,
     private val changePaydayUseCase: ChangePaydayUseCase,
+    observeCycleUseCase: ObserveCycleUseCase,
     private val setStatusBarEnabledUseCase: SetStatusBarEnabledUseCase,
     private val setUserTypeUseCase: SetUserTypeUseCase,
     private val setBudgetAlertSettingUseCase: SetBudgetAlertSettingUseCase,
@@ -74,11 +79,13 @@ class SettingViewModel @Inject constructor(
         getBudgetAlertSettingUseCase(),
         getDailyReminderSettingUseCase(),
         getPaydayAlertSettingUseCase(),
-    ) { base, budgetAlert, dailyReminder, paydayAlert ->
+        observeCycleUseCase(),
+    ) { base, budgetAlert, dailyReminder, paydayAlert, cycle ->
         base.copy(
             budgetAlert = budgetAlert,
             dailyReminder = dailyReminder,
             paydayAlert = paydayAlert,
+            cycle = cycle,
         )
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), SettingUiState())
 
@@ -87,10 +94,15 @@ class SettingViewModel @Inject constructor(
         viewModelScope.launch { setMonthlyBudgetUseCase(amount) }
     }
 
-    fun setPayday(day: Int) {
+    /**
+     * 월급일 변경 — 시트에서 규칙일과 "이번에 받은 날"을 함께 받는다.
+     *
+     * 경계를 그대로 두면 규칙만 바뀌고(시작일은 이미 받은 사실이라 유지),
+     * 경계를 옮기면 그 날부터 새 사이클이 시작한다.
+     */
+    fun setPaydayRule(effectiveDate: LocalDate, day: Int) {
         analytics.setUserProperty(AmAnalytics.UserProp.PAYDAY, day.toString())
-        // 이력에도 남긴다 — 오늘 이후 첫 지급일부터 적용(현재 사이클은 그대로)
-        viewModelScope.launch { changePaydayUseCase(day) }
+        viewModelScope.launch { changePaydayUseCase(effectiveDate, day) }
     }
 
     fun setStatusBarEnabled(enabled: Boolean) {
