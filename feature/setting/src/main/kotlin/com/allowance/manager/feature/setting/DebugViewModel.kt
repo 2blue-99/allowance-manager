@@ -16,6 +16,7 @@ import com.allowance.manager.core.domain.repository.TransactionRepository
 import com.allowance.manager.core.domain.usecase.alert.PaydayNoticeDecider
 import com.allowance.manager.core.domain.usecase.config.FetchRemoteConfigUseCase
 import com.allowance.manager.core.domain.usecase.budget.ObserveBudgetStatusUseCase
+import com.allowance.manager.core.domain.usecase.budget.GetCycleUseCase
 import com.allowance.manager.core.domain.usecase.budget.SetPaydayUseCase
 import com.allowance.manager.core.domain.util.amountToComma
 import com.allowance.manager.core.domain.usecase.setting.GetHomeGuideShownUseCase
@@ -31,6 +32,7 @@ import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import java.time.LocalDate
+import java.time.LocalTime
 import java.time.YearMonth
 import java.time.format.TextStyle
 import java.util.Locale
@@ -47,6 +49,7 @@ class DebugViewModel @Inject constructor(
     private val transactionRepository: TransactionRepository,
     private val budgetRepository: BudgetRepository,
     private val setPaydayUseCase: SetPaydayUseCase,
+    private val getCycleUseCase: GetCycleUseCase,
     private val dataStoreRepository: DataStoreRepository,
     private val remoteConfigRepository: RemoteConfigRepository,
     private val fetchRemoteConfigUseCase: FetchRemoteConfigUseCase,
@@ -94,7 +97,7 @@ class DebugViewModel @Inject constructor(
                     (monthsAgo - 7) % 2 == 0 -> 400_000L
                     else -> 500_000L
                 }
-                budgetRepository.setBudgetForMonth(ym, budget)
+                budgetRepository.setBudgetForCycle(ym.atDay(1), budget)
 
                 val createdAt = ym.atDay(15).atStartOfDay(zone).toInstant().toEpochMilli()
                 transactionRepository.record(
@@ -112,6 +115,34 @@ class DebugViewModel @Inject constructor(
     }
 
     /**
+     * 테스트용: 선택한 달에 1만원 지출 1건 추가. 누를 때마다 쌓인다.
+     *
+     * 날짜는 그 달 15일. 다만 이번 달이면 미래 거래가 되지 않도록 오늘 날짜로 넣는다.
+     * 시:분:초는 지금 시각을 써서 같은 달에 여러 건을 넣어도 정렬이 구분된다.
+     */
+    fun addExpenseToMonth(month: YearMonth) {
+        viewModelScope.launch {
+            val zone = ZoneId.systemDefault()
+            val today = LocalDate.now()
+            val day = if (month == YearMonth.now()) today.dayOfMonth else 15
+            val now = LocalTime.now()
+            val createdAt = month.atDay(day)
+                .atTime(now.hour, now.minute, now.second)
+                .atZone(zone).toInstant().toEpochMilli()
+            transactionRepository.record(
+                Transaction(
+                    type = TransactionType.EXPENSE,
+                    amount = 10_000L,
+                    packageName = "",
+                    sourceName = "테스트 지출 1만원",
+                    isManual = true,
+                    createdAt = createdAt,
+                ),
+            )
+        }
+    }
+
+    /**
      * 테스트용: 선택한 달에 값 세팅. null인 항목은 건너뜀.
      * - payday: 앱 전역 월급일(1~31, 0=말일)
      * - budget: 그 달부터 적용되는 용돈(upsert)
@@ -120,7 +151,7 @@ class DebugViewModel @Inject constructor(
     fun applyMonthSettings(month: YearMonth, payday: Int?, budget: Long?, expense: Long?, income: Long?) {
         viewModelScope.launch {
             payday?.let { setPaydayUseCase(it) }
-            budget?.let { budgetRepository.setBudgetForMonth(month, it) }
+            budget?.let { budgetRepository.setBudgetForCycle(month.atDay(1), it) }
 
             val zone = ZoneId.systemDefault()
             val createdAt = month.atDay(15).atStartOfDay(zone).toInstant().toEpochMilli()
@@ -256,7 +287,7 @@ class DebugViewModel @Inject constructor(
      */
     fun spendBudgetTenPercent() {
         viewModelScope.launch {
-            val budget = budgetRepository.observeBudgetForMonth(YearMonth.now()).first()
+            val budget = budgetRepository.getBudgetForCycle(getCycleUseCase().start)
             if (budget <= 0) return@launch
             transactionRepository.record(
                 Transaction(

@@ -57,6 +57,7 @@ fun DebugRoute(
         onHomeGuideEnabledChange = viewModel::setHomeGuideEnabled,
         onSeedTestData = viewModel::seedTestData,
         onSeedCategories = viewModel::seedCategoriesForMonth,
+        onAddExpense = viewModel::addExpenseToMonth,
         onApplyMonthSettings = viewModel::applyMonthSettings,
         budgetStatusText = budgetStatusText,
         onSpendTenPercent = viewModel::spendBudgetTenPercent,
@@ -80,6 +81,7 @@ fun DebugScreen(
     onHomeGuideEnabledChange: (Boolean) -> Unit = {},
     onSeedTestData: () -> Unit = {},
     onSeedCategories: (YearMonth) -> Unit = {},
+    onAddExpense: (YearMonth) -> Unit = {},
     onApplyMonthSettings: (YearMonth, Int?, Long?, Long?, Long?) -> Unit = { _, _, _, _, _ -> },
     budgetStatusText: String = "",
     onSpendTenPercent: () -> Unit = {},
@@ -215,6 +217,13 @@ fun DebugScreen(
         AmButton(
             text = "이 달에 카테고리별 1건씩 넣기",
             onClick = { onSeedCategories(seedMonth) },
+            modifier = Modifier.fillMaxWidth(),
+        )
+        Spacer(Modifier.height(AmSpacing.sm))
+        // 누를 때마다 1건씩 누적 — 사이클 집계·경계 확인용
+        AmButton(
+            text = "이 달에 1만원 지출 추가",
+            onClick = { onAddExpense(seedMonth) },
             modifier = Modifier.fillMaxWidth(),
         )
 

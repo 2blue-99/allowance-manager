@@ -4,6 +4,7 @@ import java.time.DayOfWeek
 import java.time.LocalDate
 import java.time.YearMonth
 import java.time.ZoneId
+import java.time.temporal.ChronoUnit
 
 /**
  * 월급일 기준 한 사이클 — 받은 날(포함) ~ 다음 받는 날(미포함).
@@ -65,15 +66,18 @@ data class BudgetCycle(
         /**
          * [after]에 받은 다음, 그다음 지급일.
          *
-         * [after]가 속한 달은 **이미 받은 달**이므로 건너뛰고 다음 달부터 찾는다.
-         * (8/22에 받았고 규칙이 25일이면 8/25가 아니라 9/25가 다음이다)
-         * 영업일 보정 결과가 [after] 이하가 되면 그다음 달로 더 넘어간다(경계 단조성).
+         * [after]가 속한 달도 후보에 넣는다 — 1일에 받고 규칙을 25일로 바꾸면 24일 뒤인
+         * 그달 25일이 다음 지급이다. 다만 [MIN_CYCLE_DAYS]일 이내로 붙는 후보는 **같은 지급이
+         * 영업일 보정으로 앞당겨진 것**으로 보고 건너뛴다. (8/22에 받았고 규칙이 25일이면
+         * 8/25가 아니라 9/25가 다음)
          */
         fun nextPayDateAfter(after: LocalDate, payday: Int, holidays: Holidays = Holidays.EMPTY): LocalDate {
-            var ym = YearMonth.from(after).plusMonths(1)
+            var ym = YearMonth.from(after)
             repeat(MAX_MONTH_PROBE) {
                 val candidate = payDate(ym, payday, holidays)
-                if (candidate.isAfter(after)) return candidate
+                if (candidate.isAfter(after) && ChronoUnit.DAYS.between(after, candidate) >= MIN_CYCLE_DAYS) {
+                    return candidate
+                }
                 ym = ym.plusMonths(1)
             }
             return after.plusDays(1)
@@ -137,6 +141,17 @@ data class BudgetCycle(
 
         /** 규칙일이 며칠이든 12개월 안에는 [after] 뒤 지급일이 나온다. */
         private const val MAX_MONTH_PROBE = 13
+
+        /**
+         * 사이클로 인정하는 최소 일수. 이보다 짧게 붙는 지급일 후보는 건너뛴다.
+         *
+         * 두 경우를 함께 막는다.
+         * - 같은 지급이 영업일 보정·조정으로 앞당겨진 것 (8/22에 받고 규칙 25일 → 8/25 아님)
+         * - 규칙을 바꿨을 때 **이미 지나간 새 규칙일** (8/1에 받고 10일로 변경 → 8/10 아님)
+         *
+         * 사이클은 월 주기라 실제 길이가 28일 밑으로 내려가지 않으므로 이 값과 충돌하지 않는다.
+         */
+        private const val MIN_CYCLE_DAYS = 10L
 
         /** 이력 시작부터 오늘까지 훑는 사이클 수 상한 — 무한 루프 방지용. */
         private const val MAX_CYCLE_PROBE = 600

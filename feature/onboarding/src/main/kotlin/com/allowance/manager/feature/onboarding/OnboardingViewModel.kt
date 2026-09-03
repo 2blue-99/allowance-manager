@@ -122,9 +122,11 @@ class OnboardingViewModel @Inject constructor(
                     )
                 )
             }
-            setMonthlyBudgetUseCase(state.budget)
-            // 규칙일 + "언제부터"를 함께 기록 — 이력의 첫 줄이 여기서 생긴다.
+            // ⚠️ 순서 주의: 월급일이 먼저다.
+            // 예산은 '현재 사이클 시작일'을 키로 저장하는데, 그 사이클은 월급일 이력에서 나온다.
+            // 예산을 먼저 쓰면 아직 이력이 없어 기본 규칙일로 계산된 엉뚱한 키에 저장된다.
             initPaydayRuleUseCase(payday)
+            setMonthlyBudgetUseCase(state.budget)
             setBudgetAlertSettingUseCase(
                 BudgetAlertSetting(
                     enabled = state.budgetAlertEnabled,

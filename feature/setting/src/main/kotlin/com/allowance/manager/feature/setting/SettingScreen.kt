@@ -528,7 +528,7 @@ private fun SupportCard(onClick: () -> Unit) {
         Column(modifier = Modifier.weight(1f)) {
             Text("후원하기", style = AmType.size14_bold, color = Color.White)
             Spacer(Modifier.height(3.dp))
-            Text("개발자에게 커피 한 잔 😊", style = AmType.size11_medium, color = Color.White.copy(alpha = 0.85f))
+            Text("개발자에게 커피 한 잔", style = AmType.size11_medium, color = Color.White.copy(alpha = 0.85f))
         }
         Box(
             modifier = Modifier

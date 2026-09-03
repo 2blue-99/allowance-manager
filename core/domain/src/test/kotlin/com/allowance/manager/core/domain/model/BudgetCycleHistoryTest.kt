@@ -120,6 +120,34 @@ class BudgetCycleHistoryTest {
         assert(cycle.startMillis() < cycle.endMillis())
     }
 
+    // ── 규칙일 변경 (설정에서 월급일을 바꾼 뒤) ──
+    // 변경은 현재 사이클 줄의 규칙일을 갱신하는 방식이라, 시작일은 그대로 두고 끝만 다시 계산된다.
+
+    @Test
+    fun `규칙일을 바꾸면 같은 달 안에서도 다음 지급일이 될 수 있다`() {
+        // 8/1에 받고(1일 규칙) 25일로 변경 → 24일 뒤인 8/25가 다음 지급
+        val cycle = BudgetCycle.of(listOf(rule("2026-08-01", 25)), today = date("2026-08-02"))
+        assertEquals(date("2026-08-01"), cycle.start)
+        assertEquals(date("2026-08-25"), cycle.endExclusive)
+    }
+
+    @Test
+    fun `이미 지나간 규칙일은 경계가 되지 않는다`() {
+        // 8/1에 받고(1일 규칙) 8/26에 10일로 변경 → 8/10은 이미 지났고 받은 적도 없다.
+        // 받지 않은 날을 경계로 삼지 않으므로 다음 지급인 9/10까지가 한 사이클.
+        val cycle = BudgetCycle.of(listOf(rule("2026-08-01", 10)), today = date("2026-08-26"))
+        assertEquals(date("2026-08-01"), cycle.start)
+        assertEquals(date("2026-09-10"), cycle.endExclusive)
+    }
+
+    @Test
+    fun `영업일 보정으로 앞당겨 받은 달은 그 달 규칙일을 다시 세지 않는다`() {
+        // 8/22에 받았다고 지정 + 규칙 25일 → 8/25는 3일 뒤라 같은 지급이 앞당겨진 것으로 본다
+        val cycle = BudgetCycle.of(listOf(rule("2026-08-22", 25)), today = date("2026-08-23"))
+        assertEquals(date("2026-08-22"), cycle.start)
+        assertEquals(date("2026-09-25"), cycle.endExclusive)
+    }
+
     @Test
     fun `이력이 비면 규칙일 하나로 계산한 결과와 같다`() {
         val fromEmpty = BudgetCycle.of(emptyList(), today = date("2026-07-20"), fallbackPayday = 10)

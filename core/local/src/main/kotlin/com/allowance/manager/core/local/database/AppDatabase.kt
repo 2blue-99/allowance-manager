@@ -21,7 +21,7 @@ import com.allowance.manager.core.local.entity.TransactionEntity
         IgnoredAccountEntity::class,
         PaydayHistoryEntity::class,
     ],
-    version = 11,  // v11: payday_history(월급일 이력) 테이블 추가 — 규칙 변경 시 과거 사이클 보존
+    version = 12,  // v12: transactions.cycle_start 추가 · budget_history 키를 사이클 시작일로
     exportSchema = true,
 )
 abstract class AppDatabase : RoomDatabase() {

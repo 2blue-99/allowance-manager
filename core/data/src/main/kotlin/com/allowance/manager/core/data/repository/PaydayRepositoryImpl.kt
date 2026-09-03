@@ -39,6 +39,9 @@ class PaydayRepositoryImpl @Inject constructor(
         paydayHistoryDao.trimTo(PaydayRule.MAX_ENTRIES)
     }
 
+    override suspend fun removeRulesAfter(date: LocalDate) =
+        paydayHistoryDao.deleteAfter(date.toString())
+
     override suspend fun removeRule(effectiveDate: LocalDate) =
         paydayHistoryDao.delete(effectiveDate.toString())
 }

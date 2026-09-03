@@ -12,6 +12,7 @@ import com.allowance.manager.MainActivity
 import com.allowance.manager.R
 import com.allowance.manager.core.domain.model.UserType
 import com.allowance.manager.core.domain.repository.BudgetRepository
+import com.allowance.manager.core.domain.usecase.budget.GetCycleUseCase
 import com.allowance.manager.core.domain.repository.DataStoreRepository
 import com.allowance.manager.core.domain.repository.RemoteConfigRepository
 import com.allowance.manager.core.domain.usecase.alert.GetPaydayAlertSettingUseCase
@@ -40,6 +41,7 @@ class PaydayAlarmReceiver : BroadcastReceiver() {
     @Inject lateinit var dataStoreRepository: DataStoreRepository
     @Inject lateinit var remoteConfigRepository: RemoteConfigRepository
     @Inject lateinit var budgetRepository: BudgetRepository
+    @Inject lateinit var getCycleUseCase: GetCycleUseCase
 
     override fun onReceive(context: Context, intent: Intent?) {
         if (intent?.action != PaydayAlarmScheduler.ACTION_PAYDAY_ALERT) return
@@ -85,21 +87,23 @@ class PaydayAlarmReceiver : BroadcastReceiver() {
                 "내일은 ${userType.paydayShort}이에요!" to
                     "이번 달 ${userType.paydayShort}을 바꾸고 싶으면 설정에서 조정할 수 있어요."
             PaydayNoticeDecider.Notice.TODAY ->
-                "이번 달 ${userType.label} 변동이 있으면 수정해주세요!" to lastMonthBudgetText()
+                "이번 달 ${userType.label} 변동이 있으면 수정해주세요!" to lastCycleBudgetText()
             PaydayNoticeDecider.Notice.NONE -> return
         }
         post(context, notice, title, body)
     }
 
     /**
-     * "지난달은 600,000원이었어요." — 이력이 없으면(설치 첫 달) null을 주고 제목만 보낸다.
+     * "지난번엔 600,000원이었어요." — 이력이 없으면(설치 첫 사이클) null을 주고 제목만 보낸다.
      *
-     * 기준을 달력 월로 잡는 이유: 사용자가 이 알림을 보고 바꾸는 월 예산도
-     * `SetMonthlyBudgetUseCase`가 `YearMonth.now()`에 쓰므로, 비교 대상도 같은 기준이어야 말이 맞다.
+     * 기준이 사이클인 이유: 사용자가 이 알림을 보고 바꾸는 예산도 `SetMonthlyBudgetUseCase`가
+     * 현재 사이클에 쓰므로, 비교 대상도 같은 기준이어야 말이 맞다.
      */
-    private suspend fun lastMonthBudgetText(): String? {
-        val amount = budgetRepository.getBudgetForMonth(YearMonth.now().minusMonths(1))
-        return if (amount > 0) "지난달은 ${amount.amountToComma()}원이었어요." else null
+    private suspend fun lastCycleBudgetText(): String? {
+        // 현재 사이클 시작 하루 전 = 직전 사이클 안의 어느 날
+        val previousDay = getCycleUseCase().start.minusDays(1)
+        val amount = budgetRepository.getBudgetForCycle(getCycleUseCase(previousDay).start)
+        return if (amount > 0) "지난번엔 ${amount.amountToComma()}원이었어요." else null
     }
 
     private fun post(context: Context, notice: PaydayNoticeDecider.Notice, title: String, body: String?) {

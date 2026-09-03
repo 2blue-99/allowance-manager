@@ -28,6 +28,14 @@ interface PaydayRepository {
      */
     suspend fun setRule(effectiveDate: LocalDate, payday: Int)
 
+    /**
+     * [date]보다 뒤의 이력 삭제.
+     *
+     * 아직 오지 않은 이력은 "받았다"는 사실이 아니라 예정일 뿐이다. 규칙을 다시 바꾸면
+     * 이전 예정분을 걷어내야 짧은 사이클이 줄줄이 남지 않는다.
+     */
+    suspend fun removeRulesAfter(date: LocalDate)
+
     /** 그 날짜의 이력 삭제(경계 지정 취소). */
     suspend fun removeRule(effectiveDate: LocalDate)
 }

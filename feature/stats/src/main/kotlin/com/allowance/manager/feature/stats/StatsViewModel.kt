@@ -128,9 +128,11 @@ class StatsViewModel @Inject constructor(
         val history: List<MonthlyBudget>,
     )
 
-    /** 그 달의 용돈 = effectiveMonth <= month 중 최신값(이월). 이력은 오름차순. */
+    // TODO(사이클 통일 6단계): 통계를 사이클 기준으로 바꾸면 그 사이클 시작일로 조회한다.
+    //  지금은 화면이 달력 월이라 '그 달 1일'을 기준으로 근사한다.
+    /** 그 달의 용돈 = effectiveCycle <= 그 달 1일 중 최신값(이월). 이력은 오름차순. */
     private fun budgetFor(month: YearMonth, history: List<MonthlyBudget>): Long =
-        history.lastOrNull { !it.effectiveMonth.isAfter(month) }?.amount ?: 0L
+        history.lastOrNull { !it.effectiveCycle.isAfter(month.atEndOfMonth()) }?.amount ?: 0L
 
     private fun render(p: Partial, selectedTx: List<Transaction>, userType: UserType, dataMonths: List<YearMonth>): StatsUiState {
         val now = YearMonth.now()

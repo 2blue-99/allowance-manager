@@ -30,6 +30,10 @@ interface PaydayHistoryDao {
     @Query("SELECT * FROM payday_history ORDER BY effective_date ASC")
     suspend fun getAll(): List<PaydayHistoryEntity>
 
+    /** [date]보다 뒤(아직 오지 않은) 이력 삭제 — 규칙을 다시 바꿀 때 예정분을 걷어낸다 */
+    @Query("DELETE FROM payday_history WHERE effective_date > :date")
+    suspend fun deleteAfter(date: String)
+
     /** 그 날짜의 지정 해제 */
     @Query("DELETE FROM payday_history WHERE effective_date = :date")
     suspend fun delete(date: String)

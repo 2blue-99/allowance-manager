@@ -16,7 +16,7 @@ import com.allowance.manager.core.domain.usecase.budget.GetMonthlyBudgetUseCase
 import com.allowance.manager.core.domain.usecase.budget.GetPaydayUseCase
 import com.allowance.manager.core.domain.usecase.budget.GetUserTypeUseCase
 import com.allowance.manager.core.domain.usecase.budget.SetMonthlyBudgetUseCase
-import com.allowance.manager.core.domain.usecase.budget.SetPaydayUseCase
+import com.allowance.manager.core.domain.usecase.budget.ChangePaydayUseCase
 import com.allowance.manager.core.domain.usecase.budget.SetUserTypeUseCase
 import com.allowance.manager.core.domain.usecase.setting.GetStatusBarEnabledUseCase
 import com.allowance.manager.core.domain.usecase.setting.SetStatusBarEnabledUseCase
@@ -52,7 +52,7 @@ class SettingViewModel @Inject constructor(
     getDailyReminderSettingUseCase: GetDailyReminderSettingUseCase,
     getPaydayAlertSettingUseCase: GetPaydayAlertSettingUseCase,
     private val setMonthlyBudgetUseCase: SetMonthlyBudgetUseCase,
-    private val setPaydayUseCase: SetPaydayUseCase,
+    private val changePaydayUseCase: ChangePaydayUseCase,
     private val setStatusBarEnabledUseCase: SetStatusBarEnabledUseCase,
     private val setUserTypeUseCase: SetUserTypeUseCase,
     private val setBudgetAlertSettingUseCase: SetBudgetAlertSettingUseCase,
@@ -89,7 +89,8 @@ class SettingViewModel @Inject constructor(
 
     fun setPayday(day: Int) {
         analytics.setUserProperty(AmAnalytics.UserProp.PAYDAY, day.toString())
-        viewModelScope.launch { setPaydayUseCase(day) }
+        // 이력에도 남긴다 — 오늘 이후 첫 지급일부터 적용(현재 사이클은 그대로)
+        viewModelScope.launch { changePaydayUseCase(day) }
     }
 
     fun setStatusBarEnabled(enabled: Boolean) {
