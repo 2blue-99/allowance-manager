@@ -11,8 +11,7 @@ import androidx.core.app.NotificationCompat
 import com.allowance.manager.MainActivity
 import com.allowance.manager.R
 import com.allowance.manager.core.domain.model.UserType
-import com.allowance.manager.core.domain.repository.BudgetRepository
-import com.allowance.manager.core.domain.usecase.budget.GetCycleUseCase
+import com.allowance.manager.core.domain.repository.CycleRepository
 import com.allowance.manager.core.domain.repository.DataStoreRepository
 import com.allowance.manager.core.domain.repository.RemoteConfigRepository
 import com.allowance.manager.core.domain.usecase.alert.GetPaydayAlertSettingUseCase
@@ -25,7 +24,6 @@ import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import java.time.LocalDate
-import java.time.YearMonth
 import javax.inject.Inject
 
 /**
@@ -40,8 +38,7 @@ class PaydayAlarmReceiver : BroadcastReceiver() {
     @Inject lateinit var getPaydayAlertSettingUseCase: GetPaydayAlertSettingUseCase
     @Inject lateinit var dataStoreRepository: DataStoreRepository
     @Inject lateinit var remoteConfigRepository: RemoteConfigRepository
-    @Inject lateinit var budgetRepository: BudgetRepository
-    @Inject lateinit var getCycleUseCase: GetCycleUseCase
+    @Inject lateinit var cycleRepository: CycleRepository
 
     override fun onReceive(context: Context, intent: Intent?) {
         if (intent?.action != PaydayAlarmScheduler.ACTION_PAYDAY_ALERT) return
@@ -64,7 +61,8 @@ class PaydayAlarmReceiver : BroadcastReceiver() {
                 val today = LocalDate.now()
                 val notice = PaydayNoticeDecider.decide(
                     today = today,
-                    payday = dataStoreRepository.getPayday().first(),
+                    // 현재 규칙 = 최신 사이클 행의 payday (단일 소스)
+                    payday = cycleRepository.cycleAt(today).payday,
                     holidays = remoteConfigRepository.getHolidays(),
                 )
                 if (notice == PaydayNoticeDecider.Notice.NONE) return@launch
@@ -101,8 +99,8 @@ class PaydayAlarmReceiver : BroadcastReceiver() {
      */
     private suspend fun lastCycleBudgetText(): String? {
         // 현재 사이클 시작 하루 전 = 직전 사이클 안의 어느 날
-        val previousDay = getCycleUseCase().start.minusDays(1)
-        val amount = budgetRepository.getBudgetForCycle(getCycleUseCase(previousDay).start)
+        val previousDay = cycleRepository.cycleAt().start.minusDays(1)
+        val amount = cycleRepository.cycleAt(previousDay).budget
         return if (amount > 0) "지난번엔 ${amount.amountToComma()}원이었어요." else null
     }
 

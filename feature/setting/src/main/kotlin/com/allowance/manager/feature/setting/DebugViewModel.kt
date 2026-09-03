@@ -8,7 +8,6 @@ import com.allowance.manager.core.common.BaseViewModel
 import com.allowance.manager.core.domain.model.Transaction
 import com.allowance.manager.core.domain.model.TransactionCategory
 import com.allowance.manager.core.domain.model.TransactionType
-import com.allowance.manager.core.domain.repository.BudgetRepository
 import com.allowance.manager.core.domain.repository.DataStoreRepository
 import com.allowance.manager.core.domain.model.BudgetCycle
 import com.allowance.manager.core.domain.repository.RemoteConfigRepository
@@ -16,8 +15,11 @@ import com.allowance.manager.core.domain.repository.TransactionRepository
 import com.allowance.manager.core.domain.usecase.alert.PaydayNoticeDecider
 import com.allowance.manager.core.domain.usecase.config.FetchRemoteConfigUseCase
 import com.allowance.manager.core.domain.usecase.budget.ObserveBudgetStatusUseCase
+import com.allowance.manager.core.domain.usecase.budget.ChangePaydayUseCase
+import com.allowance.manager.core.domain.usecase.budget.GetBudgetForCycleUseCase
 import com.allowance.manager.core.domain.usecase.budget.GetCycleUseCase
-import com.allowance.manager.core.domain.usecase.budget.SetPaydayUseCase
+import com.allowance.manager.core.domain.usecase.budget.GetPaydayUseCase
+import com.allowance.manager.core.domain.usecase.budget.SetBudgetForCycleUseCase
 import com.allowance.manager.core.domain.util.amountToComma
 import com.allowance.manager.core.domain.usecase.setting.GetHomeGuideShownUseCase
 import com.allowance.manager.core.domain.usecase.setting.SetHomeGuideShownUseCase
@@ -47,8 +49,10 @@ class DebugViewModel @Inject constructor(
     observeBudgetStatusUseCase: ObserveBudgetStatusUseCase,
     private val setHomeGuideShownUseCase: SetHomeGuideShownUseCase,
     private val transactionRepository: TransactionRepository,
-    private val budgetRepository: BudgetRepository,
-    private val setPaydayUseCase: SetPaydayUseCase,
+    private val setBudgetForCycleUseCase: SetBudgetForCycleUseCase,
+    private val getBudgetForCycleUseCase: GetBudgetForCycleUseCase,
+    private val changePaydayUseCase: ChangePaydayUseCase,
+    getPaydayUseCase: GetPaydayUseCase,
     private val getCycleUseCase: GetCycleUseCase,
     private val dataStoreRepository: DataStoreRepository,
     private val remoteConfigRepository: RemoteConfigRepository,
@@ -97,8 +101,8 @@ class DebugViewModel @Inject constructor(
                     (monthsAgo - 7) % 2 == 0 -> 400_000L
                     else -> 500_000L
                 }
-                budgetRepository.setBudgetForCycle(ym.atDay(1), budget)
 
+                // 거래를 먼저 넣어야 관문 백필이 그 달까지 사이클 행을 만들고, 그 행에 예산을 쓸 수 있다
                 val createdAt = ym.atDay(15).atStartOfDay(zone).toInstant().toEpochMilli()
                 transactionRepository.record(
                     Transaction(
@@ -110,6 +114,7 @@ class DebugViewModel @Inject constructor(
                         createdAt = createdAt,
                     ),
                 )
+                setBudgetForCycleUseCase(getCycleUseCase(ym.atDay(15)).start, budget)
             }
         }
     }
@@ -151,7 +156,7 @@ class DebugViewModel @Inject constructor(
     fun setBudgetForMonth(month: YearMonth, amount: Long) {
         viewModelScope.launch {
             val cycle = getCycleUseCase(month.atDay(15))
-            budgetRepository.setBudgetForCycle(cycle.start, amount)
+            setBudgetForCycleUseCase(cycle.start, amount)
         }
     }
 
@@ -200,7 +205,7 @@ class DebugViewModel @Inject constructor(
      * 실지급일은 사이클 경계와 같은 계산에서 나오므로, 이 값이 홈 D-day와 다르면 버그다.
      */
     val paydayDebugText: StateFlow<String> =
-        combine(dataStoreRepository.getPayday(), paydayRefresh) { payday, _ -> payday }
+        combine(getPaydayUseCase(), paydayRefresh) { payday, _ -> payday }
             .map { payday ->
                 val today = LocalDate.now()
                 val holidays = remoteConfigRepository.getHolidays()
@@ -225,7 +230,9 @@ class DebugViewModel @Inject constructor(
      */
     fun setPaydayForTest(offsetDays: Long) {
         viewModelScope.launch {
-            dataStoreRepository.setPayday(LocalDate.now().plusDays(offsetDays).dayOfMonth)
+            // 경계(받은 날)는 그대로 두고 규칙일만 바꾼다 → 사이클 끝·실지급일이 재계산됨
+            val day = LocalDate.now().plusDays(offsetDays).dayOfMonth
+            changePaydayUseCase(getCycleUseCase().start, day)
             paydayRefresh.value++
         }
     }
@@ -260,7 +267,7 @@ class DebugViewModel @Inject constructor(
      */
     fun spendBudgetTenPercent() {
         viewModelScope.launch {
-            val budget = budgetRepository.getBudgetForCycle(getCycleUseCase().start)
+            val budget = getBudgetForCycleUseCase(getCycleUseCase().start)
             if (budget <= 0) return@launch
             transactionRepository.record(
                 Transaction(

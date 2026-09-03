@@ -11,6 +11,7 @@ import com.allowance.manager.core.domain.model.UserType
 import com.allowance.manager.core.domain.usecase.budget.GetUserTypeUseCase
 import com.allowance.manager.core.domain.model.BudgetCycle
 import com.allowance.manager.core.domain.usecase.budget.GetCycleUseCase
+import com.allowance.manager.core.domain.usecase.budget.ObserveCycleUseCase
 import com.allowance.manager.core.domain.usecase.calendar.GetAdjacentCycleUseCase
 import com.allowance.manager.core.domain.usecase.calendar.ObserveCycleTransactionsUseCase
 import com.allowance.manager.core.domain.usecase.calendar.ObserveTransactionCyclesUseCase
@@ -65,6 +66,7 @@ private data class FilterParams(
 @HiltViewModel
 class CalendarViewModel @Inject constructor(
     private val observeCycleTransactionsUseCase: ObserveCycleTransactionsUseCase,
+    observeCycleUseCase: ObserveCycleUseCase,
     private val getCycleUseCase: GetCycleUseCase,
     private val getAdjacentCycleUseCase: GetAdjacentCycleUseCase,
     observeTransactionCyclesUseCase: ObserveTransactionCyclesUseCase,
@@ -81,8 +83,8 @@ class CalendarViewModel @Inject constructor(
 
     private val cycle = MutableStateFlow<BudgetCycle?>(null)
 
-    /** 오늘이 속한 사이클의 시작일 — 미래로 못 가게 막는 상한 */
-    private var todayCycleStart: java.time.LocalDate? = null
+    /** 오늘이 속한 사이클 — 미래로 못 가게 막는 상한 */
+    private var todayCycle: BudgetCycle? = null
     private val query = MutableStateFlow("")
     private val categoryFilter = MutableStateFlow<Set<TransactionCategory>>(emptySet())
     private val typeFilter = MutableStateFlow(LedgerTypeFilter.ALL)
@@ -94,7 +96,7 @@ class CalendarViewModel @Inject constructor(
 
     @OptIn(ExperimentalCoroutinesApi::class)
     private val cycleTransactions = cycle.flatMapLatest { c ->
-        if (c == null) kotlinx.coroutines.flow.flowOf(emptyList()) else observeCycleTransactionsUseCase(c.start)
+        if (c == null) kotlinx.coroutines.flow.flowOf(emptyList()) else observeCycleTransactionsUseCase(c)
     }
 
     private val filterParams = combine(query, categoryFilter, typeFilter, searchActive, mainOnly) { q, c, t, a, m ->
@@ -108,11 +110,15 @@ class CalendarViewModel @Inject constructor(
     private val dataCyclesAndType = combine(dataCyclesFlow, getUserTypeUseCase()) { dc, ut -> dc to ut }
 
     init {
-        // 오늘이 속한 사이클로 시작 (앱을 열 때마다 항상 현재로)
+        // 오늘 사이클을 '관찰' — 더보기에서 월급일을 바꾸면 홈처럼 새 경계가 즉시 반영된다.
+        // (1회 조회로 두면 탭 VM이 살아있는 동안 옛 경계를 계속 보여준다)
         viewModelScope.launch {
-            val today = getCycleUseCase()
-            todayCycleStart = today.start
-            cycle.value = today
+            observeCycleUseCase().collect { today ->
+                // 경계가 실제로 바뀌었을 때만 오늘 사이클로 리셋 — 탐색 위치를 함부로 옮기지 않는다
+                if (today == todayCycle) return@collect
+                todayCycle = today
+                cycle.value = today
+            }
         }
 
         viewModelScope.launch {
@@ -153,7 +159,7 @@ class CalendarViewModel @Inject constructor(
         // 이동 가능 여부: 과거는 거래가 있는 가장 오래된 사이클까지, 미래는 현재 사이클까지
         val oldest = dataCycles.minByOrNull { it.start }
         val canGoPrev = cycle != null && oldest != null && cycle.start.isAfter(oldest.start)
-        val canGoNext = cycle != null && todayCycleStart?.let { cycle.start.isBefore(it) } == true
+        val canGoNext = cycle != null && todayCycle?.let { cycle.start.isBefore(it.start) } == true
 
         return CalendarUiState(
             cycle = cycle,

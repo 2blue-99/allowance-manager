@@ -1,63 +1,50 @@
 package com.allowance.manager.core.domain.usecase.budget
 
-import com.allowance.manager.core.domain.model.BudgetCycle
-import com.allowance.manager.core.domain.model.MonthlyBudget
 import com.allowance.manager.core.domain.model.UserType
-import com.allowance.manager.core.domain.repository.BudgetRepository
+import com.allowance.manager.core.domain.repository.CycleRepository
 import com.allowance.manager.core.domain.repository.DataStoreRepository
-import com.allowance.manager.core.domain.repository.RemoteConfigRepository
 import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.ExperimentalCoroutinesApi
-import kotlinx.coroutines.flow.combine
-import kotlinx.coroutines.flow.flatMapLatest
+import kotlinx.coroutines.flow.map
 import java.time.LocalDate
-import java.time.YearMonth
 import javax.inject.Inject
 
-/** 현재 사이클 용돈(이월 규칙 적용). 설정 화면 표시·현재 예산용. */
+/** 현재 사이클 예산. 설정 화면 표시·현재 예산용. */
 class GetMonthlyBudgetUseCase @Inject constructor(
-    private val budgetRepository: BudgetRepository,
-    private val observeCycleUseCase: ObserveCycleUseCase,
+    private val cycleRepository: CycleRepository,
 ) {
-    @OptIn(ExperimentalCoroutinesApi::class)
     operator fun invoke(): Flow<Long> =
-        observeCycleUseCase().flatMapLatest { budgetRepository.observeBudgetForCycle(it.start) }
+        cycleRepository.observeCycleAt().map { it.budget }
 }
 
-/** 용돈 변경 → 현재 사이클부터 적용되도록 이력에 저장(upsert). */
+/** 예산 변경 → 현재 사이클 행에 저장. 이후 새 사이클은 이 값을 이월한다. */
 class SetMonthlyBudgetUseCase @Inject constructor(
-    private val budgetRepository: BudgetRepository,
-    private val getCycleUseCase: GetCycleUseCase,
+    private val cycleRepository: CycleRepository,
 ) {
     suspend operator fun invoke(amount: Long) =
-        budgetRepository.setBudgetForCycle(getCycleUseCase().start, amount)
+        cycleRepository.setBudget(cycleRepository.cycleAt().start, amount)
 }
 
-/** 특정 사이클의 용돈(이월). 통계 계단식 점선·선택 사이클 요약용. */
+/** 특정 사이클의 예산 변경 — 디버그 시드 등 과거 사이클 조정용. */
+class SetBudgetForCycleUseCase @Inject constructor(
+    private val cycleRepository: CycleRepository,
+) {
+    suspend operator fun invoke(cycleStart: LocalDate, amount: Long) =
+        cycleRepository.setBudget(cycleStart, amount)
+}
+
+/** 특정 사이클의 예산. 통계 선택 사이클 요약·알림 문구용. */
 class GetBudgetForCycleUseCase @Inject constructor(
-    private val budgetRepository: BudgetRepository,
+    private val cycleRepository: CycleRepository,
 ) {
     suspend operator fun invoke(cycleStart: LocalDate): Long =
-        budgetRepository.getBudgetForCycle(cycleStart)
+        cycleRepository.budgetFor(cycleStart)
 }
 
-/** 용돈 이력 전체 Flow. 통계 창에 매핑. */
-class ObserveBudgetHistoryUseCase @Inject constructor(
-    private val budgetRepository: BudgetRepository,
-) {
-    operator fun invoke(): Flow<List<MonthlyBudget>> = budgetRepository.observeHistory()
-}
-
+/** 현재 규칙일(1~31, 0=말일) — 최신 사이클 행의 payday가 단일 소스. 설정 화면 표시용. */
 class GetPaydayUseCase @Inject constructor(
-    private val dataStoreRepository: DataStoreRepository,
+    private val cycleRepository: CycleRepository,
 ) {
-    operator fun invoke(): Flow<Int> = dataStoreRepository.getPayday()
-}
-
-class SetPaydayUseCase @Inject constructor(
-    private val dataStoreRepository: DataStoreRepository,
-) {
-    suspend operator fun invoke(day: Int) = dataStoreRepository.setPayday(day)
+    operator fun invoke(): Flow<Int> = cycleRepository.observeCycleAt().map { it.payday }
 }
 
 /** 사용자 유형(student/youth/common) 관찰 — 호칭 등 개인화에 사용 */

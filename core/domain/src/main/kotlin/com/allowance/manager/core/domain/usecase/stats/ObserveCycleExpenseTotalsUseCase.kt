@@ -1,19 +1,29 @@
 package com.allowance.manager.core.domain.usecase.stats
 
+import com.allowance.manager.core.domain.model.BudgetCycle
 import com.allowance.manager.core.domain.repository.TransactionRepository
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.flowOf
 import java.time.LocalDate
 import javax.inject.Inject
 
 /**
- * 사이클별 예산 지출 합계 (사이클 시작일 → 금액).
+ * 주어진 사이클들의 예산 지출 합계 (사이클 시작일 → 금액).
  *
- * 거래에 박아둔 `cycle_start`로 묶으므로 `GROUP BY` 한 번에 끝난다.
- * (사이클 경계는 사용자마다·달마다 달라 SQL이 스스로 계산할 수 없다)
+ * 통계 창(6개)만큼의 사이클을 받아 기간별 합계를 묶는다.
+ * 소속은 저장된 컬럼이 아니라 createdAt 날짜 범위로 계산되므로 경계를 바꿔도 자동으로 맞는다.
  */
 class ObserveCycleExpenseTotalsUseCase @Inject constructor(
     private val transactionRepository: TransactionRepository,
 ) {
-    operator fun invoke(): Flow<Map<LocalDate, Long>> =
-        transactionRepository.observeCycleExpenseTotals()
+    operator fun invoke(cycles: List<BudgetCycle>): Flow<Map<LocalDate, Long>> {
+        if (cycles.isEmpty()) return flowOf(emptyMap())
+        val flows = cycles.map { cycle ->
+            transactionRepository.observeBudgetSpentBetween(cycle.startMillis(), cycle.endMillis())
+        }
+        return combine(flows) { totals ->
+            cycles.mapIndexed { i, cycle -> cycle.start to totals[i] }.toMap()
+        }
+    }
 }

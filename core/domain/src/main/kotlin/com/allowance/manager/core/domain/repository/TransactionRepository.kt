@@ -3,8 +3,6 @@ package com.allowance.manager.core.domain.repository
 import com.allowance.manager.core.domain.model.Transaction
 import com.allowance.manager.core.domain.model.TxScope
 import kotlinx.coroutines.flow.Flow
-import java.time.LocalDate
-import java.time.YearMonth
 
 interface TransactionRepository {
     suspend fun record(transaction: Transaction): Long
@@ -27,25 +25,8 @@ interface TransactionRepository {
     /** 예산 수입 합계 (scope=BUDGET·INCOME) — 남은 금액 가산 */
     fun observeBudgetIncomeBetween(start: Long, end: Long): Flow<Long>
 
-    // ── 사이클 기준 (transactions.cycle_start) ──
-
-    /** 그 사이클의 예산 지출 */
-    fun observeBudgetSpentInCycle(cycleStart: LocalDate): Flow<Long>
-
-    /** 그 사이클의 예산 수입 */
-    fun observeBudgetIncomeInCycle(cycleStart: LocalDate): Flow<Long>
-
-    /** 그 사이클의 내역 (최신순) */
-    fun observeByCycle(cycleStart: LocalDate): Flow<List<Transaction>>
-
-    /** 사이클별 예산 지출 합계 — 통계 막대용 */
-    fun observeCycleExpenseTotals(): Flow<Map<LocalDate, Long>>
-
-    /** 거래가 있는 사이클 시작일 (최신순) */
-    fun observeTransactionCycles(): Flow<List<LocalDate>>
-
-    /** 경계 변경 시 그 구간 거래를 다시 묶는다 */
-    suspend fun reassignCycle(cycleStart: LocalDate, from: Long, to: Long)
+    /** 전체 내역의 시각 목록 (최신순) — 사이클별 거래 유무 판정용 경량 조회 */
+    fun observeAllTimes(): Flow<List<Long>>
 
     /** 가계부 지출 합계 (scope!=EXCLUDED·EXPENSE) — 가계부 위젯 등 집계 */
     fun observeLedgerSpentBetween(start: Long, end: Long): Flow<Long>

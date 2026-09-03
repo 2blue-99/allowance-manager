@@ -2,16 +2,14 @@ package com.allowance.manager.core.data.di
 
 import com.allowance.manager.core.data.repository.AccountRepositoryImpl
 import com.allowance.manager.core.data.repository.AppVersionRepositoryImpl
-import com.allowance.manager.core.data.repository.BudgetRepositoryImpl
-import com.allowance.manager.core.data.repository.PaydayRepositoryImpl
+import com.allowance.manager.core.data.repository.CycleRepositoryImpl
 import com.allowance.manager.core.data.repository.DataStoreRepositoryImpl
 import com.allowance.manager.core.data.repository.IgnoredAccountRepositoryImpl
 import com.allowance.manager.core.data.repository.RemoteConfigRepositoryImpl
 import com.allowance.manager.core.data.repository.TransactionRepositoryImpl
 import com.allowance.manager.core.domain.repository.AccountRepository
 import com.allowance.manager.core.domain.repository.AppVersionRepository
-import com.allowance.manager.core.domain.repository.BudgetRepository
-import com.allowance.manager.core.domain.repository.PaydayRepository
+import com.allowance.manager.core.domain.repository.CycleRepository
 import com.allowance.manager.core.domain.repository.DataStoreRepository
 import com.allowance.manager.core.domain.repository.IgnoredAccountRepository
 import com.allowance.manager.core.domain.repository.RemoteConfigRepository
@@ -58,19 +56,13 @@ abstract class DataModule {
 
     @Binds
     @Singleton
-    abstract fun bindBudgetRepository(
-        impl: BudgetRepositoryImpl,
-    ): BudgetRepository
+    abstract fun bindCycleRepository(
+        impl: CycleRepositoryImpl,
+    ): CycleRepository
 
     @Binds
     @Singleton
     abstract fun bindIgnoredAccountRepository(
         impl: IgnoredAccountRepositoryImpl,
     ): IgnoredAccountRepository
-
-    @Binds
-    @Singleton
-    abstract fun bindPaydayRepository(
-        impl: PaydayRepositoryImpl,
-    ): PaydayRepository
 }

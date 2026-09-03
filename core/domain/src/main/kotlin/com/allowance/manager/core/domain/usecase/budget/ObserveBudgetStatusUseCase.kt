@@ -1,7 +1,7 @@
 package com.allowance.manager.core.domain.usecase.budget
 
 import com.allowance.manager.core.domain.model.BudgetStatus
-import com.allowance.manager.core.domain.repository.BudgetRepository
+import com.allowance.manager.core.domain.repository.CycleRepository
 import com.allowance.manager.core.domain.repository.TransactionRepository
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.Flow
@@ -16,19 +16,18 @@ import javax.inject.Inject
  * 여기서 나온 값을 화면에서 다시 계산하지 말 것 — 재계산하면 값이 어긋난다.
  */
 class ObserveBudgetStatusUseCase @Inject constructor(
-    private val budgetRepository: BudgetRepository,
+    private val cycleRepository: CycleRepository,
     private val transactionRepository: TransactionRepository,
-    private val observeCycleUseCase: ObserveCycleUseCase,
 ) {
     @OptIn(ExperimentalCoroutinesApi::class)
     operator fun invoke(): Flow<BudgetStatus> =
-        observeCycleUseCase().flatMapLatest { cycle ->
+        cycleRepository.observeCycleAt().flatMapLatest { cycle ->
+            val period = cycle.period
             combine(
-                budgetRepository.observeBudgetForCycle(cycle.start),
-                transactionRepository.observeBudgetSpentInCycle(cycle.start),
-                transactionRepository.observeBudgetIncomeInCycle(cycle.start),
-            ) { budget, spent, income ->
-                BudgetStatus(budget = budget, spent = spent, income = income, cycle = cycle)
+                transactionRepository.observeBudgetSpentBetween(period.startMillis(), period.endMillis()),
+                transactionRepository.observeBudgetIncomeBetween(period.startMillis(), period.endMillis()),
+            ) { spent, income ->
+                BudgetStatus(budget = cycle.budget, spent = spent, income = income, cycle = period)
             }
         }
 }

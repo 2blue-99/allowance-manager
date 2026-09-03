@@ -20,9 +20,6 @@ class DataStoreRepositoryImpl @Inject constructor(
     private val preferencesDataSource: PreferencesDataSource,
 ) : DataStoreRepository {
 
-    override fun getPayday(): Flow<Int> = preferencesDataSource.getPayday()
-    override suspend fun setPayday(day: Int) = preferencesDataSource.setPayday(day)
-
     override fun getUserType(): Flow<UserType> =
         preferencesDataSource.getUserType().map { UserType.fromKey(it) }
     override suspend fun setUserType(type: UserType) =

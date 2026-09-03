@@ -56,48 +56,9 @@ interface TransactionDao {
     )
     fun observeBudgetIncomeBetween(start: Long, end: Long): Flow<Long>
 
-    // ── 사이클 기준 (cycle_start로 묶음) ────────────────────────────
-    // 사이클 경계는 사용자마다·달마다 달라 SQL이 계산할 수 없다. 저장 시 박아둔 cycle_start로 묶는다.
-
-    /** 그 사이클의 예산 지출 */
-    @Query(
-        """
-        SELECT COALESCE(SUM(amount), 0) FROM transactions
-        WHERE type = 'EXPENSE' AND scope = 'BUDGET' AND cycle_start = :cycle
-        """
-    )
-    fun observeBudgetSpentInCycle(cycle: String): Flow<Long>
-
-    /** 그 사이클의 예산 수입 */
-    @Query(
-        """
-        SELECT COALESCE(SUM(amount), 0) FROM transactions
-        WHERE type = 'INCOME' AND scope = 'BUDGET' AND cycle_start = :cycle
-        """
-    )
-    fun observeBudgetIncomeInCycle(cycle: String): Flow<Long>
-
-    /** 그 사이클의 내역 (최신순) */
-    @Query("SELECT * FROM transactions WHERE cycle_start = :cycle ORDER BY created_at DESC")
-    fun observeByCycle(cycle: String): Flow<List<TransactionEntity>>
-
-    /** 사이클별 예산 지출 합계 — 통계 막대를 한 번에 집계 */
-    @Query(
-        """
-        SELECT cycle_start AS cycle, COALESCE(SUM(amount), 0) AS total FROM transactions
-        WHERE type = 'EXPENSE' AND scope = 'BUDGET'
-        GROUP BY cycle_start
-        """
-    )
-    fun observeCycleExpenseTotals(): Flow<List<CycleTotalRow>>
-
-    /** 거래가 하나라도 있는 사이클 시작일 목록. 피커에서 데이터 있는 사이클만 활성화용 */
-    @Query("SELECT DISTINCT cycle_start FROM transactions ORDER BY cycle_start DESC")
-    fun observeTransactionCycles(): Flow<List<String>>
-
-    /** 경계가 바뀐 구간의 거래를 다시 묶는다(월급일 변경 시 재계산) */
-    @Query("UPDATE transactions SET cycle_start = :cycle WHERE created_at BETWEEN :start AND :end")
-    suspend fun reassignCycle(cycle: String, start: Long, end: Long)
+    /** 전체 내역의 시각 목록 (최신순) — 사이클별 거래 유무 판정(피커 활성화)용 경량 조회 */
+    @Query("SELECT created_at FROM transactions ORDER BY created_at DESC")
+    fun observeAllTimes(): Flow<List<Long>>
 
     /** 가계부 지출 = scope != EXCLUDED · EXPENSE. 가계부 위젯 등 '집계' 합계용 */
     @Query(

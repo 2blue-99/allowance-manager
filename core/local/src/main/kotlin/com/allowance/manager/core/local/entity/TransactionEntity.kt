@@ -11,19 +11,17 @@ import androidx.room.PrimaryKey
  * - amount: 지출=양수, 취소/환불=음수(type=EXPENSE), 입금=양수(type=INCOME)
  * - accountId: 매칭된 등록계좌 id. null 이면 비메인
  * - scope: 예산 반영 상태 "BUDGET" | "LEDGER_ONLY" | "EXCLUDED" (구 is_hidden 대체)
- * - cycleStart: 이 거래가 속한 사이클의 시작일 "yyyy-MM-dd". 사이클 경계는 사용자마다·달마다
- *   달라 SQL이 스스로 계산할 수 없으므로 저장 시점에 박아둔다. 홈·월별·통계가 모두 이 값으로 묶는다.
- * - 남은 금액 예산 지출 = SUM(amount) WHERE type='EXPENSE' AND scope='BUDGET'
+ * - 사이클 소속은 컬럼으로 저장하지 않는다 — `cycles` 행의 기간과 createdAt 범위 대조로 조회.
+ *   (경계를 바꿔도 거래가 자동으로 새 사이클에 재배치된다)
+ * - 남은 금액 예산 지출 = SUM(amount) WHERE type='EXPENSE' AND scope='BUDGET' AND created_at 범위
  */
 @Entity(
     tableName = "transactions",
     indices = [
         // 리스트 정렬·범위 필터
         Index(value = ["created_at"]),
-        // 사이클별 조회
-        Index(value = ["cycle_start"]),
-        // 예산 집계 (type='EXPENSE' AND scope='BUDGET')
-        Index(value = ["cycle_start", "type", "scope"]),
+        // 예산 집계 (type='EXPENSE' AND scope='BUDGET' AND created_at 범위)
+        Index(value = ["type", "scope", "created_at"]),
     ],
 )
 data class TransactionEntity(
@@ -48,7 +46,4 @@ data class TransactionEntity(
     val isManual: Boolean = false,
     @ColumnInfo(name = "created_at")
     val createdAt: Long,
-    /** 속한 사이클의 시작일 "yyyy-MM-dd" — 경계가 바뀌면 재계산해 다시 채운다. */
-    @ColumnInfo(name = "cycle_start")
-    val cycleStart: String,
 )

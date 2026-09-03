@@ -19,8 +19,7 @@ class PreferencesDataSource @Inject constructor(
     private val dataStore: DataStore<Preferences>,
 ) {
     companion object {
-        // 월 예산(용돈)은 budget_history 테이블로 이관 (월별 이력)
-        val PAYDAY = intPreferencesKey("payday")                    // 수급일. 1~31, 0 = 말일
+        // 예산·규칙일(수급일)은 cycles 테이블로 이관 — 최신 행의 payday가 현재 규칙
         val INTRO_SHOWN = booleanPreferencesKey("intro_shown")
         val ONBOARDING_DONE = booleanPreferencesKey("onboarding_done")
         val STATUS_BAR_ENABLED = booleanPreferencesKey("status_bar_enabled")
@@ -51,14 +50,10 @@ class PreferencesDataSource @Inject constructor(
         // 추천 업데이트 팝업 — 마지막으로 띄운 날짜(yyyy-MM-dd). 하루 1회 노출 판정용.
         val RECOMMEND_UPDATE_LAST_SHOWN = stringPreferencesKey("recommend_update_last_shown")
 
-        private const val DEFAULT_PAYDAY = 25
         private const val DEFAULT_USER_TYPE = "common"              // UserType.Default.key
         private const val DEFAULT_ALERT_FREQUENCY = "medium"        // AlertFrequency.Default.key
         private const val DEFAULT_REMINDER_MINUTES = 21 * 60        // 오후 9:00
     }
-
-    fun getPayday(): Flow<Int> = get(PAYDAY, DEFAULT_PAYDAY)
-    suspend fun setPayday(day: Int) = set(PAYDAY, day)
 
     fun getUserType(): Flow<String> = get(USER_TYPE, DEFAULT_USER_TYPE)
     suspend fun setUserType(key: String) = set(USER_TYPE, key)

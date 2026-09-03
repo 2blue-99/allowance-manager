@@ -3,31 +3,29 @@ package com.allowance.manager.core.local.database
 import androidx.room.Database
 import androidx.room.RoomDatabase
 import com.allowance.manager.core.local.dao.AccountDao
-import com.allowance.manager.core.local.dao.BudgetDao
+import com.allowance.manager.core.local.dao.CycleDao
 import com.allowance.manager.core.local.dao.IgnoredAccountDao
-import com.allowance.manager.core.local.dao.PaydayHistoryDao
 import com.allowance.manager.core.local.dao.TransactionDao
 import com.allowance.manager.core.local.entity.AccountEntity
-import com.allowance.manager.core.local.entity.BudgetEntity
+import com.allowance.manager.core.local.entity.CycleEntity
 import com.allowance.manager.core.local.entity.IgnoredAccountEntity
-import com.allowance.manager.core.local.entity.PaydayHistoryEntity
 import com.allowance.manager.core.local.entity.TransactionEntity
 
 @Database(
     entities = [
         AccountEntity::class,
         TransactionEntity::class,
-        BudgetEntity::class,
+        CycleEntity::class,
         IgnoredAccountEntity::class,
-        PaydayHistoryEntity::class,
     ],
-    version = 12,  // v12: transactions.cycle_start 추가 · budget_history 키를 사이클 시작일로
+    // v13: 사이클 실체화 — payday_history·budget_history → cycles 테이블 통합,
+    //      transactions.cycle_start(도장) 제거(소속은 createdAt 범위로 조회)
+    version = 13,
     exportSchema = true,
 )
 abstract class AppDatabase : RoomDatabase() {
     abstract fun accountDao(): AccountDao
     abstract fun transactionDao(): TransactionDao
-    abstract fun budgetDao(): BudgetDao
+    abstract fun cycleDao(): CycleDao
     abstract fun ignoredAccountDao(): IgnoredAccountDao
-    abstract fun paydayHistoryDao(): PaydayHistoryDao
 }

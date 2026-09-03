@@ -41,7 +41,7 @@ data class OnboardingUiState(
 ) {
     val budget: Long get() = budgetInput.filter { it.isDigit() }.toLongOrNull() ?: 0L
 
-    /** 월급일·용돈·계좌(은행명+계좌패턴)가 모두 채워져야 시작 가능 */
+    /** 월급일·용돈·계좌(은행명+계좌패턴)가 모두 채워져야 정보 스텝을 넘어갈 수 있다 */
     val canFinish: Boolean
         get() = payday != null && budget > 0 &&
             bankName.isNotBlank() && accountPattern.isNotBlank()
@@ -92,9 +92,41 @@ class OnboardingViewModel @Inject constructor(
         viewModelScope.launch { setUserTypeUseCase(_uiState.value.userType) }
     }
 
+    /** 정보 저장 중복 방지 — 정보 스텝 '다음'은 한 번만 저장한다 */
+    private var infoSaved = false
+
+    /**
+     * 정보 스텝(월급일·용돈·계좌) 확정 — **알림 권한을 켜기 전에** 저장한다.
+     *
+     * 권한이 켜지는 순간부터 리스너가 거래를 기록하기 시작하므로, 그 전에 첫 사이클 행이
+     * 있어야 모든 거래가 사이클 안에 떨어진다. (사이클 행 없이 거래 먼저 = 유령 거래)
+     */
+    fun confirmInfo() {
+        val state = _uiState.value
+        val payday = state.payday ?: return
+        if (!state.canFinish || infoSaved) return
+        infoSaved = true
+        viewModelScope.launch {
+            if (state.accountPattern.isNotBlank()) {
+                addAccountUseCase(
+                    Account(
+                        packageName = "",
+                        bankName = state.bankName.ifBlank { "내 계좌" },
+                        // 계좌번호 정규화는 AddAccountUseCase에서 일괄 처리
+                        accountPattern = state.accountPattern,
+                        enabled = true,
+                    )
+                )
+            }
+            // ⚠️ 순서 주의: 월급일이 먼저다 — 첫 사이클 행을 심어야 예산을 그 행에 쓸 수 있다.
+            initPaydayRuleUseCase(payday)
+            setMonthlyBudgetUseCase(state.budget)
+        }
+    }
+
+    /** 마지막 스텝(서브 알림 설정) 완료 — 알림 설정 저장 + 온보딩 종료 표식 + 계측 */
     fun finish() {
         val state = _uiState.value
-        if (!state.canFinish) return
         val payday = state.payday ?: return
         // 온보딩 세이브 시 값 기록 + 이후 전체 이벤트 세그먼트용 User Property 세팅
         analytics.logEvent(
@@ -111,22 +143,8 @@ class OnboardingViewModel @Inject constructor(
         analytics.setUserProperty(AmAnalytics.UserProp.BUDGET_RANGE, budgetRange(state.budget))
         analytics.setUserProperty(AmAnalytics.UserProp.PAYDAY, payday.toString())
         viewModelScope.launch {
-            if (state.accountPattern.isNotBlank()) {
-                addAccountUseCase(
-                    Account(
-                        packageName = "",
-                        bankName = state.bankName.ifBlank { "내 계좌" },
-                        // 계좌번호 정규화는 AddAccountUseCase에서 일괄 처리
-                        accountPattern = state.accountPattern,
-                        enabled = true,
-                    )
-                )
-            }
-            // ⚠️ 순서 주의: 월급일이 먼저다.
-            // 예산은 '현재 사이클 시작일'을 키로 저장하는데, 그 사이클은 월급일 이력에서 나온다.
-            // 예산을 먼저 쓰면 아직 이력이 없어 기본 규칙일로 계산된 엉뚱한 키에 저장된다.
-            initPaydayRuleUseCase(payday)
-            setMonthlyBudgetUseCase(state.budget)
+            // 혹시 정보 스텝 저장이 안 지나갔으면(비정상 경로) 여기서 한 번 더 보장
+            if (!infoSaved) confirmInfo()
             setBudgetAlertSettingUseCase(
                 BudgetAlertSetting(
                     enabled = state.budgetAlertEnabled,

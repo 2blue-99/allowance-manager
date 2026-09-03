@@ -4,18 +4,17 @@ import androidx.lifecycle.viewModelScope
 import com.allowance.manager.core.analytics.AmAnalytics
 import com.allowance.manager.core.analytics.AnalyticsHelper
 import com.allowance.manager.core.common.BaseViewModel
-import com.allowance.manager.core.domain.model.MonthlyBudget
 import com.allowance.manager.core.domain.model.Transaction
 import com.allowance.manager.core.domain.model.TransactionCategory
 import com.allowance.manager.core.domain.model.TransactionType
 import com.allowance.manager.core.domain.model.UserType
 import com.allowance.manager.core.domain.usecase.budget.GetUserTypeUseCase
-import com.allowance.manager.core.domain.usecase.budget.ObserveBudgetHistoryUseCase
 import com.allowance.manager.core.domain.model.BudgetCycle
 import com.allowance.manager.core.domain.model.lastDay
 import com.allowance.manager.core.domain.model.toBarLabel
 import com.allowance.manager.core.domain.model.toPeriodLabel
-import com.allowance.manager.core.domain.usecase.budget.GetCycleUseCase
+import com.allowance.manager.core.domain.usecase.budget.ObserveCycleUseCase
+import com.allowance.manager.core.domain.usecase.budget.ObserveCyclesUseCase
 import com.allowance.manager.core.domain.usecase.calendar.GetAdjacentCycleUseCase
 import com.allowance.manager.core.domain.usecase.calendar.ObserveCycleTransactionsUseCase
 import com.allowance.manager.core.domain.usecase.calendar.ObserveTransactionCyclesUseCase
@@ -27,6 +26,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.flatMapLatest
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
 import java.time.LocalDate
 import java.time.YearMonth
@@ -83,11 +83,11 @@ data class StatsUiState(
 @HiltViewModel
 class StatsViewModel @Inject constructor(
     observeCycleExpenseTotalsUseCase: ObserveCycleExpenseTotalsUseCase,
-    observeBudgetHistoryUseCase: ObserveBudgetHistoryUseCase,
+    observeCyclesUseCase: ObserveCyclesUseCase,
     getUserTypeUseCase: GetUserTypeUseCase,
     observeTransactionCyclesUseCase: ObserveTransactionCyclesUseCase,
     private val observeCycleTransactionsUseCase: ObserveCycleTransactionsUseCase,
-    private val getCycleUseCase: GetCycleUseCase,
+    observeCycleUseCase: ObserveCycleUseCase,
     private val getAdjacentCycleUseCase: GetAdjacentCycleUseCase,
     private val analytics: AnalyticsHelper,
 ) : BaseViewModel() {
@@ -106,21 +106,30 @@ class StatsViewModel @Inject constructor(
 
     @OptIn(ExperimentalCoroutinesApi::class)
     private val selectedTransactions = selected.flatMapLatest { c ->
-        if (c == null) kotlinx.coroutines.flow.flowOf(emptyList()) else observeCycleTransactionsUseCase(c.start)
+        if (c == null) kotlinx.coroutines.flow.flowOf(emptyList()) else observeCycleTransactionsUseCase(c)
     }
 
-    // 사이클별 지출 합계 맵 — GROUP BY cycle_start 한 방
-    private val expenseByCycle = observeCycleExpenseTotalsUseCase()
+    // 창(6개) 사이클별 지출 합계 맵 — 기간(createdAt 범위)으로 집계
+    @OptIn(ExperimentalCoroutinesApi::class)
+    private val expenseByCycle = window.flatMapLatest { observeCycleExpenseTotalsUseCase(it) }
+
+    // 사이클 행 → 시작일별 예산 맵 (계단식 점선·선택 사이클 요약)
+    private val budgetsByCycle = observeCyclesUseCase().map { rows -> rows.associate { it.start to it.budget } }
 
     // 거래 있는 사이클 (피커 활성화용)
     private val dataCyclesFlow = observeTransactionCyclesUseCase()
 
     init {
+        // 오늘 사이클을 '관찰' — 더보기에서 월급일을 바꾸면 홈처럼 새 경계가 즉시 반영된다.
+        // (1회 조회로 두면 탭 VM이 살아있는 동안 옛 경계를 계속 보여준다)
         viewModelScope.launch {
-            val today = getCycleUseCase()
-            todayCycle = today
-            selected.value = today
-            moveWindowTo(today)
+            observeCycleUseCase().collect { today ->
+                // 경계가 실제로 바뀌었을 때만 창·선택을 오늘 사이클로 리셋
+                if (today == todayCycle) return@collect
+                todayCycle = today
+                selected.value = today
+                moveWindowTo(today)
+            }
         }
 
         viewModelScope.launch {
@@ -128,8 +137,8 @@ class StatsViewModel @Inject constructor(
                 window,
                 selected,
                 expenseByCycle,
-                observeBudgetHistoryUseCase(),
-            ) { win, sel, totals, history -> Partial(win, sel, totals, history) }
+                budgetsByCycle,
+            ) { win, sel, totals, budgets -> Partial(win, sel, totals, budgets) }
             combine(partialFlow, selectedTransactions, getUserTypeUseCase(), dataCyclesFlow) { p, tx, userType, dc ->
                 render(p, tx, userType, dc)
             }.collect { _uiState.value = it }
@@ -152,18 +161,14 @@ class StatsViewModel @Inject constructor(
         val window: List<BudgetCycle>,
         val selected: BudgetCycle?,
         val expenseByCycle: Map<LocalDate, Long>,
-        val history: List<MonthlyBudget>,
+        val budgets: Map<LocalDate, Long>,   // 사이클 시작일 → 그 행의 예산
     )
-
-    /** 그 사이클의 용돈 = effectiveCycle <= 사이클 시작일 중 최신값(이월). 이력은 오름차순. */
-    private fun budgetFor(cycleStart: LocalDate, history: List<MonthlyBudget>): Long =
-        history.lastOrNull { !it.effectiveCycle.isAfter(cycleStart) }?.amount ?: 0L
 
     private fun render(p: Partial, selectedTx: List<Transaction>, userType: UserType, dataCycles: List<BudgetCycle>): StatsUiState {
         val dataStarts = dataCycles.map { it.start }.toSet()
         val window = p.window.map { cycle ->
             val expense = p.expenseByCycle[cycle.start] ?: 0L
-            val budget = budgetFor(cycle.start, p.history)
+            val budget = p.budgets[cycle.start] ?: 0L
             MonthBar(
                 cycle = cycle,
                 // 막대마다 자기 기간을 그대로 단다. 달 이름을 쓰면 규칙을 바꾼 달에
@@ -183,7 +188,7 @@ class StatsViewModel @Inject constructor(
         val expenseTx = counted.filter { it.type == TransactionType.EXPENSE }
         val totalExpense = expenseTx.sumOf { it.amount }
         val income = counted.filter { it.type == TransactionType.INCOME }.sumOf { it.amount }
-        val budget = p.selected?.let { budgetFor(it.start, p.history) } ?: 0L
+        val budget = p.selected?.let { p.budgets[it.start] } ?: 0L
 
         val categories = expenseTx
             .groupBy { it.category ?: TransactionCategory.ETC }   // 미지정은 기타로 합산

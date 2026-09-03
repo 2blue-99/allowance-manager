@@ -9,10 +9,7 @@ import com.allowance.manager.core.domain.model.UserType
 import kotlinx.coroutines.flow.Flow
 
 interface DataStoreRepository {
-    // 용돈(월 예산)은 budget_history 테이블(월별 이력)로 이관 — BudgetRepository 참조
-
-    fun getPayday(): Flow<Int>          // 1~31, 0 = 말일
-    suspend fun setPayday(day: Int)
+    // 예산·규칙일은 cycles 테이블로 이관 — CycleRepository 참조 (최신 행의 payday가 현재 규칙)
 
     /** 사용자 유형(student/youth/common) — 온보딩·설정에서 선택, 개인화에 사용 */
     fun getUserType(): Flow<UserType>

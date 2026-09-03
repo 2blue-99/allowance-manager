@@ -88,7 +88,9 @@ fun OnboardingRoute(
     val initiallyGranted = remember { isListenerGranted(context) }
     var permissionGranted by remember { mutableStateOf(initiallyGranted) }
     var postGranted by remember { mutableStateOf(isPostNotificationGranted(context)) }
-    // 온보딩 내부 스텝: 유형 선택(개인화) → 권한 → 정보 입력.
+    // 온보딩 내부 스텝: 유형 → 정보 입력 → 권한 → 서브 알림.
+    // 권한(알림 접근)이 정보 입력 **뒤**인 이유: 권한이 켜지는 순간부터 거래가 자동 기록되므로,
+    // 먼저 첫 사이클(월급일·예산)이 저장돼 있어야 모든 거래가 사이클 안에 떨어진다.
     var step by remember { mutableStateOf(OnboardingStep.PERSONAL) }
 
     val openListenerSettings = {
@@ -121,11 +123,11 @@ fun OnboardingRoute(
         postGranted = isPostNotificationGranted(context)
     }
 
-    // 권한 화면에서 알림 접근이 허용되면 0.5초 뒤에 정보 화면으로 전환 (✓ 상태를 잠깐 노출).
+    // 권한 화면에서 알림 접근이 허용되면 잠시 뒤 서브 알림 설정으로 전환 (✓ 상태를 잠깐 노출).
     LaunchedEffect(permissionGranted, step) {
         if (permissionGranted && step == OnboardingStep.PERMISSION) {
             delay(300)
-            step = OnboardingStep.INFO
+            step = OnboardingStep.ALERT
         }
     }
 
@@ -140,15 +142,10 @@ fun OnboardingRoute(
                 selected = uiState.userType,
                 onSelect = viewModel::onUserTypeChange,
                 onNext = {
-                    // 유형 확정 → 저장 후 다음 스텝 (권한 이미 있으면 정보로 바로)
+                    // 유형 확정 → 저장 후 정보 입력으로
                     viewModel.confirmUserType()
-                    step = if (permissionGranted) OnboardingStep.INFO else OnboardingStep.PERMISSION
+                    step = OnboardingStep.INFO
                 },
-            )
-            OnboardingStep.PERMISSION -> OnboardingPermissionScreen(
-                postGranted = postGranted,
-                listenerGranted = permissionGranted,
-                onAllow = requestBothPermissions,
             )
             OnboardingStep.INFO -> OnboardingInfoScreen(
                 uiState = uiState,
@@ -157,8 +154,16 @@ fun OnboardingRoute(
                 onBudgetChange = viewModel::onBudgetChange,
                 onPaydayInputChange = viewModel::onPaydayInputChange,
                 onPaydaySelect = viewModel::onPaydaySelect,
-                // 기본 정보 입력 완료 → 알림 설정 스텝으로
-                onNext = { step = OnboardingStep.ALERT },
+                onNext = {
+                    // 권한을 켜기 전에 계좌·첫 사이클(월급일·예산)을 먼저 저장한다
+                    viewModel.confirmInfo()
+                    step = if (permissionGranted) OnboardingStep.ALERT else OnboardingStep.PERMISSION
+                },
+            )
+            OnboardingStep.PERMISSION -> OnboardingPermissionScreen(
+                postGranted = postGranted,
+                listenerGranted = permissionGranted,
+                onAllow = requestBothPermissions,
             )
             OnboardingStep.ALERT -> OnboardingAlertScreen(
                 uiState = uiState,
@@ -172,7 +177,7 @@ fun OnboardingRoute(
     }
 }
 
-private enum class OnboardingStep { PERSONAL, PERMISSION, INFO, ALERT }
+private enum class OnboardingStep { PERSONAL, INFO, PERMISSION, ALERT }
 
 // ── 유형 선택 (온보딩 첫 단계) ─────────────────────────
 // 뱃지(용돈/생활비/예산) + 아래 설명. 선택 후 '다음'에서 유형이 저장·고정된다.
