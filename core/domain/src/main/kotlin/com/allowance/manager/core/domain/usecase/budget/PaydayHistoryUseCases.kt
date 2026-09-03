@@ -1,17 +1,19 @@
 package com.allowance.manager.core.domain.usecase.budget
 
+import com.allowance.manager.core.domain.model.BudgetCycle
 import com.allowance.manager.core.domain.model.PaydayRule
 import com.allowance.manager.core.domain.repository.DataStoreRepository
 import com.allowance.manager.core.domain.repository.PaydayRepository
+import com.allowance.manager.core.domain.repository.RemoteConfigRepository
 import kotlinx.coroutines.flow.Flow
 import java.time.LocalDate
 import javax.inject.Inject
 
-/** [date] 시점에 유효한 월급일 규칙 관찰. */
+/** [date] 시점에 유효한 월급일 규칙 관찰. 이력이 아직 없으면 null. */
 class ObservePaydayRuleUseCase @Inject constructor(
     private val paydayRepository: PaydayRepository,
 ) {
-    operator fun invoke(date: LocalDate = LocalDate.now()): Flow<PaydayRule> =
+    operator fun invoke(date: LocalDate = LocalDate.now()): Flow<PaydayRule?> =
         paydayRepository.observeRuleAt(date)
 }
 
@@ -20,6 +22,24 @@ class ObservePaydayHistoryUseCase @Inject constructor(
     private val paydayRepository: PaydayRepository,
 ) {
     operator fun invoke(): Flow<List<PaydayRule>> = paydayRepository.observeHistory()
+}
+
+/**
+ * 온보딩·초기 설정에서 첫 규칙을 심는다.
+ *
+ * 경계는 **오늘이 속한 사이클의 시작일**로 잡는다. 첫 거래는 온보딩 이후에 쌓이므로
+ * 이보다 과거를 조회할 일이 없고, 이력이 짧게 유지돼 사이클 계산도 가볍다.
+ */
+class InitPaydayRuleUseCase @Inject constructor(
+    private val paydayRepository: PaydayRepository,
+    private val dataStoreRepository: DataStoreRepository,
+    private val remoteConfigRepository: RemoteConfigRepository,
+) {
+    suspend operator fun invoke(payday: Int, today: LocalDate = LocalDate.now()) {
+        val cycle = BudgetCycle.of(payday, today, remoteConfigRepository.getHolidays())
+        paydayRepository.setRule(cycle.start, payday)
+        dataStoreRepository.setPayday(payday)
+    }
 }
 
 /**

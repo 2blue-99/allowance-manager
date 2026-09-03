@@ -17,13 +17,5 @@ data class PaydayRule(
     companion object {
         /** 이력 보존 개수. 넘으면 오래된 것부터 버린다. */
         const val MAX_ENTRIES = 24
-
-        /**
-         * 이력의 하한선 — 첫 규칙을 심을 때 쓰는 날짜.
-         *
-         * 이보다 과거를 조회할 일은 없으므로 `ruleAt()`이 항상 규칙을 돌려준다.
-         * 덕분에 사이클 계산에 "이력이 없을 때" 분기를 두지 않아도 된다.
-         */
-        val FLOOR: LocalDate = LocalDate.of(2000, 1, 1)
     }
 }

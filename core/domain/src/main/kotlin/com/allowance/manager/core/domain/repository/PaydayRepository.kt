@@ -10,16 +10,11 @@ import java.time.LocalDate
  * 기존 `DataStoreRepository.getPayday()`(값 하나)를 대체한다.
  */
 interface PaydayRepository {
-    /**
-     * [date] 시점에 유효한 규칙.
-     *
-     * 이력이 아직 없으면(온보딩 이전, 또는 DB만 초기화된 개발 기기) DataStore의 규칙일로 대신한다.
-     * 그래서 호출부는 "이력 없음" 분기를 두지 않아도 된다.
-     */
-    suspend fun ruleAt(date: LocalDate): PaydayRule
+    /** [date] 시점에 유효한 규칙. 이력이 아직 없으면 null. */
+    suspend fun ruleAt(date: LocalDate): PaydayRule?
 
-    /** [date] 시점 규칙 Flow — 이력 변경 시 재방출. 대체 규칙은 [ruleAt]과 같다. */
-    fun observeRuleAt(date: LocalDate): Flow<PaydayRule>
+    /** [date] 시점 규칙 Flow — 이력 변경 시 재방출. */
+    fun observeRuleAt(date: LocalDate): Flow<PaydayRule?>
 
     /** 전체 이력(오래된 → 최신). 사이클 목록·피커 계산에 사용. */
     fun observeHistory(): Flow<List<PaydayRule>>

@@ -6,10 +6,13 @@ import java.time.YearMonth
 import java.time.ZoneId
 
 /**
- * 월급일 기준 이번달 사이클.
+ * 월급일 기준 한 사이클 — 받은 날(포함) ~ 다음 받는 날(미포함).
  * payday: 1~31 = 해당 일, 0 = 말일. 해당 월에 없는 날짜(예: 31 → 2월)는 말일로 clamp.
  *
- * 사이클 경계는 항상 [payDate] 한 곳에서만 나온다. 규칙일(payday)을 주말·공휴일 보정해서 쓴다.
+ * 경계는 [PaydayRule] 이력에서 나온다. **시작은 이력에 저장된 날짜를 그대로 쓰고**(사용자가
+ * 캘린더에서 찍은 사실이므로 보정하지 않는다), 끝은 규칙일을 주말·공휴일 보정해 계산하되
+ * 다음 이력이 더 이르면 거기서 끊는다 — 그래서 사이클 사이에 빈틈도 겹침도 생기지 않는다.
+ *
  * 계산을 여기로 모아둔 덕에 홈·위젯·통계·월급일 알림이 같은 날짜를 본다.
  */
 data class BudgetCycle(
@@ -59,6 +62,60 @@ data class BudgetCycle(
             holidays: Holidays = Holidays.EMPTY,
         ): LocalDate = adjustToBusinessDay(dateOf(ym, payday), holidays)
 
+        /**
+         * [after]에 받은 다음, 그다음 지급일.
+         *
+         * [after]가 속한 달은 **이미 받은 달**이므로 건너뛰고 다음 달부터 찾는다.
+         * (8/22에 받았고 규칙이 25일이면 8/25가 아니라 9/25가 다음이다)
+         * 영업일 보정 결과가 [after] 이하가 되면 그다음 달로 더 넘어간다(경계 단조성).
+         */
+        fun nextPayDateAfter(after: LocalDate, payday: Int, holidays: Holidays = Holidays.EMPTY): LocalDate {
+            var ym = YearMonth.from(after).plusMonths(1)
+            repeat(MAX_MONTH_PROBE) {
+                val candidate = payDate(ym, payday, holidays)
+                if (candidate.isAfter(after)) return candidate
+                ym = ym.plusMonths(1)
+            }
+            return after.plusDays(1)
+        }
+
+        /**
+         * 이력 기반 사이클 — [today]가 속한 구간.
+         *
+         * [rules]는 오래된 → 최신 순. 비어 있으면 [fallbackPayday]로 규칙일 하나만 쓰던
+         * 기존 계산([of])과 같은 결과를 준다(온보딩 이전, DB만 초기화된 개발 기기 등).
+         */
+        fun of(
+            rules: List<PaydayRule>,
+            today: LocalDate = LocalDate.now(),
+            holidays: Holidays = Holidays.EMPTY,
+            fallbackPayday: Int = 0,
+        ): BudgetCycle {
+            if (rules.isEmpty()) return of(fallbackPayday, today, holidays)
+
+            val sorted = rules.sortedBy { it.effectiveDate }
+            // today 시점 규칙이 없으면(이력보다 과거) 첫 이력부터 훑는다.
+            val startIndex = sorted.indexOfLast { !it.effectiveDate.isAfter(today) }.coerceAtLeast(0)
+
+            var index = startIndex
+            var start = sorted[index].effectiveDate
+            repeat(MAX_CYCLE_PROBE) {
+                val payday = sorted[index].payday
+                val nextRuleDate = sorted.getOrNull(index + 1)?.effectiveDate
+                // 규칙일로 계산한 다음 경계. 그 전에 새 이력이 있으면 거기서 끊는다.
+                val byRule = nextPayDateAfter(start, payday, holidays)
+                val end = if (nextRuleDate != null && nextRuleDate.isBefore(byRule)) nextRuleDate else byRule
+
+                if (today.isBefore(end)) return BudgetCycle(start, endAfter(end, start))
+
+                start = end
+                if (nextRuleDate != null && !start.isBefore(nextRuleDate)) index++
+            }
+            // 이력이 심하게 오래됐을 때의 안전망 — 마지막 규칙으로 한 사이클을 만든다.
+            val payday = sorted.last().payday
+            return BudgetCycle(start, endAfter(nextPayDateAfter(start, payday, holidays), start))
+        }
+
         fun of(
             payday: Int,
             today: LocalDate = LocalDate.now(),
@@ -77,6 +134,12 @@ data class BudgetCycle(
                 BudgetCycle(startBefore(prev, thisPay), thisPay)
             }
         }
+
+        /** 규칙일이 며칠이든 12개월 안에는 [after] 뒤 지급일이 나온다. */
+        private const val MAX_MONTH_PROBE = 13
+
+        /** 이력 시작부터 오늘까지 훑는 사이클 수 상한 — 무한 루프 방지용. */
+        private const val MAX_CYCLE_PROBE = 600
 
         // 경계 단조성 가드 — 영업일 보정으로 두 경계가 같은 날이 될 수 있다.
         // 길이 0 사이클은 endMillis < startMillis 가 되어 집계가 통째로 비므로 최소 1일을 보장한다.

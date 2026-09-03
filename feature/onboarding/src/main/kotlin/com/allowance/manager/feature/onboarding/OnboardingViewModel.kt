@@ -11,8 +11,7 @@ import com.allowance.manager.core.domain.usecase.alert.SetBudgetAlertSettingUseC
 import com.allowance.manager.core.domain.usecase.alert.SetDailyReminderSettingUseCase
 import com.allowance.manager.core.domain.usecase.budget.SetUserTypeUseCase
 import com.allowance.manager.core.domain.usecase.budget.SetMonthlyBudgetUseCase
-import com.allowance.manager.core.domain.model.PaydayRule
-import com.allowance.manager.core.domain.usecase.budget.SetPaydayRuleUseCase
+import com.allowance.manager.core.domain.usecase.budget.InitPaydayRuleUseCase
 import com.allowance.manager.core.domain.usecase.onboarding.SetOnboardingDoneUseCase
 import com.allowance.manager.core.analytics.AmAnalytics
 import com.allowance.manager.core.analytics.AnalyticsHelper
@@ -51,7 +50,7 @@ data class OnboardingUiState(
 @HiltViewModel
 class OnboardingViewModel @Inject constructor(
     private val setMonthlyBudgetUseCase: SetMonthlyBudgetUseCase,
-    private val setPaydayRuleUseCase: SetPaydayRuleUseCase,
+    private val initPaydayRuleUseCase: InitPaydayRuleUseCase,
     private val addAccountUseCase: AddAccountUseCase,
     private val setUserTypeUseCase: SetUserTypeUseCase,
     private val setOnboardingDoneUseCase: SetOnboardingDoneUseCase,
@@ -125,8 +124,7 @@ class OnboardingViewModel @Inject constructor(
             }
             setMonthlyBudgetUseCase(state.budget)
             // 규칙일 + "언제부터"를 함께 기록 — 이력의 첫 줄이 여기서 생긴다.
-            // 첫 거래는 온보딩 이후에 쌓이므로 시작 경계는 하한(FLOOR)이면 충분하다.
-            setPaydayRuleUseCase(PaydayRule.FLOOR, payday)
+            initPaydayRuleUseCase(payday)
             setBudgetAlertSettingUseCase(
                 BudgetAlertSetting(
                     enabled = state.budgetAlertEnabled,
