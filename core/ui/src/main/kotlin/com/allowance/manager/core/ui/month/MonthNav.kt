@@ -45,10 +45,11 @@ fun MonthNavBar(
     canGoNext: Boolean,
     onPrev: () -> Unit,
     onNext: () -> Unit,
-    onPickMonth: () -> Unit,
     modifier: Modifier = Modifier,
     prevDesc: String = "이전",
     nextDesc: String = "다음",
+    /** 라벨을 눌렀을 때 동작. null이면 라벨이 눌리지 않는다(화살표로만 이동하는 화면). */
+    onPickMonth: (() -> Unit)? = null,
 ) {
     Row(
         modifier = modifier.fillMaxWidth(),
@@ -62,10 +63,16 @@ fun MonthNavBar(
             color = AmColors.TextPrimary,
             modifier = Modifier
                 .clip(AmShape.pill)
-                .clickable(
-                    interactionSource = remember { MutableInteractionSource() },
-                    indication = null,
-                    onClick = onPickMonth,
+                .then(
+                    if (onPickMonth != null) {
+                        Modifier.clickable(
+                            interactionSource = remember { MutableInteractionSource() },
+                            indication = null,
+                            onClick = onPickMonth,
+                        )
+                    } else {
+                        Modifier
+                    },
                 )
                 .padding(horizontal = 12.dp, vertical = 6.dp),
         )
@@ -80,6 +87,7 @@ fun MonthNavBar(
  * 익숙한 월 그리드를 그대로 쓴다. 대표 월이 겹치면 최신 사이클이 남는다.
  *
  * @param dataMonths 거래가 있는 달 집합. 이 달들(+현재 선택월)만 선택 가능, 나머지는 회색 비활성.
+ * @param allowEmptyMonths 거래 없는 달도 고를 수 있게 한다(디버그 시드용). 켜면 [minMonth]~[maxMonth] 범위가 모두 활성.
  */
 @Composable
 fun MonthPickerDialog(
@@ -89,6 +97,7 @@ fun MonthPickerDialog(
     dataMonths: Set<YearMonth>,
     onSelect: (YearMonth) -> Unit,
     onDismiss: () -> Unit,
+    allowEmptyMonths: Boolean = false,
 ) {
     var year by remember { mutableStateOf(current.year) }
     val minYear = minMonth?.year ?: (maxMonth.year - 10)
@@ -119,8 +128,9 @@ fun MonthPickerDialog(
                         val m = row * 3 + col + 1
                         val ym = YearMonth.of(year, m)
                         // 데이터 있는 달(+현재 선택월)만 선택 가능, 빈 달은 회색 비활성.
-                        // dataMonths가 비면(정보 없음/디버그 등) 기존 [minMonth, maxMonth] 범위 방식으로 폴백.
-                        val enabled = if (dataMonths.isEmpty()) {
+                        // [allowEmptyMonths]를 켠 화면(디버그 시드)만 [minMonth, maxMonth] 범위 방식으로 폴백한다.
+                        // 월별·통계에서 폴백을 타면 거래 없는 달까지 눌리고, 눌러도 갈 곳이 없어 조용히 닫힌다.
+                        val enabled = if (allowEmptyMonths) {
                             ym >= (minMonth ?: ym) && ym <= maxMonth
                         } else {
                             ym == current || ym in dataMonths

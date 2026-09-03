@@ -230,18 +230,6 @@ class StatsViewModel @Inject constructor(
         moveWindow(PAGE_STEP)
     }
 
-    /** 피커로 창 점프 — 고른 사이클을 창의 오른쪽 끝으로. */
-    fun onPickCycle(target: BudgetCycle) {
-        analytics.logEvent(AmAnalytics.Event.STATS_WINDOW_MOVE, mapOf(AmAnalytics.Param.DIRECTION to "picker"))
-        viewModelScope.launch {
-            // 오늘 사이클보다 미래로는 못 간다
-            val today = todayCycle
-            val end = if (today != null && target.start.isAfter(today.start)) today else target
-            moveWindowTo(end)
-            selected.value = end
-        }
-    }
-
     /**
      * 창을 [offset]칸 옮긴다. 창 이동 시 선택 사이클을 새 창의 최신으로 맞춰
      * 헤더와 항상 일치하고, 왕복해도 같은 자리로 돌아온다.

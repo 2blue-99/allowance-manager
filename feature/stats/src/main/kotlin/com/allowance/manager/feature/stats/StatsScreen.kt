@@ -62,11 +62,9 @@ import com.allowance.manager.core.designsystem.theme.AmType
 import com.allowance.manager.core.domain.util.amountToComma
 import com.allowance.manager.core.domain.util.toCompactShort
 import com.allowance.manager.core.domain.model.BudgetCycle
-import com.allowance.manager.core.domain.model.byRepresentativeMonth
 import com.allowance.manager.core.domain.model.representativeMonth
 import com.allowance.manager.core.domain.model.toPeriodLabel
 import com.allowance.manager.core.ui.month.MonthNavBar
-import com.allowance.manager.core.ui.month.MonthPickerDialog
 import com.allowance.manager.core.ui.transaction.categoryColor
 import com.allowance.manager.core.ui.transaction.categoryLabel
 import java.time.YearMonth
@@ -82,7 +80,6 @@ fun StatsRoute(
         onSelectCycle = viewModel::onSelectCycle,
         onOlder = viewModel::onOlder,
         onNewer = viewModel::onNewer,
-        onPickCycle = viewModel::onPickCycle,
         onOpenMonth = onOpenMonth,
     )
 }
@@ -93,12 +90,9 @@ fun StatsScreen(
     onSelectCycle: (BudgetCycle) -> Unit = {},
     onOlder: () -> Unit = {},
     onNewer: () -> Unit = {},
-    onPickCycle: (BudgetCycle) -> Unit = {},
     onOpenMonth: (YearMonth) -> Unit = {},
 ) {
     val analytics = LocalAnalyticsHelper.current
-    // 월 피커 노출 여부 — 순수 UI 상태라 화면이 보유
-    var showMonthPicker by remember { mutableStateOf(false) }
 
     Column(
         modifier = Modifier
@@ -114,10 +108,10 @@ fun StatsScreen(
             canGoNext = uiState.canNewer,
             onPrev = onOlder,
             onNext = onNewer,
-            onPickMonth = { showMonthPicker = true },
             modifier = Modifier.padding(horizontal = AmSpacing.lg, vertical = 10.dp),
             prevDesc = "이전 6개",
             nextDesc = "다음 6개",
+            // 통계는 화살표로 6개씩 넘기면 되므로 라벨을 눌러 여는 피커가 없다
         )
 
         Column(modifier = Modifier.padding(horizontal = AmSpacing.xl).padding(bottom = AmSpacing.xl)) {
@@ -145,25 +139,9 @@ fun StatsScreen(
                     Spacer(Modifier.height(AmSpacing.md))
                     CategoryCard(categories = detail.categories, total = detail.summary.expense)
                 }
+            }
+            Spacer(Modifier.height(AmSpacing.md))
         }
-        Spacer(Modifier.height(AmSpacing.md))
-        }
-    }
-
-    if (showMonthPicker) {
-        // 사이클을 대표 월로 이어 붙여 익숙한 월 그리드를 그대로 쓴다 (월별 화면과 동일)
-        val byMonth = uiState.dataCycles.byRepresentativeMonth()
-        MonthPickerDialog(
-            current = uiState.selected?.representativeMonth ?: YearMonth.now(),
-            minMonth = byMonth.keys.minOrNull(),
-            maxMonth = YearMonth.now(),
-            dataMonths = byMonth.keys,
-            onSelect = { month ->
-                byMonth[month]?.let { onPickCycle(it) }
-                showMonthPicker = false
-            },
-            onDismiss = { showMonthPicker = false },
-        )
     }
 }
 

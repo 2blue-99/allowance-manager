@@ -58,7 +58,7 @@ fun DebugRoute(
         onSeedTestData = viewModel::seedTestData,
         onSeedCategories = viewModel::seedCategoriesForMonth,
         onAddExpense = viewModel::addExpenseToMonth,
-        onApplyMonthSettings = viewModel::applyMonthSettings,
+        onSetBudget = viewModel::setBudgetForMonth,
         budgetStatusText = budgetStatusText,
         onSpendTenPercent = viewModel::spendBudgetTenPercent,
         onResetSpending = viewModel::resetDebugSpending,
@@ -81,8 +81,8 @@ fun DebugScreen(
     onHomeGuideEnabledChange: (Boolean) -> Unit = {},
     onSeedTestData: () -> Unit = {},
     onSeedCategories: (YearMonth) -> Unit = {},
-    onAddExpense: (YearMonth) -> Unit = {},
-    onApplyMonthSettings: (YearMonth, Int?, Long?, Long?, Long?) -> Unit = { _, _, _, _, _ -> },
+    onAddExpense: (YearMonth, Long) -> Unit = { _, _ -> },
+    onSetBudget: (YearMonth, Long) -> Unit = { _, _ -> },
     budgetStatusText: String = "",
     onSpendTenPercent: () -> Unit = {},
     onResetSpending: () -> Unit = {},
@@ -97,11 +97,12 @@ fun DebugScreen(
     // 테스트 데이터 대상 달 (기본 이번 달) — 카테고리 시드·달별 세팅 공용 + 월 피커 노출 여부
     var seedMonth by remember { mutableStateOf(YearMonth.now()) }
     var showMonthPicker by remember { mutableStateOf(false) }
-    // 달별 세팅 입력값
-    var paydayInput by remember { mutableStateOf("") }
-    var budgetInput by remember { mutableStateOf("") }
-    var expenseInput by remember { mutableStateOf("") }
-    var incomeInput by remember { mutableStateOf("") }
+    // 빠른 지출 입력 — 월·금액만
+    var quickMonthInput by remember { mutableStateOf(YearMonth.now().monthValue.toString()) }
+    var quickAmountInput by remember { mutableStateOf("10000") }
+    // 빠른 예산 설정 — 월·금액만
+    var budgetMonthInput by remember { mutableStateOf(YearMonth.now().monthValue.toString()) }
+    var budgetAmountInput by remember { mutableStateOf("500000") }
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -219,64 +220,93 @@ fun DebugScreen(
             onClick = { onSeedCategories(seedMonth) },
             modifier = Modifier.fillMaxWidth(),
         )
-        Spacer(Modifier.height(AmSpacing.sm))
-        // 누를 때마다 1건씩 누적 — 사이클 집계·경계 확인용
-        AmButton(
-            text = "이 달에 1만원 지출 추가",
-            onClick = { onAddExpense(seedMonth) },
-            modifier = Modifier.fillMaxWidth(),
-        )
+
 
         Spacer(Modifier.height(AmSpacing.xl))
-        Text("달별 세팅 (대상 달 기준)", style = AmType.size12_bold, color = AmColors.TextSecondary)
-        Spacer(Modifier.height(AmSpacing.md))
-        // 월급일은 앱 전역 설정이라 달과 무관하게 전역 적용. 지출/수입은 그 달에 1건씩 추가.
-        AmLineTextField(
-            value = paydayInput,
-            onValueChange = { v -> paydayInput = v.filter { it.isDigit() } },
-            hint = "월급일 (1~31, 0=말일 · 전역)",
-            keyboardType = KeyboardType.Number,
-            modifier = Modifier.fillMaxWidth(),
+        Text("지출 넣기", style = AmType.size12_bold, color = AmColors.TextSecondary)
+        Spacer(Modifier.height(AmSpacing.sm))
+        Text(
+            "월과 금액만 넣으면 그 달에 지출 1건이 바로 쌓여요",
+            style = AmType.size10_medium,
+            color = AmColors.TextTertiary,
         )
         Spacer(Modifier.height(AmSpacing.sm))
-        AmLineTextField(
-            value = budgetInput,
-            onValueChange = { v -> budgetInput = v.filter { it.isDigit() } },
-            hint = "예산(용돈) 금액",
-            keyboardType = KeyboardType.Number,
+        // 한 줄에서 끝내는 입력 — 월·금액만 받고 나머지(날짜·출처)는 기본값으로 채운다
+        Row(
             modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(AmSpacing.sm),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            AmLineTextField(
+                value = quickMonthInput,
+                onValueChange = { v -> quickMonthInput = v.filter { it.isDigit() }.take(2) },
+                hint = "월",
+                keyboardType = KeyboardType.Number,
+                modifier = Modifier.weight(1f),
+            )
+            AmLineTextField(
+                value = quickAmountInput,
+                onValueChange = { v -> quickAmountInput = v.filter { it.isDigit() } },
+                hint = "금액",
+                keyboardType = KeyboardType.Number,
+                modifier = Modifier.weight(2f),
+            )
+            AmButton(
+                text = "추가",
+                onClick = {
+                    val month = quickMonthInput.toIntOrNull()?.takeIf { it in 1..12 }
+                    val amount = quickAmountInput.toLongOrNull()?.takeIf { it > 0 }
+                    if (month != null && amount != null) {
+                        // 연도는 올해 기준. 아직 오지 않은 달이면 작년 것으로 본다.
+                        val now = YearMonth.now()
+                        val target = YearMonth.of(now.year, month)
+                        onAddExpense(if (target.isAfter(now)) target.minusYears(1) else target, amount)
+                    }
+                },
+            )
+        }
+
+        Spacer(Modifier.height(AmSpacing.xl))
+        Text("예산 넣기", style = AmType.size12_bold, color = AmColors.TextSecondary)
+        Spacer(Modifier.height(AmSpacing.sm))
+        Text(
+            "그 달에 걸친 사이클의 예산을 바꿔요. 이후 사이클은 이 값을 이월해요",
+            style = AmType.size10_medium,
+            color = AmColors.TextTertiary,
         )
         Spacer(Modifier.height(AmSpacing.sm))
-        AmLineTextField(
-            value = expenseInput,
-            onValueChange = { v -> expenseInput = v.filter { it.isDigit() } },
-            hint = "지출 금액 (1건 추가)",
-            keyboardType = KeyboardType.Number,
+        Row(
             modifier = Modifier.fillMaxWidth(),
-        )
-        Spacer(Modifier.height(AmSpacing.sm))
-        AmLineTextField(
-            value = incomeInput,
-            onValueChange = { v -> incomeInput = v.filter { it.isDigit() } },
-            hint = "수입 금액 (1건 추가)",
-            keyboardType = KeyboardType.Number,
-            modifier = Modifier.fillMaxWidth(),
-        )
-        Spacer(Modifier.height(AmSpacing.md))
-        AmButton(
-            text = "대상 달에 적용",
-            onClick = {
-                onApplyMonthSettings(
-                    seedMonth,
-                    paydayInput.toIntOrNull()?.coerceIn(0, 31),
-                    budgetInput.toLongOrNull(),
-                    expenseInput.toLongOrNull(),
-                    incomeInput.toLongOrNull(),
-                )
-                paydayInput = ""; budgetInput = ""; expenseInput = ""; incomeInput = ""
-            },
-            modifier = Modifier.fillMaxWidth(),
-        )
+            horizontalArrangement = Arrangement.spacedBy(AmSpacing.sm),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            AmLineTextField(
+                value = budgetMonthInput,
+                onValueChange = { v -> budgetMonthInput = v.filter { it.isDigit() }.take(2) },
+                hint = "월",
+                keyboardType = KeyboardType.Number,
+                modifier = Modifier.weight(1f),
+            )
+            AmLineTextField(
+                value = budgetAmountInput,
+                onValueChange = { v -> budgetAmountInput = v.filter { it.isDigit() } },
+                hint = "예산",
+                keyboardType = KeyboardType.Number,
+                modifier = Modifier.weight(2f),
+            )
+            AmButton(
+                text = "설정",
+                onClick = {
+                    val month = budgetMonthInput.toIntOrNull()?.takeIf { it in 1..12 }
+                    val amount = budgetAmountInput.toLongOrNull()?.takeIf { it > 0 }
+                    if (month != null && amount != null) {
+                        val now = YearMonth.now()
+                        val target = YearMonth.of(now.year, month)
+                        onSetBudget(if (target.isAfter(now)) target.minusYears(1) else target, amount)
+                    }
+                },
+            )
+        }
     }
 
     if (showMonthPicker) {
@@ -284,7 +314,8 @@ fun DebugScreen(
             current = seedMonth,
             minMonth = null,
             maxMonth = YearMonth.now(),
-            dataMonths = emptySet(),   // 디버그는 빈 달도 선택 가능해야 함 → 범위 방식 폴백
+            dataMonths = emptySet(),
+            allowEmptyMonths = true,   // 디버그는 빈 달에도 시드를 넣어야 하므로 전부 활성
             onSelect = { seedMonth = it; showMonthPicker = false },
             onDismiss = { showMonthPicker = false },
         )

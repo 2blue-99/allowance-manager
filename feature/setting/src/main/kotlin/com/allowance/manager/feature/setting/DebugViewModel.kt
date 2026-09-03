@@ -115,12 +115,12 @@ class DebugViewModel @Inject constructor(
     }
 
     /**
-     * 테스트용: 선택한 달에 1만원 지출 1건 추가. 누를 때마다 쌓인다.
+     * 테스트용: 선택한 달에 [amount]원 지출 1건 추가. 누를 때마다 쌓인다.
      *
      * 날짜는 그 달 15일. 다만 이번 달이면 미래 거래가 되지 않도록 오늘 날짜로 넣는다.
      * 시:분:초는 지금 시각을 써서 같은 달에 여러 건을 넣어도 정렬이 구분된다.
      */
-    fun addExpenseToMonth(month: YearMonth) {
+    fun addExpenseToMonth(month: YearMonth, amount: Long) {
         viewModelScope.launch {
             val zone = ZoneId.systemDefault()
             val today = LocalDate.now()
@@ -132,9 +132,9 @@ class DebugViewModel @Inject constructor(
             transactionRepository.record(
                 Transaction(
                     type = TransactionType.EXPENSE,
-                    amount = 10_000L,
+                    amount = amount,
                     packageName = "",
-                    sourceName = "테스트 지출 1만원",
+                    sourceName = "테스트 지출",
                     isManual = true,
                     createdAt = createdAt,
                 ),
@@ -143,42 +143,15 @@ class DebugViewModel @Inject constructor(
     }
 
     /**
-     * 테스트용: 선택한 달에 값 세팅. null인 항목은 건너뜀.
-     * - payday: 앱 전역 월급일(1~31, 0=말일)
-     * - budget: 그 달부터 적용되는 용돈(upsert)
-     * - expense/income: 그 달 15일에 해당 금액의 수동 거래 1건 삽입
+     * 테스트용: 그 달에 걸친 사이클의 예산을 [amount]원으로 설정.
+     *
+     * 예산 키는 사이클 시작일이라, 달 하나를 받아 그 달 중간이 속한 사이클을 찾아 저장한다.
+     * (그 사이클부터 적용되고, 이후 사이클은 바꾸지 않는 한 이 값을 이월한다)
      */
-    fun applyMonthSettings(month: YearMonth, payday: Int?, budget: Long?, expense: Long?, income: Long?) {
+    fun setBudgetForMonth(month: YearMonth, amount: Long) {
         viewModelScope.launch {
-            payday?.let { setPaydayUseCase(it) }
-            budget?.let { budgetRepository.setBudgetForCycle(month.atDay(1), it) }
-
-            val zone = ZoneId.systemDefault()
-            val createdAt = month.atDay(15).atStartOfDay(zone).toInstant().toEpochMilli()
-            if (expense != null && expense > 0) {
-                transactionRepository.record(
-                    Transaction(
-                        type = TransactionType.EXPENSE,
-                        amount = expense,
-                        packageName = "",
-                        sourceName = "지출 테스트",
-                        isManual = true,
-                        createdAt = createdAt,
-                    ),
-                )
-            }
-            if (income != null && income > 0) {
-                transactionRepository.record(
-                    Transaction(
-                        type = TransactionType.INCOME,
-                        amount = income,
-                        packageName = "",
-                        sourceName = "수입 테스트",
-                        isManual = true,
-                        createdAt = createdAt,
-                    ),
-                )
-            }
+            val cycle = getCycleUseCase(month.atDay(15))
+            budgetRepository.setBudgetForCycle(cycle.start, amount)
         }
     }
 
