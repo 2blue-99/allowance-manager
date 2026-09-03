@@ -2,7 +2,6 @@ package com.allowance.manager.core.data.repository
 
 import com.allowance.manager.core.domain.model.BudgetCycle
 import com.allowance.manager.core.domain.model.MaskedAccount
-import com.allowance.manager.core.domain.model.MonthlyExpense
 import com.allowance.manager.core.domain.model.Transaction
 import com.allowance.manager.core.domain.model.TransactionCategory
 import com.allowance.manager.core.domain.model.TransactionType
@@ -109,19 +108,6 @@ class TransactionRepositoryImpl @Inject constructor(
 
     override fun observeLedgerIncomeBetween(start: Long, end: Long): Flow<Long> =
         transactionDao.observeLedgerIncomeBetween(start, end)
-
-    override fun observeMonthlyExpenseTotals(): Flow<List<MonthlyExpense>> =
-        transactionDao.observeMonthlyExpenseTotals().map { rows ->
-            rows.mapNotNull { row ->
-                runCatching { YearMonth.parse(row.ym) }.getOrNull()
-                    ?.let { MonthlyExpense(yearMonth = it, total = row.total) }
-            }
-        }
-
-    override fun observeTransactionMonths(): Flow<List<YearMonth>> =
-        transactionDao.observeTransactionMonths().map { rows ->
-            rows.mapNotNull { runCatching { YearMonth.parse(it) }.getOrNull() }
-        }
 
     override suspend fun setHidden(id: Long, hidden: Boolean) {
         // 전환기: hidden 토글을 scope 로 매핑 (true=EXCLUDED / false=BUDGET). Phase 5에서 setScope 로 대체.

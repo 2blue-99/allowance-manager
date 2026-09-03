@@ -60,6 +60,10 @@ import com.allowance.manager.core.designsystem.theme.AmSpacing
 import com.allowance.manager.core.designsystem.theme.AmType
 import com.allowance.manager.core.domain.util.amountToComma
 import com.allowance.manager.core.domain.util.toCompactShort
+import com.allowance.manager.core.domain.model.BudgetCycle
+import com.allowance.manager.core.domain.model.byRepresentativeMonth
+import com.allowance.manager.core.domain.model.representativeMonth
+import com.allowance.manager.core.domain.model.toPeriodLabel
 import com.allowance.manager.core.ui.month.MonthNavBar
 import com.allowance.manager.core.ui.month.MonthPickerDialog
 import com.allowance.manager.core.ui.transaction.categoryColor
@@ -74,10 +78,10 @@ fun StatsRoute(
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     StatsScreen(
         uiState = uiState,
-        onSelectMonth = viewModel::onSelectMonth,
+        onSelectCycle = viewModel::onSelectCycle,
         onOlder = viewModel::onOlder,
         onNewer = viewModel::onNewer,
-        onPickMonth = viewModel::onPickMonth,
+        onPickCycle = viewModel::onPickCycle,
         onOpenMonth = onOpenMonth,
     )
 }
@@ -85,10 +89,10 @@ fun StatsRoute(
 @Composable
 fun StatsScreen(
     uiState: StatsUiState,
-    onSelectMonth: (YearMonth) -> Unit = {},
+    onSelectCycle: (BudgetCycle) -> Unit = {},
     onOlder: () -> Unit = {},
     onNewer: () -> Unit = {},
-    onPickMonth: (YearMonth) -> Unit = {},
+    onPickCycle: (BudgetCycle) -> Unit = {},
     onOpenMonth: (YearMonth) -> Unit = {},
 ) {
     val analytics = LocalAnalyticsHelper.current
@@ -104,7 +108,7 @@ fun StatsScreen(
     ) {
         ChartCard(
             uiState = uiState,
-            onSelectMonth = onSelectMonth,
+            onSelectCycle = onSelectCycle,
             onOlder = onOlder,
             onNewer = onNewer,
             onOpenMonthPicker = { showMonthPicker = true },
@@ -114,14 +118,17 @@ fun StatsScreen(
         AnimatedContent(
             targetState = MonthDetail(uiState.selected, uiState.summary, uiState.categories),
             transitionSpec = { fadeIn(tween(220)) togetherWith fadeOut(tween(180)) },
-            contentKey = { it.month },
+            contentKey = { it.cycle?.start },
             label = "statsDetail",
         ) { detail ->
             Column {
                 SummaryCard(
                     summary = detail.summary,
                     label = uiState.userType.label,
-                    onOpenMonth = { analytics.logEvent(AmAnalytics.Event.STATS_OPEN_MONTH_CLICK); onOpenMonth(detail.month) },
+                    onOpenMonth = {
+                        analytics.logEvent(AmAnalytics.Event.STATS_OPEN_MONTH_CLICK)
+                        detail.cycle?.let { onOpenMonth(it.representativeMonth) }
+                    },
                 )
                 Spacer(Modifier.height(AmSpacing.md))
                 CategoryCard(categories = detail.categories, total = detail.summary.expense)
@@ -131,12 +138,17 @@ fun StatsScreen(
     }
 
     if (showMonthPicker) {
+        // 사이클을 대표 월로 이어 붙여 익숙한 월 그리드를 그대로 쓴다 (월별 화면과 동일)
+        val byMonth = uiState.dataCycles.byRepresentativeMonth()
         MonthPickerDialog(
-            current = uiState.selected,
-            minMonth = uiState.minMonth,
+            current = uiState.selected?.representativeMonth ?: YearMonth.now(),
+            minMonth = byMonth.keys.minOrNull(),
             maxMonth = YearMonth.now(),
-            dataMonths = uiState.dataMonths,
-            onSelect = { onPickMonth(it); showMonthPicker = false },
+            dataMonths = byMonth.keys,
+            onSelect = { month ->
+                byMonth[month]?.let { onPickCycle(it) }
+                showMonthPicker = false
+            },
             onDismiss = { showMonthPicker = false },
         )
     }
@@ -144,7 +156,7 @@ fun StatsScreen(
 
 /** 선택 월의 요약·분류 스냅샷 — 월 변경 시 이전/새 데이터를 각각 잡아 페이드 크로스 처리 */
 private data class MonthDetail(
-    val month: java.time.YearMonth,
+    val cycle: BudgetCycle?,
     val summary: MonthSummary,
     val categories: List<CategorySlice>,
 )
@@ -153,7 +165,7 @@ private data class MonthDetail(
 @Composable
 private fun ChartCard(
     uiState: StatsUiState,
-    onSelectMonth: (YearMonth) -> Unit,
+    onSelectCycle: (BudgetCycle) -> Unit,
     onOlder: () -> Unit,
     onNewer: () -> Unit,
     onOpenMonthPicker: () -> Unit,
@@ -163,8 +175,7 @@ private fun ChartCard(
             // 월별 화면과 동일한 월 네비게이션(‹ 월 ▾ ›). 통계는 화살표가 6개월 창을 3개월씩 이동.
             MonthNavBar(
                 // 헤더 중앙은 6개월 창의 최신월이 아니라 '선택된 달'을 보여준다 (막대 탭/이동에 따라 갱신)
-                // TODO(사이클 통일 5단계): 사이클로 바꾸면 월별과 같은 기간 라벨을 쓴다
-                label = "${uiState.selected.year}년 ${uiState.selected.monthValue}월",
+                label = uiState.selected?.toPeriodLabel() ?: "",
                 canGoPrev = uiState.canOlder,
                 canGoNext = uiState.canNewer,
                 onPrev = onOlder,
@@ -175,7 +186,7 @@ private fun ChartCard(
             )
 
             Spacer(Modifier.height(18.dp))
-            BarChart(bars = uiState.window, onSelectMonth = onSelectMonth)
+            BarChart(bars = uiState.window, onSelectCycle = onSelectCycle)
 
             Spacer(Modifier.height(10.dp))
             Row(horizontalArrangement = Arrangement.spacedBy(13.dp)) {
@@ -191,7 +202,7 @@ private val CHART_HEIGHT = 150.dp
 private val CHART_TOP_RESERVE = 18.dp   // 선택 달 금액 라벨 공간
 
 @Composable
-private fun BarChart(bars: List<MonthBar>, onSelectMonth: (YearMonth) -> Unit) {
+private fun BarChart(bars: List<MonthBar>, onSelectCycle: (BudgetCycle) -> Unit) {
     val density = LocalDensity.current
     // 스케일: 지출·용돈 중 최대값 + 15% 여유
     val maxValue = (bars.maxOfOrNull { maxOf(it.expense, it.budget) } ?: 1L)
@@ -202,7 +213,7 @@ private fun BarChart(bars: List<MonthBar>, onSelectMonth: (YearMonth) -> Unit) {
     // 노출/구간 이동 시 막대가 0부터 차오르는 애니메이션. 보이는 6개월이 바뀌면 다시 재생.
     // windowKey로 키드 remember → 창이 바뀌면 Animatable을 0부터 새로 생성. (이전 값 1f가 남아
     // 새 막대가 full 높이로 번쩍이는 첫 프레임 깜빡임 방지)
-    val windowKey = bars.firstOrNull()?.yearMonth to bars.lastOrNull()?.yearMonth
+    val windowKey = bars.firstOrNull()?.cycle?.start to bars.lastOrNull()?.cycle?.start
     val grow = remember(windowKey) { Animatable(0f) }
     LaunchedEffect(windowKey) {
         grow.animateTo(1f, animationSpec = tween(durationMillis = 600, easing = FastOutSlowInEasing))
@@ -225,7 +236,7 @@ private fun BarChart(bars: List<MonthBar>, onSelectMonth: (YearMonth) -> Unit) {
                                 Modifier.clickable(
                                     interactionSource = remember { MutableInteractionSource() },
                                     indication = null,
-                                ) { onSelectMonth(bar.yearMonth) }
+                                ) { onSelectCycle(bar.cycle) }
                             } else {
                                 Modifier
                             },

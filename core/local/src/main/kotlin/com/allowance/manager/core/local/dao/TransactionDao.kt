@@ -182,24 +182,4 @@ interface TransactionDao {
     )
     suspend fun promoteBySource(packageName: String, accountId: Long)
 
-    /** 월별 예산 지출 합계 (scope=BUDGET·EXPENSE). 통계 6개월 막대(예산 대비)용. ym = "yyyy-MM" (로컬 타임존) */
-    @Query(
-        """
-        SELECT strftime('%Y-%m', created_at / 1000, 'unixepoch', 'localtime') AS ym,
-               COALESCE(SUM(amount), 0) AS total
-        FROM transactions
-        WHERE type = 'EXPENSE' AND scope = 'BUDGET'
-        GROUP BY ym
-        """
-    )
-    fun observeMonthlyExpenseTotals(): Flow<List<MonthlyTotalRow>>
-
-    /** 거래가 하나라도 있는 모든 달 ("yyyy-MM", 기기 로컬 타임존). 월 피커에서 데이터 있는 달만 활성화용. */
-    @Query(
-        """
-        SELECT DISTINCT strftime('%Y-%m', created_at / 1000, 'unixepoch', 'localtime') AS ym
-        FROM transactions
-        """
-    )
-    fun observeTransactionMonths(): Flow<List<String>>
 }

@@ -1,6 +1,5 @@
 package com.allowance.manager.core.domain.repository
 
-import com.allowance.manager.core.domain.model.MonthlyExpense
 import com.allowance.manager.core.domain.model.Transaction
 import com.allowance.manager.core.domain.model.TxScope
 import kotlinx.coroutines.flow.Flow
@@ -54,11 +53,7 @@ interface TransactionRepository {
     /** 가계부 수입 합계 (scope!=EXCLUDED·INCOME) — 홈 수입 카드·가계부 위젯 */
     fun observeLedgerIncomeBetween(start: Long, end: Long): Flow<Long>
 
-    /** 월별 지출 합계 (통계용) */
-    fun observeMonthlyExpenseTotals(): Flow<List<MonthlyExpense>>
 
-    /** 거래가 하나라도 있는 달 목록 (월 피커에서 데이터 있는 달만 활성화). */
-    fun observeTransactionMonths(): Flow<List<YearMonth>>
 
     /** 숨김 토글 (합계 제외/복원, 내역은 보관) — 스와이프 빠른 제외/복원용 */
     suspend fun setHidden(id: Long, hidden: Boolean)
