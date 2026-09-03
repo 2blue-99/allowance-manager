@@ -78,15 +78,19 @@ class AllowanceNotificationListenerService : NotificationListenerService() {
 
         log("알림수신 pkg=${sbn.packageName}\n  title=$title\n  body=$body")
 
-        val result = NotificationParser.parse(
-            packageName = sbn.packageName,
-            title = title,
-            text = body,
-        ) ?: run {
+        // 파싱은 어떤 알림 문구가 와도 서비스가 죽지 않게 방어 (실패 = 무시)
+        val result = runCatching {
+            NotificationParser.parse(
+                packageName = sbn.packageName,
+                title = title,
+                text = body,
+            )
+        }.onFailure { Timber.tag(TAG).e(it, "파싱 중 예외") }.getOrNull() ?: run {
             log("→ 파싱 실패(무시): 금전 키워드/금액을 못 찾음")
             return
         }
-        log("→ 파싱 성공 type=${result.type} amount=${result.amount} account=${result.extractedAccount} bank=${result.sourceName}")
+        // 사용처(merchant)는 개인정보 → 값 대신 추출 여부만 로그
+        log("→ 파싱 성공 type=${result.type} amount=${result.amount} account=${result.extractedAccount} bank=${result.sourceName} merchant=${result.merchant != null}")
 
         serviceScope.launch {
             runCatching {
@@ -97,6 +101,7 @@ class AllowanceNotificationListenerService : NotificationListenerService() {
                         balance = result.balance,
                         packageName = sbn.packageName,
                         sourceName = result.sourceName,
+                        merchant = result.merchant,
                         extractedAccount = result.extractedAccount,
                         rawText = result.content,
                     )

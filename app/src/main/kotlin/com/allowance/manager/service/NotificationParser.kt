@@ -53,6 +53,7 @@ object NotificationParser {
         val balance: Long?,
         val extractedAccount: String?,
         val sourceName: String,
+        val merchant: String?,     // 사용처(상대처). 못 뽑으면 null → 리스트는 sourceName로 폴백
         val content: String,       // 계좌 매칭용 전체 텍스트
     )
 
@@ -82,14 +83,19 @@ object NotificationParser {
             else -> { type = TransactionType.EXPENSE; amount = magnitude }
         }
 
-        Timber.d("parse: pkg=$packageName type=$type amount=$amount account=$account balance=$balance")
+        val sourceName = PACKAGE_TO_BANK[packageName] ?: (title ?: packageName)
+        val merchant = extractMerchant(content, sourceName)
+
+        // 사용처(merchant)는 개인정보 → 로그에 남기지 않는다 (추출 성공 여부만)
+        Timber.d("parse: pkg=$packageName type=$type amount=$amount account=$account balance=$balance merchant=${merchant != null}")
 
         return ParseResult(
             type = type,
             amount = amount,
             balance = balance,
             extractedAccount = account,
-            sourceName = PACKAGE_TO_BANK[packageName] ?: (title ?: packageName),
+            sourceName = sourceName,
+            merchant = merchant,
             content = content,
         )
     }
@@ -109,4 +115,84 @@ object NotificationParser {
     }
 
     private fun String.toLongAmount(): Long? = replace(",", "").toLongOrNull()
+
+    // ─────────────────────── 사용처(상대처) 추출 ───────────────────────
+    // 은행·카드 알림은 대부분 아래 골격을 따른다.
+    //   [접두] [날짜] [시각] [마스킹계좌] ★상대처★ [거래구분][금액] [잔액]
+    // → ① 마스킹 계좌 뒤 구간(대부분) ② 금액 뒤 구간(우리은행식) ③ 노이즈 소거 후 잔여 토큰 순으로 시도.
+    // 애매하면 뽑지 않는다(null) → 리스트는 기존대로 sourceName(출처)로 폴백.
+
+    /** 마스킹 계좌 토큰(추출 앵커). 별표 선행(*250284)·숫자 선행(941602-**-***318) 모두 인식 */
+    private val MASKED_TOKEN_REGEX = Regex("""\*[\d*\-]{3,}|\d[\d\-]*\*[\d*\-]*""")
+
+    /** 사용처 구간의 종료 경계 — 거래구분(채널 접두 포함)·잔액·금액 중 먼저 오는 것 */
+    private val MERCHANT_END_REGEX = Regex(
+        """[가-힣A-Za-z]{0,6}(?:입금|출금|결제|승인|이체|취소|환불|구매)|잔액|\d[\d,]*\s*원|\d{1,3}(?:,\d{3})+|\d{3,}"""
+    )
+
+    /** 후보에서 지울 노이즈 — [Web발신]·콜센터번호·마스킹 예금주(이*름님)·날짜·시각 */
+    private val NOISE_TOKEN_REGEX = Regex(
+        """\[[^\]]*\]|\d{2,4}-\d{3,4}(?:-\d{4})?|[가-힣][가-힣*]{0,9}님|\d{1,4}[/.]\d{1,2}(?:[/.]\d{1,2})?|\d{1,2}:\d{2}"""
+    )
+
+    /** 사용처에 남으면 안 되는 단어 — 거래구분·금액·잔액 + 결제수단/기관(체크카드·OO은행·페이…) */
+    private val BANNED_MERCHANT_WORDS = listOf(
+        "잔액", "누적", "승인", "출금", "입금", "결제", "이체", "취소", "환불", "구매", "한도", "원",
+        "카드", "은행", "뱅크", "페이", "통장", "계좌", "할부", "일시불",
+    )
+
+    /**
+     * 알림 본문에서 사용처(상대처)를 뽑는다. 입금이면 보낸 사람 이름이 들어온다.
+     * 규칙이 모두 실패하거나 검증에 걸리면 null → 저장 시 merchant 미기록(기존 동작 유지).
+     */
+    private fun extractMerchant(content: String, sourceName: String): String? = runCatching {
+        // ① 마스킹 계좌 뒤 ~ 경계 앞  ② 금액 뒤 ~ 경계 앞
+        listOfNotNull(afterMaskedAccount(content), afterAmount(content))
+            .map { it.untilBoundary().cleanMerchant() }
+            .firstOrNull { it.isValidMerchant(sourceName) }
+            ?: byElimination(content, sourceName)   // ③ 노이즈 소거 폴백
+    }.getOrNull()
+
+    /** ① 마스킹 계좌 뒤 구간 (KB·농협·현대카드 등 대부분) */
+    private fun afterMaskedAccount(content: String): String? =
+        MASKED_TOKEN_REGEX.find(content)?.let { content.substring(it.range.last + 1) }
+
+    /** ② 금액 뒤 구간 (우리은행식: 출금 3,000원 서울특별시－현 잔액 …) */
+    private fun afterAmount(content: String): String? {
+        val match = AMOUNT_WON_REGEX.find(content) ?: AMOUNT_NEAR_KEYWORD_REGEX.find(content) ?: return null
+        return content.substring(match.range.last + 1)
+    }
+
+    /** ③ 노이즈를 모두 지우고 남은 토큰이 정확히 하나일 때만 인정 (오추출 방지) */
+    private fun byElimination(content: String, sourceName: String): String? {
+        val stripped = content
+            .replace(MASKED_TOKEN_REGEX, " ")
+            .replace(NOISE_TOKEN_REGEX, " ")
+            .replace(Regex("""[가-힣A-Za-z]{0,6}(?:입금|출금|결제|승인|이체|취소|환불|구매|사용|이용)"""), " ")
+            .replace(Regex("""잔액\s*[\d,]*"""), " ")
+            .replace(Regex("""[\d,]+\s*원?"""), " ")
+            .replace(sourceName, " ")
+        return stripped.split(Regex("""\s+"""))
+            .map { it.cleanMerchant() }
+            .filter { it.isValidMerchant(sourceName) }
+            .singleOrNull()
+    }
+
+    /** 경계(거래구분·잔액·금액) 앞까지만 남긴다 */
+    private fun String.untilBoundary(): String =
+        substring(0, MERCHANT_END_REGEX.find(this)?.range?.first ?: length)
+
+    private fun String.cleanMerchant(): String = NOISE_TOKEN_REGEX.replace(this, " ")
+        .replace(Regex("""[\[\]()<>·,]"""), " ")
+        .replace(Regex("""\s+"""), " ")
+        .trim()
+        .trim('-', '.', '/', ':', '*', '－', '·')
+        .trim()
+
+    /** 애매한 후보는 버린다: 길이 2~20 · 글자 1자 이상 · 금지어 미포함 · 출처명과 다름 */
+    private fun String.isValidMerchant(sourceName: String): Boolean =
+        length in 2..20 &&
+            any { it.isLetter() } &&
+            BANNED_MERCHANT_WORDS.none { contains(it) } &&
+            !equals(sourceName.trim(), ignoreCase = true)
 }

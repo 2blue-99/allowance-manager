@@ -51,6 +51,8 @@ class RecordTransactionUseCase @Inject constructor(
                 balance = parsed.balance,
                 packageName = parsed.packageName,
                 sourceName = parsed.sourceName,
+                // 알림에서 뽑은 사용처. 실패 시 null → 리스트에서 sourceName로 폴백. 사용자가 수정하면 덮어씀
+                merchant = parsed.merchant,
                 extractedAccount = parsed.extractedAccount,
                 accountId = accountId,
                 // 미등록 계좌 = 제외(EXCLUDED). 등록계좌 매칭 시 수입은 예산 미반영(가계부만),

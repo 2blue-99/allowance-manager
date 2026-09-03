@@ -59,6 +59,7 @@ data class ParsedTransaction(
     val balance: Long?,
     val packageName: String,
     val sourceName: String,
+    val merchant: String?,          // 알림에서 뽑은 사용처(상대처). 못 뽑으면 null
     val extractedAccount: String?,
     val rawText: String,
 )

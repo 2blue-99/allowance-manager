@@ -116,4 +116,99 @@ class NotificationParserTest {
         assertEquals(TransactionType.EXPENSE, result.type)
         assertEquals(3_000L, result.amount)
     }
+
+    // ─────────── 사용처(merchant) 추출 — 실제 은행·카드 알림 원문 기반 ───────────
+
+    @Test
+    fun `사용처 - KB 푸시 출금(계좌 뒤 상대처)`() {
+        val result = NotificationParser.parse(
+            packageName = "com.kbstar.kbbank",
+            title = "출금 8,110원",
+            text = "이*름님 09/03 16:46 941602-**-***318 쿠팡 FBS출금 8,110 잔액77,139",
+        )
+        requireNotNull(result)
+        assertEquals(8_110L, result.amount)
+        assertEquals("쿠팡", result.merchant)
+    }
+
+    @Test
+    fun `사용처 - KB 푸시 입금은 보낸 사람 이름`() {
+        val result = NotificationParser.parse(
+            packageName = "com.kbstar.kbbank",
+            title = "입금 1,000원",
+            text = "이*름님 04/01 14:48 941602-**-***318 이푸름 FBS입금 1,000 잔액225,023",
+        )
+        requireNotNull(result)
+        assertEquals("이푸름", result.merchant)
+    }
+
+    @Test
+    fun `사용처 - KB 체크카드 문자(Web발신 접두)`() {
+        val result = NotificationParser.parse(
+            packageName = "com.samsung.android.messaging",
+            title = null,
+            text = "[Web발신] [KB]11/18 14:58 279801**027 과일놀이터 체크카드출금 18,000 잔액238,281",
+        )
+        requireNotNull(result)
+        assertEquals(18_000L, result.amount)
+        assertEquals("과일놀이터", result.merchant)
+    }
+
+    @Test
+    fun `사용처 - 우리은행식(금액 뒤 · 잔액 앞)`() {
+        val result = NotificationParser.parse(
+            packageName = "com.samsung.android.messaging",
+            title = null,
+            text = "[Web발신] 우리 11/17 18:17 *250284 출금 3,000원 서울특별시－현 잔액 214,164원",
+        )
+        requireNotNull(result)
+        assertEquals(3_000L, result.amount)
+        assertEquals("서울특별시－현", result.merchant)
+    }
+
+    @Test
+    fun `사용처 - 농협식(계좌 뒤 · 잔액 앞)`() {
+        val result = NotificationParser.parse(
+            packageName = "com.samsung.android.messaging",
+            title = null,
+            text = "[Web발신] 농협 출금2,500원 11/03 17:43 301-****-2640-41 파우PC 잔액5,428원",
+        )
+        requireNotNull(result)
+        assertEquals(2_500L, result.amount)
+        assertEquals("파우PC", result.merchant)
+    }
+
+    @Test
+    fun `사용처 - 현대카드식(맨 끝 상대처)`() {
+        val result = NotificationParser.parse(
+            packageName = "com.samsung.android.messaging",
+            title = null,
+            text = "[Web발신] 2024/11/15 12:57 출금 354,594원 잔액 50,622원 현대카드 469***03801011 기업",
+        )
+        requireNotNull(result)
+        assertEquals(354_594L, result.amount)
+        assertEquals("기업", result.merchant)
+    }
+
+    @Test
+    fun `사용처 - 카드 승인 알림(금액 뒤 가맹점)`() {
+        val result = NotificationParser.parse(
+            packageName = "com.shinhancard.smartcalculator",
+            title = "신한카드 승인",
+            text = "홍길동님 6,500원 스타벅스 결제",
+        )
+        requireNotNull(result)
+        assertEquals("스타벅스", result.merchant)
+    }
+
+    @Test
+    fun `사용처 - 뽑을 게 없으면 null(출처명 폴백)`() {
+        val result = NotificationParser.parse(
+            packageName = "com.kbstar.kbbank",
+            title = "출금 3000",
+            text = "체크카드 출금 3000 잔액 12,000",
+        )
+        requireNotNull(result)
+        assertNull(result.merchant)
+    }
 }
