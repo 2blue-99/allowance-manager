@@ -163,7 +163,8 @@ private fun ChartCard(
             // 월별 화면과 동일한 월 네비게이션(‹ 월 ▾ ›). 통계는 화살표가 6개월 창을 3개월씩 이동.
             MonthNavBar(
                 // 헤더 중앙은 6개월 창의 최신월이 아니라 '선택된 달'을 보여준다 (막대 탭/이동에 따라 갱신)
-                month = uiState.selected,
+                // TODO(사이클 통일 5단계): 사이클로 바꾸면 월별과 같은 기간 라벨을 쓴다
+                label = "${uiState.selected.year}년 ${uiState.selected.monthValue}월",
                 canGoPrev = uiState.canOlder,
                 canGoNext = uiState.canNewer,
                 onPrev = onOlder,

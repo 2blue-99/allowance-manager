@@ -14,7 +14,6 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ChevronLeft
 import androidx.compose.material.icons.filled.ChevronRight
-import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -41,7 +40,7 @@ import java.time.YearMonth
  */
 @Composable
 fun MonthNavBar(
-    month: YearMonth,
+    label: String,
     canGoPrev: Boolean,
     canGoNext: Boolean,
     onPrev: () -> Unit,
@@ -57,7 +56,10 @@ fun MonthNavBar(
         verticalAlignment = Alignment.CenterVertically,
     ) {
         NavArrow(icon = Icons.Filled.ChevronLeft, enabled = canGoPrev, contentDescription = prevDesc, onClick = onPrev)
-        Row(
+        Text(
+            label,
+            style = AmType.size16_bold,
+            color = AmColors.TextPrimary,
             modifier = Modifier
                 .clip(AmShape.pill)
                 .clickable(
@@ -66,22 +68,17 @@ fun MonthNavBar(
                     onClick = onPickMonth,
                 )
                 .padding(horizontal = 12.dp, vertical = 6.dp),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            Text("${month.year}년 ${month.monthValue}월", style = AmType.size18_black, color = AmColors.TextPrimary)
-            Icon(
-                Icons.Filled.KeyboardArrowDown,
-                contentDescription = "월 선택",
-                tint = AmColors.TextSecondary,
-                modifier = Modifier.size(22.dp),
-            )
-        }
+        )
         NavArrow(icon = Icons.Filled.ChevronRight, enabled = canGoNext, contentDescription = nextDesc, onClick = onNext)
     }
 }
 
 /**
  * 월 선택 피커 다이얼로그 (연도 이동 + 3열 x 4행 월 그리드). 월별·통계 공용.
+ *
+ * 사이클은 달력 월과 1:1이 아니지만, 각 사이클의 **대표 월**(중간 날짜가 속한 달)로 이어 붙여
+ * 익숙한 월 그리드를 그대로 쓴다. 대표 월이 겹치면 최신 사이클이 남는다.
+ *
  * @param dataMonths 거래가 있는 달 집합. 이 달들(+현재 선택월)만 선택 가능, 나머지는 회색 비활성.
  */
 @Composable

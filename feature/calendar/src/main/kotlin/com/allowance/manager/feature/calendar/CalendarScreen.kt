@@ -66,6 +66,10 @@ import com.allowance.manager.core.domain.model.TransactionCategory
 import com.allowance.manager.core.domain.model.TransactionType
 import com.allowance.manager.core.domain.model.TxScope
 import com.allowance.manager.core.domain.util.amountToComma
+import com.allowance.manager.core.domain.model.BudgetCycle
+import com.allowance.manager.core.domain.model.byRepresentativeMonth
+import com.allowance.manager.core.domain.model.representativeMonth
+import com.allowance.manager.core.domain.model.toPeriodLabel
 import com.allowance.manager.core.ui.month.MonthNavBar
 import com.allowance.manager.core.ui.month.MonthPickerDialog
 import com.allowance.manager.core.ui.transaction.categoryChipColor
@@ -90,7 +94,7 @@ fun CalendarRoute(
         uiState = uiState,
         onPrevMonth = viewModel::onPrevMonth,
         onNextMonth = viewModel::onNextMonth,
-        onSelectMonth = viewModel::onSelectMonth,
+        onSelectCycle = viewModel::onSelectCycle,
         onToggleSearch = viewModel::onToggleSearch,
         onToggleMainOnly = viewModel::onToggleMainOnly,
         onQueryChange = viewModel::onQueryChange,
@@ -112,7 +116,7 @@ fun CalendarScreen(
     uiState: CalendarUiState,
     onPrevMonth: () -> Unit = {},
     onNextMonth: () -> Unit = {},
-    onSelectMonth: (YearMonth) -> Unit = {},
+    onSelectCycle: (BudgetCycle) -> Unit = {},
     onToggleSearch: () -> Unit = {},
     onToggleMainOnly: () -> Unit = {},
     onQueryChange: (String) -> Unit = {},
@@ -144,7 +148,7 @@ fun CalendarScreen(
             },
     ) {
         MonthNavBar(
-            month = uiState.month,
+            label = uiState.cycle?.toPeriodLabel() ?: "",
             canGoPrev = uiState.canGoPrev,
             canGoNext = uiState.canGoNext,
             onPrev = onPrevMonth,
@@ -156,7 +160,7 @@ fun CalendarScreen(
         )
 
         Column(modifier = Modifier.padding(horizontal = AmSpacing.xl)) {
-            SummaryCard(expense = uiState.expense, income = uiState.income, monthKey = uiState.month)
+            SummaryCard(expense = uiState.expense, income = uiState.income, monthKey = uiState.cycle?.start)
             Spacer(Modifier.height(12.dp))
             LedgerListHeader(
                 showChips = false,   // 스코프 필터는 아래 trailing에서 단일 '메인' 토글로 제공
@@ -227,12 +231,17 @@ fun CalendarScreen(
     }
 
     if (showMonthPicker) {
+        // 사이클을 대표 월로 이어 붙여 익숙한 월 그리드를 그대로 쓴다.
+        val byMonth = uiState.dataCycles.byRepresentativeMonth()
         MonthPickerDialog(
-            current = uiState.month,
-            minMonth = uiState.minMonth,
+            current = uiState.cycle?.representativeMonth ?: YearMonth.now(),
+            minMonth = byMonth.keys.minOrNull(),
             maxMonth = YearMonth.now(),
-            dataMonths = uiState.dataMonths,
-            onSelect = { onSelectMonth(it); showMonthPicker = false },
+            dataMonths = byMonth.keys,
+            onSelect = { month ->
+                byMonth[month]?.let { onSelectCycle(it) }
+                showMonthPicker = false
+            },
             onDismiss = { showMonthPicker = false },
         )
     }

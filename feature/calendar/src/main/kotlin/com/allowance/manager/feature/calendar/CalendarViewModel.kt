@@ -9,9 +9,11 @@ import com.allowance.manager.core.domain.model.TransactionCategory
 import com.allowance.manager.core.domain.model.TransactionType
 import com.allowance.manager.core.domain.model.UserType
 import com.allowance.manager.core.domain.usecase.budget.GetUserTypeUseCase
-import com.allowance.manager.core.domain.usecase.calendar.GetFirstTransactionMonthUseCase
-import com.allowance.manager.core.domain.usecase.calendar.ObserveMonthTransactionsUseCase
-import com.allowance.manager.core.domain.usecase.calendar.ObserveTransactionMonthsUseCase
+import com.allowance.manager.core.domain.model.BudgetCycle
+import com.allowance.manager.core.domain.usecase.budget.GetCycleUseCase
+import com.allowance.manager.core.domain.usecase.calendar.GetAdjacentCycleUseCase
+import com.allowance.manager.core.domain.usecase.calendar.ObserveCycleTransactionsUseCase
+import com.allowance.manager.core.domain.usecase.calendar.ObserveTransactionCyclesUseCase
 import com.allowance.manager.core.domain.usecase.ignore.AddIgnoredAccountUseCase
 import com.allowance.manager.core.domain.usecase.ignore.CountIgnorableTransactionsUseCase
 import com.allowance.manager.core.domain.usecase.transaction.DeleteTransactionUseCase
@@ -35,7 +37,8 @@ import javax.inject.Inject
 enum class LedgerTypeFilter { ALL, EXPENSE, INCOME }
 
 data class CalendarUiState(
-    val month: YearMonth = YearMonth.now(),
+    /** 보고 있는 사이클. 첫 로딩 중엔 null */
+    val cycle: BudgetCycle? = null,
     val transactions: List<Transaction> = emptyList(), // 검색·필터가 적용된 '노출 리스트'
     val expense: Long = 0L,                             // 노출 리스트 기준 지출 합계 (숨김 제외)
     val income: Long = 0L,                              // 노출 리스트 기준 수입 합계 (숨김 제외)
@@ -44,17 +47,12 @@ data class CalendarUiState(
     val query: String = "",
     val typeFilter: LedgerTypeFilter = LedgerTypeFilter.ALL,
     val categoryFilter: Set<TransactionCategory> = emptySet(),
-    val minMonth: YearMonth? = null,                    // 이보다 과거로는 이동 불가 (첫 내역의 달)
-    val dataMonths: Set<YearMonth> = emptySet(),        // 거래 있는 달 (월 피커 활성화용)
+    val canGoPrev: Boolean = false,                     // 더 과거 사이클이 있는지
+    val canGoNext: Boolean = false,                     // 현재 사이클보다 뒤인지
+    val dataCycles: List<BudgetCycle> = emptyList(),    // 거래 있는 사이클 (피커 목록)
     val userType: UserType = UserType.Default,          // 자산 호칭(용돈/생활비/예산) — 행·시트 안내문
     val isLoading: Boolean = true,
-) {
-    /** 다음 달(미래) 이동 가능 여부 — 이번 달까지만 */
-    val canGoNext: Boolean get() = month < YearMonth.now()
-
-    /** 이전 달 이동 가능 여부 — 첫 내역의 달까지만 (내역 없으면 제한 없음) */
-    val canGoPrev: Boolean get() = minMonth == null || month > minMonth
-}
+)
 
 private data class FilterParams(
     val query: String,
@@ -66,9 +64,10 @@ private data class FilterParams(
 
 @HiltViewModel
 class CalendarViewModel @Inject constructor(
-    private val observeMonthTransactionsUseCase: ObserveMonthTransactionsUseCase,
-    private val getFirstTransactionMonthUseCase: GetFirstTransactionMonthUseCase,
-    observeTransactionMonthsUseCase: ObserveTransactionMonthsUseCase,
+    private val observeCycleTransactionsUseCase: ObserveCycleTransactionsUseCase,
+    private val getCycleUseCase: GetCycleUseCase,
+    private val getAdjacentCycleUseCase: GetAdjacentCycleUseCase,
+    observeTransactionCyclesUseCase: ObserveTransactionCyclesUseCase,
     getUserTypeUseCase: GetUserTypeUseCase,
     private val hideTransactionUseCase: HideTransactionUseCase,
     private val addIgnoredAccountUseCase: AddIgnoredAccountUseCase,
@@ -80,48 +79,55 @@ class CalendarViewModel @Inject constructor(
     private val analytics: AnalyticsHelper,
 ) : BaseViewModel() {
 
-    private val month = MutableStateFlow(YearMonth.now())
+    private val cycle = MutableStateFlow<BudgetCycle?>(null)
+
+    /** 오늘이 속한 사이클의 시작일 — 미래로 못 가게 막는 상한 */
+    private var todayCycleStart: java.time.LocalDate? = null
     private val query = MutableStateFlow("")
     private val categoryFilter = MutableStateFlow<Set<TransactionCategory>>(emptySet())
     private val typeFilter = MutableStateFlow(LedgerTypeFilter.ALL)
     private val searchActive = MutableStateFlow(false)
     private val mainOnly = MutableStateFlow(false)
-    private val minMonth = MutableStateFlow<YearMonth?>(null)
 
     private val _uiState = MutableStateFlow(CalendarUiState())
     val uiState: StateFlow<CalendarUiState> = _uiState.asStateFlow()
 
     @OptIn(ExperimentalCoroutinesApi::class)
-    private val monthTransactions = month.flatMapLatest { observeMonthTransactionsUseCase(it) }
+    private val cycleTransactions = cycle.flatMapLatest { c ->
+        if (c == null) kotlinx.coroutines.flow.flowOf(emptyList()) else observeCycleTransactionsUseCase(c.start)
+    }
 
     private val filterParams = combine(query, categoryFilter, typeFilter, searchActive, mainOnly) { q, c, t, a, m ->
         FilterParams(q, c, t, a, m)
     }
 
-    // 거래 있는 달 (월 피커 활성화용)
-    private val dataMonthsFlow = observeTransactionMonthsUseCase()
+    // 거래 있는 사이클 (피커 목록)
+    private val dataCyclesFlow = observeTransactionCyclesUseCase()
 
-    // combine 인자 수 제한(5) 회피 — 데이터월 + 사용자유형을 한 플로우로 묶음
-    private val dataMonthsAndType = combine(dataMonthsFlow, getUserTypeUseCase()) { dm, ut -> dm to ut }
+    // combine 인자 수 제한(5) 회피 — 데이터사이클 + 사용자유형을 한 플로우로 묶음
+    private val dataCyclesAndType = combine(dataCyclesFlow, getUserTypeUseCase()) { dc, ut -> dc to ut }
 
     init {
-        // 첫 내역의 달(이전-달 이동 하한) 1회 조회
-        viewModelScope.launch { minMonth.value = getFirstTransactionMonthUseCase() }
+        // 오늘이 속한 사이클로 시작 (앱을 열 때마다 항상 현재로)
+        viewModelScope.launch {
+            val today = getCycleUseCase()
+            todayCycleStart = today.start
+            cycle.value = today
+        }
 
         viewModelScope.launch {
-            combine(month, monthTransactions, minMonth, filterParams, dataMonthsAndType) { m, raw, min, fp, dmType ->
-                render(m, raw, min, fp, dmType.first, dmType.second)
+            combine(cycle, cycleTransactions, filterParams, dataCyclesAndType) { c, raw, fp, dcType ->
+                render(c, raw, fp, dcType.first, dcType.second)
             }.collect { _uiState.value = it }
         }
     }
 
-    /** 보이는 달 내역에 검색·필터를 적용하고, 노출 리스트 기준으로 지출·수입 요약을 계산 */
+    /** 보이는 사이클 내역에 검색·필터를 적용하고, 노출 리스트 기준으로 지출·수입 요약을 계산 */
     private fun render(
-        month: YearMonth,
+        cycle: BudgetCycle?,
         raw: List<Transaction>,
-        minMonth: YearMonth?,
         fp: FilterParams,
-        dataMonths: List<YearMonth>,
+        dataCycles: List<BudgetCycle>,
         userType: UserType,
     ): CalendarUiState {
         val filtered = raw.filter { tx ->
@@ -144,8 +150,13 @@ class CalendarViewModel @Inject constructor(
         val counted = filtered.filter { it.inLedger }
         val expense = counted.filter { it.type == TransactionType.EXPENSE }.sumOf { it.amount }
         val income = counted.filter { it.type == TransactionType.INCOME }.sumOf { it.amount }
+        // 이동 가능 여부: 과거는 거래가 있는 가장 오래된 사이클까지, 미래는 현재 사이클까지
+        val oldest = dataCycles.minByOrNull { it.start }
+        val canGoPrev = cycle != null && oldest != null && cycle.start.isAfter(oldest.start)
+        val canGoNext = cycle != null && todayCycleStart?.let { cycle.start.isBefore(it) } == true
+
         return CalendarUiState(
-            month = month,
+            cycle = cycle,
             transactions = filtered,
             expense = expense,
             income = income,
@@ -154,33 +165,43 @@ class CalendarViewModel @Inject constructor(
             query = fp.query,
             typeFilter = fp.typeFilter,
             categoryFilter = fp.categories,
-            minMonth = minMonth,
-            dataMonths = dataMonths.toSet(),
+            canGoPrev = canGoPrev,
+            canGoNext = canGoNext,
+            dataCycles = dataCycles,
             userType = userType,
-            isLoading = false,
+            isLoading = cycle == null,
         )
     }
 
     fun onPrevMonth() {
         analytics.logEvent(AmAnalytics.Event.CALENDAR_MONTH_CHANGE, mapOf(AmAnalytics.Param.DIRECTION to "prev"))
-        if (uiState.value.canGoPrev) month.value = month.value.minusMonths(1)
+        moveCycle(-1)
     }
 
     fun onNextMonth() {
         analytics.logEvent(AmAnalytics.Event.CALENDAR_MONTH_CHANGE, mapOf(AmAnalytics.Param.DIRECTION to "next"))
-        if (uiState.value.canGoNext) month.value = month.value.plusMonths(1)
+        moveCycle(1)
     }
 
-    fun onSelectMonth(target: YearMonth) {
+    /**
+     * 통계 딥링크 — 특정 달을 열면 그 달 중간이 속한 사이클로 이동.
+     * TODO(사이클 통일 5단계): 통계가 사이클 기준이 되면 사이클 시작일을 직접 받는다.
+     */
+    fun onSelectMonth(month: YearMonth) {
+        viewModelScope.launch { cycle.value = getCycleUseCase(month.atDay(15)) }
+    }
+
+    /** 피커에서 사이클을 직접 고름 */
+    fun onSelectCycle(target: BudgetCycle) {
         analytics.logEvent(AmAnalytics.Event.CALENDAR_MONTH_CHANGE, mapOf(AmAnalytics.Param.DIRECTION to "picker"))
-        val max = YearMonth.now()
-        val min = minMonth.value
-        val clamped = when {
-            target > max -> max
-            min != null && target < min -> min
-            else -> target
-        }
-        month.value = clamped
+        cycle.value = target
+    }
+
+    private fun moveCycle(offset: Int) {
+        val current = cycle.value ?: return
+        if (offset < 0 && !uiState.value.canGoPrev) return
+        if (offset > 0 && !uiState.value.canGoNext) return
+        viewModelScope.launch { cycle.value = getAdjacentCycleUseCase(current, offset) }
     }
 
     fun onToggleSearch() {

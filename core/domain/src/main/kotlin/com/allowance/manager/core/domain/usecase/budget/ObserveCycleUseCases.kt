@@ -79,12 +79,3 @@ class GetRecentCyclesUseCase @Inject constructor(
         return result
     }
 }
-
-/** 사이클 목록을 오래된 → 최신 순으로. 통계 막대 순서에 맞춘 편의 확장. */
-fun List<BudgetCycle>.oldestFirst(): List<BudgetCycle> = asReversed()
-
-/** 사이클을 화면 표기용 문자열로 — "8.25 – 9.24" (받은 날 ~ 다음 받는 날 전날) */
-fun BudgetCycle.toPeriodLabel(): String {
-    val last = endExclusive.minusDays(1)
-    return "${start.monthValue}.${start.dayOfMonth} – ${last.monthValue}.${last.dayOfMonth}"
-}
