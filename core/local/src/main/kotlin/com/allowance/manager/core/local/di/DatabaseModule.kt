@@ -5,6 +5,7 @@ import androidx.room.Room
 import com.allowance.manager.core.local.dao.AccountDao
 import com.allowance.manager.core.local.dao.BudgetDao
 import com.allowance.manager.core.local.dao.IgnoredAccountDao
+import com.allowance.manager.core.local.dao.PaydayHistoryDao
 import com.allowance.manager.core.local.dao.TransactionDao
 import com.allowance.manager.core.local.database.AppDatabase
 import com.allowance.manager.core.local.database.MIGRATION_9_10
@@ -48,4 +49,8 @@ object DatabaseModule {
     @Provides
     fun provideIgnoredAccountDao(database: AppDatabase): IgnoredAccountDao =
         database.ignoredAccountDao()
+
+    @Provides
+    fun providePaydayHistoryDao(database: AppDatabase): PaydayHistoryDao =
+        database.paydayHistoryDao()
 }
