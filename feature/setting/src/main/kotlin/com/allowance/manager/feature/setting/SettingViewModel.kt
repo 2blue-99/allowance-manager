@@ -21,6 +21,7 @@ import com.allowance.manager.core.domain.usecase.budget.ChangePaydayUseCase
 import com.allowance.manager.core.domain.usecase.budget.ObserveCycleUseCase
 import com.allowance.manager.core.domain.usecase.budget.PaydayChangePreview
 import com.allowance.manager.core.domain.usecase.budget.PreviewPaydayChangeUseCase
+import com.allowance.manager.core.domain.usecase.budget.SetCycleEndUseCase
 import java.time.LocalDate
 import com.allowance.manager.core.domain.usecase.budget.SetUserTypeUseCase
 import com.allowance.manager.core.domain.usecase.setting.GetStatusBarEnabledUseCase
@@ -44,8 +45,7 @@ data class SettingUiState(
     val budgetAlert: BudgetAlertSetting = BudgetAlertSetting(),
     val dailyReminder: DailyReminderSetting = DailyReminderSetting(),
     val paydayAlert: PaydayAlertSetting = PaydayAlertSetting(),
-    val cycle: BudgetCycle? = null,   // 월급일 변경 시트가 쓰는 현재 사이클
-    /** 이번 달 실지급일 정보 — 사이클 경계와 같은 계산에서 온다. 첫 프레임에선 아직 null */
+    val cycle: BudgetCycle? = null,   // 월급일·이번 회차 다이얼로그가 쓰는 현재 사이클. 첫 프레임에선 아직 null
 )
 
 @HiltViewModel
@@ -59,6 +59,7 @@ class SettingViewModel @Inject constructor(
     getPaydayAlertSettingUseCase: GetPaydayAlertSettingUseCase,
     private val setMonthlyBudgetUseCase: SetMonthlyBudgetUseCase,
     private val changePaydayUseCase: ChangePaydayUseCase,
+    private val setCycleEndUseCase: SetCycleEndUseCase,
     private val previewPaydayChangeUseCase: PreviewPaydayChangeUseCase,
     observeCycleUseCase: ObserveCycleUseCase,
     private val setStatusBarEnabledUseCase: SetStatusBarEnabledUseCase,
@@ -105,6 +106,11 @@ class SettingViewModel @Inject constructor(
     fun setPaydayRule(effectiveDate: LocalDate, day: Int) {
         analytics.setUserProperty(AmAnalytics.UserProp.PAYDAY, day.toString())
         viewModelScope.launch { changePaydayUseCase(effectiveDate, day) }
+    }
+
+    /** "이번 회차만 이 날 받아요" — 현재 회차 끝을 고정. 규칙일은 그대로. */
+    fun setCycleEnd(end: LocalDate) {
+        viewModelScope.launch { setCycleEndUseCase(end) }
     }
 
     /** 저장 전 결과 예고 — 다이얼로그가 입력이 바뀔 때마다 호출. 저장 로직과 같은 계산을 쓴다. */

@@ -37,7 +37,13 @@ class CycleRepositoryImplTest {
     private fun d(month: Int, day: Int): LocalDate = LocalDate.of(2026, month, day)
 
     private fun seed(start: LocalDate, end: LocalDate, payday: Int, budget: Long = 500_000L) {
-        cycleDao.rows.value = cycleDao.rows.value + CycleEntity(start.toString(), end.toString(), budget, payday, 0L)
+        cycleDao.rows.value = cycleDao.rows.value + CycleEntity(
+            start = start.toString(),
+            endExclusive = end.toString(),
+            budget = budget,
+            payday = payday,
+            updatedAt = 0L,
+        )
     }
 
     private fun starts() = cycleDao.rows.value.map { LocalDate.parse(it.start) }
@@ -236,6 +242,49 @@ class CycleRepositoryImplTest {
         assertEquals(0L, row.budget)
     }
 
+    // ─────────────────────────── 이번 회차만 받을 날 (끝 고정) ───────────────────────────
+
+    @Test
+    fun `setCycleEnd - 고정한 끝은 관문이 규칙으로 되돌리지 않는다`() = runBlocking {
+        seed(d(8, 25), d(9, 25), payday = 25)
+        val repo = repo()
+
+        repo.setCycleEnd(d(8, 25), d(9, 20))
+        val cycle = repo.cycleAt(today)
+
+        assertEquals(d(9, 20), cycle.endExclusive)
+        assertTrue(cycleDao.rows.value.single().endPinned)
+    }
+
+    @Test
+    fun `setCycleEnd - 고정한 끝이 지나면 다음 회차가 거기서 시작하고 이후 끝은 다시 규칙으로`() = runBlocking {
+        seed(d(8, 25), d(9, 25), payday = 25, budget = 500_000L)
+        val repo = repo(today = d(9, 21))
+
+        repo.setCycleEnd(d(8, 25), d(9, 20))
+        val cycle = repo.cycleAt(d(9, 21))
+
+        // 8/25~9/20(고정) → 9/20~10/23(10/25 일요일 보정, 규칙 복귀)
+        assertEquals(listOf(d(8, 25), d(9, 20)), starts())
+        assertEquals(d(9, 20), cycle.start)
+        assertEquals(d(10, 23), cycle.endExclusive)
+        assertTrue(!cycle.endPinned)
+        assertEquals(500_000L, cycle.budget)
+    }
+
+    @Test
+    fun `setCycleEnd - 규칙일을 바꾸면 고정이 풀려 끝이 다시 계산된다`() = runBlocking {
+        seed(d(8, 25), d(9, 25), payday = 25)
+        val repo = repo()
+        repo.setCycleEnd(d(8, 25), d(9, 20))
+
+        repo.changePayday(boundary = d(8, 25), payday = 25, today = today)
+
+        val row = cycleDao.rows.value.single()
+        assertEquals("2026-09-25", row.endExclusive)
+        assertTrue(!row.endPinned)
+    }
+
     @Test
     fun `budgetFor - 없는 사이클은 0`() = runBlocking {
         seed(d(8, 25), d(9, 25), payday = 25, budget = 500_000L)
@@ -274,6 +323,12 @@ private class FakeCycleDao : CycleDao {
 
     override suspend fun updateBudget(start: String, budget: Long, updatedAt: Long) {
         rows.value = rows.value.map { if (it.start == start) it.copy(budget = budget, updatedAt = updatedAt) else it }
+    }
+
+    override suspend fun pinEnd(start: String, end: String, updatedAt: Long) {
+        rows.value = rows.value.map {
+            if (it.start == start) it.copy(endExclusive = end, endPinned = true, updatedAt = updatedAt) else it
+        }
     }
 }
 

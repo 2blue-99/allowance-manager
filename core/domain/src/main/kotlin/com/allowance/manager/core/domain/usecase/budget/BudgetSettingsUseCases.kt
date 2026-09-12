@@ -24,6 +24,17 @@ class SetMonthlyBudgetUseCase @Inject constructor(
         cycleRepository.setBudget(cycleRepository.cycleAt().start, amount)
 }
 
+/**
+ * "이번 회차만 이 날 받아요" — 현재 사이클의 끝(다음 받는 날)을 [end]로 고정.
+ * 규칙일은 그대로라 그 뒤 회차는 다시 규칙으로 계산되고, 규칙일을 바꾸면 고정이 풀린다.
+ */
+class SetCycleEndUseCase @Inject constructor(
+    private val cycleRepository: CycleRepository,
+) {
+    suspend operator fun invoke(end: LocalDate) =
+        cycleRepository.setCycleEnd(cycleRepository.cycleAt().start, end)
+}
+
 /** 특정 사이클의 예산 변경 — 디버그 시드 등 과거 사이클 조정용. */
 class SetBudgetForCycleUseCase @Inject constructor(
     private val cycleRepository: CycleRepository,

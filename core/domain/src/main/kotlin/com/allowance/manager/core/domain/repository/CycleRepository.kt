@@ -33,6 +33,12 @@ interface CycleRepository {
     /** 그 사이클의 예산. 행이 없으면 0. */
     suspend fun budgetFor(cycleStart: LocalDate): Long
 
+    /**
+     * "이번 회차만 이 날 받아요" — 그 사이클의 끝(다음 받는 날)을 [end]로 **고정**.
+     * 규칙일은 그대로라 그 날이 지나면 다음 회차는 다시 규칙으로 계산된다. 규칙일을 바꾸면 고정이 풀린다.
+     */
+    suspend fun setCycleEnd(cycleStart: LocalDate, end: LocalDate)
+
     /** 온보딩: 첫 사이클을 심는다 — 오늘이 속한 사이클을 규칙일로 계산해 행으로 저장. */
     suspend fun init(payday: Int, today: LocalDate = LocalDate.now())
 

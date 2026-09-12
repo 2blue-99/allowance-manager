@@ -13,6 +13,7 @@ data class Cycle(
     val endExclusive: LocalDate,   // 다음 받는 날 (미포함). 마지막 행만 '예정'
     val budget: Long,              // 이 사이클 예산 (생성 시 직전 행 값 이월)
     val payday: Int,               // 규칙일 1~31, 0 = 말일
+    val endPinned: Boolean = false, // 사용자가 "이번 회차만 이 날"로 끝을 고정 — 규칙 재계산 제외
 ) {
     /** 기간만 필요한 화면·계산용 뷰 */
     val period: BudgetCycle get() = BudgetCycle(start, endExclusive)

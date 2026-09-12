@@ -73,6 +73,14 @@ class CycleRepositoryImpl(
     override suspend fun budgetFor(cycleStart: LocalDate): Long =
         cycleDao.getAll().toDomain().firstOrNull { it.start == cycleStart }?.budget ?: 0L
 
+    override suspend fun setCycleEnd(cycleStart: LocalDate, end: LocalDate) {
+        mutex.withLock {
+            cycleDao.pinEnd(cycleStart.toString(), end.toString(), System.currentTimeMillis())
+            // 고정한 끝이 이미 지났으면 그 날부터 이어서 채운다
+            ensureLocked(today())
+        }
+    }
+
     override suspend fun init(payday: Int, today: LocalDate) {
         mutex.withLock {
             val cycle = BudgetCycle.of(payday.coerceIn(0, 31), today, holidays())
@@ -135,10 +143,11 @@ class CycleRepositoryImpl(
         val holidays = holidays()
         val now = System.currentTimeMillis()
 
-        // ① 마지막 행의 끝은 '예정' — 규칙·공휴일이 바뀌었을 수 있으니 재계산해 맞춘다
+        // ① 마지막 행의 끝은 '예정' — 규칙·공휴일이 바뀌었을 수 있으니 재계산해 맞춘다.
+        //    사용자가 "이번 회차만 이 날"로 고정한 끝은 건드리지 않는다.
         var last = rows.last()
         val derived = BudgetCycle.endAfterPayDate(last.start, last.payday, holidays)
-        if (derived != last.endExclusive) {
+        if (!last.endPinned && derived != last.endExclusive) {
             cycleDao.updateEnd(last.start.toString(), derived.toString(), now)
             last = last.copy(endExclusive = derived)
         }
@@ -217,6 +226,7 @@ private fun List<CycleEntity>.toDomain(): List<Cycle> = mapNotNull { e ->
             endExclusive = LocalDate.parse(e.endExclusive),
             budget = e.budget,
             payday = e.payday,
+            endPinned = e.endPinned,
         )
     }.getOrNull()
 }
@@ -226,5 +236,6 @@ private fun Cycle.toEntity(updatedAt: Long) = CycleEntity(
     endExclusive = endExclusive.toString(),
     budget = budget,
     payday = payday,
+    endPinned = endPinned,
     updatedAt = updatedAt,
 )

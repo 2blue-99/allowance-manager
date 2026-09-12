@@ -15,6 +15,8 @@ import androidx.room.PrimaryKey
  *   인접성(끝 = 다음 행의 시작)은 관문·변경 로직이 유지한다.
  * - budget: 이 사이클 예산. 새 행 생성 시 직전 행 값을 복사(이월).
  * - payday: 규칙일(1~31, 0=말일). **최신 행의 값이 곧 현재 규칙**(단일 소스).
+ * - endPinned: 사용자가 "이번 회차만 이 날 받아요"로 끝을 직접 고정. 관문이 규칙으로 재계산하지 않는다.
+ *   규칙일을 바꾸면 행이 다시 만들어져 고정이 풀린다.
  *
  * 거래는 이 테이블을 참조하지 않는다 — 소속은 createdAt 날짜 범위로 조회한다.
  */
@@ -27,6 +29,8 @@ data class CycleEntity(
     val endExclusive: String,
     val budget: Long,
     val payday: Int,
+    @ColumnInfo(name = "end_pinned", defaultValue = "0")
+    val endPinned: Boolean = false,
     @ColumnInfo(name = "updated_at")
     val updatedAt: Long,
 )
