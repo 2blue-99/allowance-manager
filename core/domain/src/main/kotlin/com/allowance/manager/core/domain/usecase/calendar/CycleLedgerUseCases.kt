@@ -29,10 +29,11 @@ class GetAdjacentCycleUseCase @Inject constructor(
         if (offset == 0) return from
         val periods = cycleRepository.getAll().map { it.period }
         if (periods.isEmpty()) return from
-        // from이 행 목록에 없으면(가상 과거 사이클 등) 시작일 기준 가장 가까운 이전 행으로 잡는다
+        // from이 행 목록에 없으면(가상 과거 사이클 등) 시작일 기준 가장 가까운 이전 행을 기준으로 잡는다.
+        // 첫 행보다 앞이면 -1 → 앞으로 한 칸은 첫 행, 뒤로는 첫 행에서 멈춘다.
         val index = periods.indexOfFirst { it.start == from.start }
             .takeIf { it >= 0 }
-            ?: periods.indexOfLast { it.start.isBefore(from.start) }.coerceAtLeast(0)
+            ?: periods.indexOfLast { it.start.isBefore(from.start) }
         return periods[(index + offset).coerceIn(0, periods.lastIndex)]
     }
 }
