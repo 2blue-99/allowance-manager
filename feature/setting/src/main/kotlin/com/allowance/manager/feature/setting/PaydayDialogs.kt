@@ -46,6 +46,9 @@ private const val PAYDAY_EOM = 0
  */
 typealias PaydayPreview = suspend (boundary: LocalDate, payday: Int) -> PaydayChangePreview?
 
+/** 시작 이동(받았던 날) 예고 — 끝은 현재 회차 것을 유지한다. 규칙 변경 예고([PaydayPreview])와 계산이 다르다. */
+typealias CycleStartPreview = suspend (boundary: LocalDate) -> PaydayChangePreview?
+
 /**
  * ① 월급일(규칙일) 다이얼로그 — "앞으로 매달 며칠에 받나요?" 질문 하나.
  *
@@ -61,6 +64,7 @@ fun PaydayRuleDialog(
     preview: PaydayPreview,
     onSave: (Int) -> Unit,
     onDismiss: () -> Unit,
+    today: LocalDate = LocalDate.now(),
 ) {
     // 말일은 대표값 31로 보여주되 저장은 EOM으로
     var input by remember { mutableStateOf(if (currentPayday in 1..31) currentPayday.toString() else "31") }
@@ -116,7 +120,12 @@ fun PaydayRuleDialog(
                 "이번 회차" to (p?.let { periodText(it.thisCycle, highlightStart = false, highlightEnd = endChanged) } ?: DASH),
                 "다음 회차" to (next?.let { periodText(it, highlightStart = endChanged, highlightEnd = endChanged) } ?: DASH),
             ),
-            note = "앞으로 매월 ${payday?.paydayText() ?: "—"}에 받는 걸로 계산해요. 주말·공휴일이면 앞의 평일로 당겨요.",
+            // 새 규칙의 다음 지급일이 이미 지났으면(말일→10일을 12일에 바꾸는 경우) 저장 즉시 회차가 넘어간다 — 미리 알린다
+            note = if (p != null && !p.nextStart.isAfter(today)) {
+                "${p.nextStart.korean()}이 이미 지나서 저장하면 바로 다음 회차가 이번 회차가 돼요. 앞으로 매월 ${payday?.paydayText() ?: "—"}에 받는 걸로 계산해요."
+            } else {
+                "앞으로 매월 ${payday?.paydayText() ?: "—"}에 받는 걸로 계산해요. 주말·공휴일이면 앞의 평일로 당겨요."
+            },
         )
     }
 }
@@ -139,6 +148,12 @@ private enum class CycleEdge(val label: String) {
  *
  * 기본 탭은 '받을 날' — "이번 달은 며칠에 받는다"가 가장 흔한 용례고, 새 사용자는 고칠 시작이 없다.
  *
+ * 질문은 "회차가 끝나는 날"이 아니라 **"월급일이 언제냐"** 로 묻는다 — 사용자가 넣는 숫자는 돈이 들어오는 날이고,
+ * 코드에서도 그 날이 회차 경계(endExclusive/start)다. 회차 표시(~ 전날)는 그대로.
+ *
+ * @param paydayLabel 유형별 호칭 — "월급일"/"용돈일"
+ * @param preview 규칙 기준 예고 — 받을 날 모드의 '다음 회차'(고른 날에서 규칙으로 시작하는 회차) 계산용
+ * @param previewStart 시작 이동 예고 — 끝은 현재 회차 것을 유지 (받았던 날 모드)
  * @param onSaveStart 해석된 실제 받은 날 (시작 정정)
  * @param onSaveEnd 해석된 다음 받을 날 (끝 고정)
  */
@@ -146,7 +161,9 @@ private enum class CycleEdge(val label: String) {
 fun CycleAdjustDialog(
     currentCycle: BudgetCycle,
     currentPayday: Int,
+    paydayLabel: String,
     preview: PaydayPreview,
+    previewStart: CycleStartPreview,
     onSaveStart: (LocalDate) -> Unit,
     onSaveEnd: (LocalDate) -> Unit,
     onDismiss: () -> Unit,
@@ -170,11 +187,11 @@ fun CycleAdjustDialog(
     else endDay?.let { BudgetCycle.upcomingDate(it, today) }?.takeIf { it.isAfter(currentCycle.start) }
 
     // 둘 다 저장 로직과 같은 계산을 쓰는 UseCase로 예고한다.
-    // - 시작 정정: (새 시작, 현재 규칙) → 이번·지난 회차
+    // - 시작 정정: 시작만 새 날로, 끝은 현재 회차 것 유지 → 이번·지난 회차
     // - 끝 고정: 이번 회차 끝은 고른 날 자체고, **다음 회차**는 그 날에서 규칙으로 시작하는 사이클 = (새 끝, 현재 규칙)
     var startResult by remember { mutableStateOf<PaydayChangePreview?>(null) }
     LaunchedEffect(resolvedStart) {
-        startResult = resolvedStart?.let { preview(it, currentPayday) }
+        startResult = resolvedStart?.let { previewStart(it) }
     }
     var nextAfterEnd by remember { mutableStateOf<BudgetCycle?>(null) }
     LaunchedEffect(resolvedEnd) {
@@ -208,7 +225,7 @@ fun CycleAdjustDialog(
 
         when (edge) {
             CycleEdge.START -> {
-                Text("이번 회차는 며칠에 시작했나요? (받은 날)", style = AmType.size12_medium, color = AmColors.TextSecondary)
+                Text("이번 ${paydayLabel}은 언제였나요?", style = AmType.size12_medium, color = AmColors.TextSecondary)
                 Spacer(Modifier.height(AmSpacing.sm))
                 AmLineTextField(
                     value = startInput,
@@ -217,7 +234,7 @@ fun CycleAdjustDialog(
                     keyboardType = KeyboardType.Number,
                     // 해석 결과를 항상 명시 — "22"가 어느 달 22일인지 오해하지 않게
                     supportingText = when {
-                        !startTouched -> "= ${currentCycle.start.korean()} (지금 잡혀 있는 시작일)"
+                        !startTouched -> "= ${currentCycle.start.korean()} (지금 기록된 ${paydayLabel})"
                         resolvedStart != null -> "= ${resolvedStart.korean()}로 기록돼요"
                         startDay != null -> "최근 두 달 안에 없는 날짜예요"
                         else -> "1~31 사이 숫자를 넣어주세요"
@@ -250,7 +267,7 @@ fun CycleAdjustDialog(
             }
 
             CycleEdge.END -> {
-                Text("이번 회차는 며칠에 끝나나요? (다음 받는 날)", style = AmType.size12_medium, color = AmColors.TextSecondary)
+                Text("이번 ${paydayLabel}은 언제인가요?", style = AmType.size12_medium, color = AmColors.TextSecondary)
                 Spacer(Modifier.height(AmSpacing.sm))
                 AmLineTextField(
                     value = endInput,
@@ -258,7 +275,7 @@ fun CycleAdjustDialog(
                     hint = "예) 20",
                     keyboardType = KeyboardType.Number,
                     supportingText = when {
-                        !endTouched -> "= ${currentCycle.endExclusive.korean()} (지금 잡혀 있는 다음 받는 날)"
+                        !endTouched -> "= ${currentCycle.endExclusive.korean()} (지금 잡혀 있는 ${paydayLabel})"
                         resolvedEnd != null -> "= ${resolvedEnd.korean()}에 받는 걸로 계산해요"
                         endDay != null -> "다가오는 두 달 안에 없는 날짜예요"
                         else -> "1~31 사이 숫자를 넣어주세요"
@@ -277,7 +294,8 @@ fun CycleAdjustDialog(
                         "다음 회차" to (next?.let { periodText(it, highlightStart = endTouched, highlightEnd = false) } ?: DASH),
                     ),
                     note = if (endTouched && end != null) {
-                        "이번 회차만 ${end.korean()}에 끝나요. 다음부터는 다시 매월 ${currentPayday.paydayText()}이에요."
+                        // 회차는 그 전날에 끝나므로 "끝나요"가 아니라 "받아요"로 — 숫자의 뜻(월급일)과 맞춘다
+                        "이번 달만 ${end.korean()}에 받아요. 다음부터는 다시 매월 ${currentPayday.paydayText()}이에요."
                     } else {
                         "매달 받는 날(${currentPayday.paydayText()}) 그대로예요. 이번 달만 다른 날 받으면 위에 적어주세요."
                     },

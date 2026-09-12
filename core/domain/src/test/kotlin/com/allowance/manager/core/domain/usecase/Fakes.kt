@@ -24,6 +24,7 @@ class FakeCycleRepository(var rows: List<Cycle>) : CycleRepository {
     }
     override suspend fun budgetFor(cycleStart: LocalDate): Long = rows.firstOrNull { it.start == cycleStart }?.budget ?: 0L
     override suspend fun setCycleEnd(cycleStart: LocalDate, end: LocalDate) = error("unused")
+    override suspend fun moveCycleStart(boundary: LocalDate, today: LocalDate) = error("unused")
     override suspend fun init(payday: Int, today: LocalDate) = error("unused")
     override suspend fun changePayday(boundary: LocalDate, payday: Int, today: LocalDate) = error("unused")
 

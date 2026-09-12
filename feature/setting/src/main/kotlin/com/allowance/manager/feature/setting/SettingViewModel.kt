@@ -18,8 +18,10 @@ import com.allowance.manager.core.domain.usecase.budget.GetUserTypeUseCase
 import com.allowance.manager.core.domain.usecase.budget.SetMonthlyBudgetUseCase
 import com.allowance.manager.core.domain.model.BudgetCycle
 import com.allowance.manager.core.domain.usecase.budget.ChangePaydayUseCase
+import com.allowance.manager.core.domain.usecase.budget.MoveCycleStartUseCase
 import com.allowance.manager.core.domain.usecase.budget.ObserveCycleUseCase
 import com.allowance.manager.core.domain.usecase.budget.PaydayChangePreview
+import com.allowance.manager.core.domain.usecase.budget.PreviewCycleStartUseCase
 import com.allowance.manager.core.domain.usecase.budget.PreviewPaydayChangeUseCase
 import com.allowance.manager.core.domain.usecase.budget.SetCycleEndUseCase
 import java.time.LocalDate
@@ -60,7 +62,9 @@ class SettingViewModel @Inject constructor(
     private val setMonthlyBudgetUseCase: SetMonthlyBudgetUseCase,
     private val changePaydayUseCase: ChangePaydayUseCase,
     private val setCycleEndUseCase: SetCycleEndUseCase,
+    private val moveCycleStartUseCase: MoveCycleStartUseCase,
     private val previewPaydayChangeUseCase: PreviewPaydayChangeUseCase,
+    private val previewCycleStartUseCase: PreviewCycleStartUseCase,
     observeCycleUseCase: ObserveCycleUseCase,
     private val setStatusBarEnabledUseCase: SetStatusBarEnabledUseCase,
     private val setUserTypeUseCase: SetUserTypeUseCase,
@@ -112,6 +116,15 @@ class SettingViewModel @Inject constructor(
     fun setCycleEnd(end: LocalDate) {
         viewModelScope.launch { setCycleEndUseCase(end) }
     }
+
+    /** "이번 월급일은 사실 이 날이었다" — 현재 회차 시작만 이동. 끝·예산·규칙은 그대로. */
+    fun moveCycleStart(boundary: LocalDate) {
+        viewModelScope.launch { moveCycleStartUseCase(boundary) }
+    }
+
+    /** 시작 이동 예고 — 저장 로직과 같은 계산 (끝 유지) */
+    suspend fun previewCycleStart(boundary: LocalDate): PaydayChangePreview? =
+        runCatching { previewCycleStartUseCase(boundary) }.getOrNull()
 
     /** 저장 전 결과 예고 — 다이얼로그가 입력이 바뀔 때마다 호출. 저장 로직과 같은 계산을 쓴다. */
     suspend fun previewPaydayChange(boundary: LocalDate, day: Int): PaydayChangePreview? =

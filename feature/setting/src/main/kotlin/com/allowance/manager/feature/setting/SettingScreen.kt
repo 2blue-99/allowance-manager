@@ -119,7 +119,9 @@ fun SettingRoute(
         onBudgetChange = viewModel::setBudget,
         onPaydayRuleChange = viewModel::setPaydayRule,
         onCycleEndChange = viewModel::setCycleEnd,
+        onCycleStartChange = viewModel::moveCycleStart,
         onPreviewPaydayChange = viewModel::previewPaydayChange,
+        onPreviewCycleStart = viewModel::previewCycleStart,
         onUserTypeChange = viewModel::setUserType,
         onBudgetAlertEnabledChange = viewModel::setBudgetAlertEnabled,
         onBudgetAlertFrequencyChange = viewModel::setBudgetAlertFrequency,
@@ -193,7 +195,9 @@ fun SettingScreen(
     onBudgetChange: (Long) -> Unit = {},
     onPaydayRuleChange: (java.time.LocalDate, Int) -> Unit = { _, _ -> },
     onCycleEndChange: (java.time.LocalDate) -> Unit = {},
+    onCycleStartChange: (java.time.LocalDate) -> Unit = {},
     onPreviewPaydayChange: PaydayPreview = { _, _ -> null },
+    onPreviewCycleStart: CycleStartPreview = { null },
     onUserTypeChange: (UserType) -> Unit = {},
     onBudgetAlertEnabledChange: (Boolean) -> Unit = {},
     onBudgetAlertFrequencyChange: (AlertFrequency) -> Unit = {},
@@ -379,14 +383,16 @@ fun SettingScreen(
             )
         }
     }
-    // 이번 회차 = 받았던 날(시작 정정) / 받을 날(끝 고정). 규칙은 두 경우 모두 유지
+    // 이번 회차 = 받았던 날(시작만 이동, 끝 유지) / 받을 날(끝 고정). 규칙은 두 경우 모두 유지
     if (showCycleDialog) {
         uiState.cycle?.let { cycle ->
             CycleAdjustDialog(
                 currentCycle = cycle,
                 currentPayday = uiState.payday,
+                paydayLabel = uiState.userType.paydayLabel,
                 preview = onPreviewPaydayChange,
-                onSaveStart = { date -> onPaydayRuleChange(date, uiState.payday); showCycleDialog = false },
+                previewStart = onPreviewCycleStart,
+                onSaveStart = { date -> onCycleStartChange(date); showCycleDialog = false },
                 onSaveEnd = { date -> onCycleEndChange(date); showCycleDialog = false },
                 onDismiss = { showCycleDialog = false },
             )

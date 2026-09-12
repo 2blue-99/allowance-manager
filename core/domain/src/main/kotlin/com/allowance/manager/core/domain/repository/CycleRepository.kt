@@ -43,6 +43,16 @@ interface CycleRepository {
     suspend fun init(payday: Int, today: LocalDate = LocalDate.now())
 
     /**
+     * "이번 월급일은 사실 [boundary]였다" — 현재 회차의 **시작만** 옮긴다. 끝(다음 월급일)·예산·규칙은 그대로.
+     *
+     * 규칙으로 끝을 다시 계산하지 않는다 — 말일 규칙에 8/20을 넣었을 때 "8/20 다음 말일 = 8/31"로 11일짜리
+     * 회차가 생기면 안 된다. 8/20 지급은 8/31 지급을 대신한 것이고, 다음 월급일은 여전히 9/30이다.
+     * 그래서 새 행의 끝은 시작으로 유도되지 않는 값 → 고정 표시(endPinned)로 관문 재계산에서 제외한다.
+     * 직전 회차의 끝은 [boundary]로 맞춰져 빈틈·겹침이 없다.
+     */
+    suspend fun moveCycleStart(boundary: LocalDate, today: LocalDate = LocalDate.now())
+
+    /**
      * 월급일 변경 — [boundary]("이번에 받은 날")부터 새 사이클이 시작하고 이후 규칙은 [payday].
      *
      * [boundary] 이후에 시작하던 행은 대체되어 삭제되고, 직전 행의 끝이 [boundary]로 맞춰져
