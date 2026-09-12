@@ -105,4 +105,56 @@ class BudgetCycleTest {
             BudgetCycle.payDate(YearMonth.of(2026, 8), payday = 25),
         )
     }
+
+    // ─────────── recentDate — "며칠에 받았다"를 가장 최근 지나간 날짜로 ───────────
+
+    private val today = LocalDate.of(2026, 9, 12)
+
+    @Test
+    fun `recentDate - 이번 달에 이미 지난 날은 이번 달`() {
+        assertEquals(LocalDate.of(2026, 9, 5), BudgetCycle.recentDate(5, today))
+    }
+
+    @Test
+    fun `recentDate - 오늘 자체도 허용`() {
+        assertEquals(LocalDate.of(2026, 9, 12), BudgetCycle.recentDate(12, today))
+    }
+
+    @Test
+    fun `recentDate - 이번 달에 아직 안 온 날은 지난달`() {
+        assertEquals(LocalDate.of(2026, 8, 22), BudgetCycle.recentDate(22, today))
+    }
+
+    @Test
+    fun `recentDate - 이번 달에 없는 날(9월 31일)은 건너뛰고 지난달`() {
+        assertEquals(LocalDate.of(2026, 8, 31), BudgetCycle.recentDate(31, today))
+    }
+
+    @Test
+    fun `recentDate - 두 달 모두 없는 날이면 null`() {
+        // 3/12 기준 31일: 3월(31일 있지만 미래)·2월(없음) → null
+        assertEquals(null, BudgetCycle.recentDate(31, LocalDate.of(2026, 3, 12)))
+    }
+
+    @Test
+    fun `recentDate - 범위 밖 숫자는 null`() {
+        assertEquals(null, BudgetCycle.recentDate(0, today))
+        assertEquals(null, BudgetCycle.recentDate(32, today))
+    }
+
+    // ─────────── endAfterPayDate — 저장·미리보기가 공유하는 끝 계산 ───────────
+
+    @Test
+    fun `endAfterPayDate - 시작 뒤 첫 규칙일(보정 포함)이 끝`() {
+        // 8/25 시작, 규칙 25 → 9/25(금)
+        assertEquals(LocalDate.of(2026, 9, 25), BudgetCycle.endAfterPayDate(LocalDate.of(2026, 8, 25), 25))
+        // 8/25 시작, 규칙 말일 → 9/30(수)
+        assertEquals(LocalDate.of(2026, 9, 30), BudgetCycle.endAfterPayDate(LocalDate.of(2026, 8, 25), 0))
+    }
+
+    @Test
+    fun `endAfterPayDate - 규칙을 바꿔 짧아져도 최소 열흘 미만 후보는 건너뛴다`() {
+        // 8/22 시작, 규칙 25 → 8/25는 3일 뒤라 건너뛰고 9/25
+        assertEquals(LocalDate.of(2026, 9, 25), BudgetCycle.endAfterPayDate(LocalDate.of(2026, 8, 22), 25))
+    }
 }

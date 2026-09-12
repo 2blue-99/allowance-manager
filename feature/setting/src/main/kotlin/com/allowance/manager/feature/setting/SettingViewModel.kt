@@ -19,6 +19,8 @@ import com.allowance.manager.core.domain.usecase.budget.SetMonthlyBudgetUseCase
 import com.allowance.manager.core.domain.model.BudgetCycle
 import com.allowance.manager.core.domain.usecase.budget.ChangePaydayUseCase
 import com.allowance.manager.core.domain.usecase.budget.ObserveCycleUseCase
+import com.allowance.manager.core.domain.usecase.budget.PaydayChangePreview
+import com.allowance.manager.core.domain.usecase.budget.PreviewPaydayChangeUseCase
 import java.time.LocalDate
 import com.allowance.manager.core.domain.usecase.budget.SetUserTypeUseCase
 import com.allowance.manager.core.domain.usecase.setting.GetStatusBarEnabledUseCase
@@ -57,6 +59,7 @@ class SettingViewModel @Inject constructor(
     getPaydayAlertSettingUseCase: GetPaydayAlertSettingUseCase,
     private val setMonthlyBudgetUseCase: SetMonthlyBudgetUseCase,
     private val changePaydayUseCase: ChangePaydayUseCase,
+    private val previewPaydayChangeUseCase: PreviewPaydayChangeUseCase,
     observeCycleUseCase: ObserveCycleUseCase,
     private val setStatusBarEnabledUseCase: SetStatusBarEnabledUseCase,
     private val setUserTypeUseCase: SetUserTypeUseCase,
@@ -95,15 +98,18 @@ class SettingViewModel @Inject constructor(
     }
 
     /**
-     * 월급일 변경 — 시트에서 규칙일과 "이번에 받은 날"을 함께 받는다.
-     *
-     * 경계를 그대로 두면 규칙만 바뀌고(시작일은 이미 받은 사실이라 유지),
-     * 경계를 옮기면 그 날부터 새 사이클이 시작한다.
+     * 월급일 변경 — 두 다이얼로그가 같은 진입점을 쓴다.
+     * - 규칙일 다이얼로그: (현재 회차 시작, 새 규칙일) → 시작은 유지, 끝만 재계산
+     * - 이번 회차 다이얼로그: (실제 받은 날, 현재 규칙일) → 규칙은 유지, 시작만 이동
      */
     fun setPaydayRule(effectiveDate: LocalDate, day: Int) {
         analytics.setUserProperty(AmAnalytics.UserProp.PAYDAY, day.toString())
         viewModelScope.launch { changePaydayUseCase(effectiveDate, day) }
     }
+
+    /** 저장 전 결과 예고 — 다이얼로그가 입력이 바뀔 때마다 호출. 저장 로직과 같은 계산을 쓴다. */
+    suspend fun previewPaydayChange(boundary: LocalDate, day: Int): PaydayChangePreview? =
+        runCatching { previewPaydayChangeUseCase(boundary, day) }.getOrNull()
 
     fun setStatusBarEnabled(enabled: Boolean) {
         analytics.logEvent(AmAnalytics.Event.SETTING_STATUSBAR_TOGGLE, mapOf(AmAnalytics.Param.ENABLED to enabled))

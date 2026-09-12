@@ -102,6 +102,33 @@ data class BudgetCycle(
         }
 
         /**
+         * [start]에 받은 사이클의 끝(다음 지급일, 미포함). 영업일 보정으로 경계가 같은 날이 되면 최소 하루를 보장한다.
+         *
+         * 저장(CycleRepository)과 변경 미리보기가 **같은 함수**를 써야 화면 예고와 실제 결과가 어긋나지 않는다.
+         */
+        fun endAfterPayDate(start: LocalDate, payday: Int, holidays: Holidays = Holidays.EMPTY): LocalDate =
+            endAfter(nextPayDateAfter(start, payday, holidays), start)
+
+        /**
+         * "며칠에 받았다"는 일(日) 숫자를 **가장 최근에 지나간** 실제 날짜로 푼다.
+         *
+         * 이번 달에 아직 안 온 날이면 지난달 것이고, 그 달에 없는 날(9월 31일)은 건너뛴다.
+         * 두 달 안에 없으면 null. 오늘보다 미래는 절대 나오지 않는다 — "받은 날"은 일어난 사실만 기록한다.
+         */
+        fun recentDate(day: Int, today: LocalDate = LocalDate.now()): LocalDate? {
+            if (day !in 1..31) return null
+            var ym = YearMonth.from(today)
+            repeat(2) {
+                if (day <= ym.lengthOfMonth()) {
+                    val candidate = ym.atDay(day)
+                    if (!candidate.isAfter(today)) return candidate
+                }
+                ym = ym.minusMonths(1)
+            }
+            return null
+        }
+
+        /**
          * 이력 기반 사이클 — [today]가 속한 구간.
          *
          * [rules]는 오래된 → 최신 순. 비어 있으면 [fallbackPayday]로 규칙일 하나만 쓰던

@@ -67,6 +67,7 @@ import com.allowance.manager.core.designsystem.theme.AmType
 import com.allowance.manager.core.domain.model.AlertFrequency
 import com.allowance.manager.core.domain.model.PaydayAlertSetting
 import com.allowance.manager.core.domain.model.UserType
+import com.allowance.manager.core.domain.model.toShortPeriodLabel
 import com.allowance.manager.core.domain.util.amountToComma
 import com.allowance.manager.core.domain.util.formatTimeOfDay
 import com.allowance.manager.core.ui.VerticalSpacer
@@ -117,6 +118,7 @@ fun SettingRoute(
         onStatusBarEnabledChange = viewModel::setStatusBarEnabled,
         onBudgetChange = viewModel::setBudget,
         onPaydayRuleChange = viewModel::setPaydayRule,
+        onPreviewPaydayChange = viewModel::previewPaydayChange,
         onUserTypeChange = viewModel::setUserType,
         onBudgetAlertEnabledChange = viewModel::setBudgetAlertEnabled,
         onBudgetAlertFrequencyChange = viewModel::setBudgetAlertFrequency,
@@ -189,6 +191,7 @@ fun SettingScreen(
     onStatusBarEnabledChange: (Boolean) -> Unit = {},
     onBudgetChange: (Long) -> Unit = {},
     onPaydayRuleChange: (java.time.LocalDate, Int) -> Unit = { _, _ -> },
+    onPreviewPaydayChange: PaydayPreview = { _, _ -> null },
     onUserTypeChange: (UserType) -> Unit = {},
     onBudgetAlertEnabledChange: (Boolean) -> Unit = {},
     onBudgetAlertFrequencyChange: (AlertFrequency) -> Unit = {},
@@ -203,6 +206,7 @@ fun SettingScreen(
     // 다이얼로그 노출 여부는 순수 UI 상태 → 화면이 직접 보유
     var showBudgetDialog by remember { mutableStateOf(false) }
     var showPaydayDialog by remember { mutableStateOf(false) }
+    var showCycleDialog by remember { mutableStateOf(false) }
     var showTypeDialog by remember { mutableStateOf(false) }
     var showFrequencyDialog by remember { mutableStateOf(false) }
     var showTimePicker by remember { mutableStateOf(false) }
@@ -233,8 +237,16 @@ fun SettingScreen(
                             }
                         },
                         {
-                            AmSettingItem(title = uiState.userType.paydayLabel, onClick = { showPaydayDialog = true }) {
+                            AmSettingItem(title = uiState.userType.paydayLabel, subtitle = "매달 받는 날", onClick = { showPaydayDialog = true }) {
                                 Text(paydayLabel(uiState.payday), fontSize = 13.sp, fontWeight = FontWeight.Bold, color = AmColors.Emerald)
+                                Spacer(Modifier.width(AmSpacing.xs))
+                                AmChevron()
+                            }
+                        },
+                        {
+                            // 규칙과 별개로 "이번에 실제로 받은 날"만 정정하는 진입점
+                            AmSettingItem(title = "이번 회차", subtitle = "이번에 받은 날이 다르면 정정", onClick = { showCycleDialog = true }) {
+                                Text(uiState.cycle?.toShortPeriodLabel() ?: "—", fontSize = 13.sp, fontWeight = FontWeight.Bold, color = AmColors.Emerald)
                                 Spacer(Modifier.width(AmSpacing.xs))
                                 AmChevron()
                             }
@@ -352,15 +364,28 @@ fun SettingScreen(
             onDismiss = { showBudgetDialog = false },
         )
     }
-    // 월급일 변경 — 규칙일(칩)과 이번에 받은 날(캘린더)을 함께 정한다
+    // 월급일 = 규칙일만 (시작 유지, 끝 재계산)
     if (showPaydayDialog) {
         uiState.cycle?.let { cycle ->
-            PaydayChangeSheet(
+            PaydayRuleDialog(
                 currentCycle = cycle,
                 currentPayday = uiState.payday,
                 title = uiState.userType.paydayLabel,
-                onSave = { boundary, day -> onPaydayRuleChange(boundary, day); showPaydayDialog = false },
+                preview = onPreviewPaydayChange,
+                onSave = { day -> onPaydayRuleChange(cycle.start, day); showPaydayDialog = false },
                 onDismiss = { showPaydayDialog = false },
+            )
+        }
+    }
+    // 이번 회차 = 실제 받은 날만 (규칙 유지, 시작 이동)
+    if (showCycleDialog) {
+        uiState.cycle?.let { cycle ->
+            CycleStartDialog(
+                currentCycle = cycle,
+                currentPayday = uiState.payday,
+                preview = onPreviewPaydayChange,
+                onSave = { date -> onPaydayRuleChange(date, uiState.payday); showCycleDialog = false },
+                onDismiss = { showCycleDialog = false },
             )
         }
     }

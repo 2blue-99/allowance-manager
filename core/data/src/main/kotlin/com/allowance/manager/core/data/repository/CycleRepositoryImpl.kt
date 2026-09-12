@@ -27,11 +27,20 @@ import javax.inject.Singleton
  * 위젯 갱신과 리스너가 동시에 들어와 "새 행 추가"가 겹칠 수 있어 [mutex]로 잠근다.
  */
 @Singleton
-class CycleRepositoryImpl @Inject constructor(
+class CycleRepositoryImpl(
     private val cycleDao: CycleDao,
     private val transactionDao: TransactionDao,
     private val remoteConfigRepository: RemoteConfigRepository,
+    /** "오늘" 공급자 — 관문이 어디까지 채울지의 기준. 테스트에서 날짜를 고정하기 위해 주입한다. */
+    private val today: () -> LocalDate,
 ) : CycleRepository {
+
+    @Inject
+    constructor(
+        cycleDao: CycleDao,
+        transactionDao: TransactionDao,
+        remoteConfigRepository: RemoteConfigRepository,
+    ) : this(cycleDao, transactionDao, remoteConfigRepository, { LocalDate.now() })
 
     private val mutex = Mutex()
 
@@ -49,12 +58,12 @@ class CycleRepositoryImpl @Inject constructor(
     }
 
     override fun observeAll(): Flow<List<Cycle>> = flow {
-        runCatching { ensure(LocalDate.now()) }
+        runCatching { ensure(today()) }
         emitAll(cycleDao.observeAll().map { it.toDomain() })
     }
 
     override suspend fun getAll(): List<Cycle> {
-        runCatching { ensure(LocalDate.now()) }
+        runCatching { ensure(today()) }
         return cycleDao.getAll().toDomain()
     }
 
@@ -101,7 +110,7 @@ class CycleRepositoryImpl @Inject constructor(
             cycleDao.upsert(
                 CycleEntity(
                     start = boundary.toString(),
-                    endExclusive = deriveEnd(boundary, rule).toString(),
+                    endExclusive = BudgetCycle.endAfterPayDate(boundary, rule, holidays()).toString(),
                     budget = keepBudget,
                     payday = rule,
                     updatedAt = System.currentTimeMillis(),
@@ -116,7 +125,7 @@ class CycleRepositoryImpl @Inject constructor(
 
     /** [date](와 오늘)까지 사이클 행이 이어져 있도록 보장. 행이 하나도 없으면(온보딩 전) 아무것도 안 한다. */
     private suspend fun ensure(date: LocalDate) {
-        mutex.withLock { ensureLocked(maxOf(date, LocalDate.now())) }
+        mutex.withLock { ensureLocked(maxOf(date, today())) }
     }
 
     private suspend fun ensureLocked(cover: LocalDate) {
@@ -128,7 +137,7 @@ class CycleRepositoryImpl @Inject constructor(
 
         // ① 마지막 행의 끝은 '예정' — 규칙·공휴일이 바뀌었을 수 있으니 재계산해 맞춘다
         var last = rows.last()
-        val derived = deriveEnd(last.start, last.payday, holidays)
+        val derived = BudgetCycle.endAfterPayDate(last.start, last.payday, holidays)
         if (derived != last.endExclusive) {
             cycleDao.updateEnd(last.start.toString(), derived.toString(), now)
             last = last.copy(endExclusive = derived)
@@ -139,7 +148,7 @@ class CycleRepositoryImpl @Inject constructor(
         while (!cover.isBefore(last.endExclusive) && probes++ < MAX_PROBE) {
             val next = Cycle(
                 start = last.endExclusive,
-                endExclusive = deriveEnd(last.endExclusive, last.payday, holidays),
+                endExclusive = BudgetCycle.endAfterPayDate(last.endExclusive, last.payday, holidays),
                 budget = last.budget,
                 payday = last.payday,
             )
@@ -187,15 +196,6 @@ class CycleRepositoryImpl @Inject constructor(
             fallbackPayday = first.payday,
         )
         return Cycle(virtual.start, virtual.endExclusive, budget = 0L, payday = first.payday)
-    }
-
-    /** 다음 지급일(주말·공휴일 보정) — 최소 하루짜리 사이클 보장 */
-    private suspend fun deriveEnd(start: LocalDate, payday: Int): LocalDate =
-        deriveEnd(start, payday, holidays())
-
-    private fun deriveEnd(start: LocalDate, payday: Int, holidays: Holidays): LocalDate {
-        val candidate = BudgetCycle.nextPayDateAfter(start, payday, holidays)
-        return if (candidate.isAfter(start)) candidate else start.plusDays(1)
     }
 
     private fun holidays(): Holidays = remoteConfigRepository.getHolidays()
