@@ -114,6 +114,12 @@ class HomeViewModel @Inject constructor(
         viewModelScope.launch { setHomeGuideShownUseCase(true) }
     }
 
+    /** 예산 카드의 ? — 첫 진입 가이드를 다시 본다. '안 봤음'으로 되돌리면 [showGuide]가 켜지고, 끝나면 기존처럼 저장된다. */
+    fun onReopenGuide() {
+        analytics.logEvent(AmAnalytics.Event.HOME_GUIDE_REOPEN)
+        viewModelScope.launch { setHomeGuideShownUseCase(false) }
+    }
+
     /** 공지 확인/닫음 — 그 id를 저장해 다시 안 뜨게 하고, 다이얼로그를 내린다. */
     fun onAnnouncementDismissed() {
         val id = _announcement.value?.id ?: return

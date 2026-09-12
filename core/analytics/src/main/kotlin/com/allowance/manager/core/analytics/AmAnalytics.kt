@@ -18,6 +18,7 @@ object AmAnalytics {
         const val HOME_TX_SWIPE_DELETE = "home_tx_swipe_delete"
         const val HOME_ADD_FAB_CLICK = "home_add_fab_click"
         const val HOME_TX_ITEM_CLICK = "home_tx_item_click"
+        const val HOME_GUIDE_REOPEN = "home_guide_reopen"       // 예산 카드 ? — 첫 진입 가이드 다시 보기
 
         // 홈 첫 진입 가이드(스포트라이트)
         const val GUIDE_SLIDE = "guide_slide"

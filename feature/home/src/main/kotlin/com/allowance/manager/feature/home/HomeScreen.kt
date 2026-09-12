@@ -75,6 +75,7 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.allowance.manager.core.domain.model.Announcement
 import com.allowance.manager.core.domain.model.toShortPeriodLabel
+import com.allowance.manager.core.designsystem.component.AmHelpIcon
 import com.allowance.manager.core.domain.model.LedgerFilter
 import com.allowance.manager.core.domain.model.LedgerFilterChip
 import com.allowance.manager.core.domain.model.Transaction
@@ -146,6 +147,7 @@ fun HomeRoute(
         onAddTransaction = viewModel::onAddTransaction,
         showGuide = showGuide,
         onGuideFinished = viewModel::onGuideFinished,
+        onReopenGuide = viewModel::onReopenGuide,
         widgetPinSupported = widgetPinSupported,
         widgetPreviewRes = widgetPreviewRes,
         onAddWidget = onAddWidget,
@@ -170,6 +172,7 @@ fun HomeScreen(
     onAddTransaction: (TransactionType, Long, String, TransactionCategory?, String, TxScope) -> Unit = { _, _, _, _, _, _ -> },
     showGuide: Boolean = false,
     onGuideFinished: () -> Unit = {},
+    onReopenGuide: () -> Unit = {},
     widgetPinSupported: Boolean = false,
     @DrawableRes widgetPreviewRes: Int = 0,
     onAddWidget: () -> Unit = {},
@@ -204,7 +207,7 @@ fun HomeScreen(
 
     Box(modifier = modifier.fillMaxSize()) {
         Column(modifier = Modifier.fillMaxSize().background(AmColors.ScreenBg)) {
-            Hero(uiState = uiState, guideTargets = guideTargets)
+            Hero(uiState = uiState, guideTargets = guideTargets, onReopenGuide = onReopenGuide)
             BottomContent(
                 uiState = uiState,
                 onFilterChip = onFilterChip,
@@ -358,6 +361,7 @@ private fun homeGuideSteps(
 private fun Hero(
     uiState: HomeUiState,
     guideTargets: SnapshotStateMap<String, Rect>,
+    onReopenGuide: () -> Unit = {},
 ) {
     Column(
         modifier = Modifier
@@ -366,7 +370,14 @@ private fun Hero(
             .padding(horizontal = AmSpacing.xl)
             .padding(top = 12.dp, bottom = 4.dp),
     ) {
-        Box(Modifier.fillMaxWidth().guideTarget("hero", guideTargets)) { BudgetCard(uiState = uiState) }
+        Box(Modifier.fillMaxWidth().guideTarget("hero", guideTargets)) {
+            BudgetCard(uiState = uiState)
+            // 가이드 재진입 ? — 카드 우상단 코너에 오버레이. 카드 내부 정렬(가운데 머리글·금액)은 건드리지 않는다.
+            AmHelpIcon(
+                onClick = onReopenGuide,
+                modifier = Modifier.align(Alignment.TopEnd).padding(14.dp),
+            )
+        }
         Spacer(Modifier.height(12.dp))
         // 가이드 2번: 하루 지표는 예산 카드로 옮겨져 지출·수입 카드만 하이라이트한다.
         Box(Modifier.fillMaxWidth().guideTarget("expenseIncome", guideTargets)) {
