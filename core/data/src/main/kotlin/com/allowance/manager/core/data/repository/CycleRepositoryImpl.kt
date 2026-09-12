@@ -67,8 +67,14 @@ class CycleRepositoryImpl(
         return cycleDao.getAll().toDomain()
     }
 
-    override suspend fun setBudget(cycleStart: LocalDate, amount: Long) =
-        cycleDao.updateBudget(cycleStart.toString(), amount, System.currentTimeMillis())
+    override suspend fun setBudget(cycleStart: LocalDate, amount: Long) {
+        mutex.withLock {
+            // 거래가 없어 행이 없는 과거 회차(디버그 시드 등)에 넣는 경우 — 그 날까지 행을 만들어 저장한다.
+            // 그냥 UPDATE만 하면 0건 갱신으로 조용히 무시된다
+            backfillTo(cycleStart, holidays(), System.currentTimeMillis())
+            cycleDao.updateBudget(cycleStart.toString(), amount, System.currentTimeMillis())
+        }
+    }
 
     override suspend fun budgetFor(cycleStart: LocalDate): Long =
         cycleDao.getAll().toDomain().firstOrNull { it.start == cycleStart }?.budget ?: 0L
@@ -202,16 +208,25 @@ class CycleRepositoryImpl(
         }
 
         // ③ 백필 — 가장 오래된 거래가 첫 행보다 과거면 뒤로도 생성 (모든 거래가 사이클에 속하게)
-        val firstTxDate = transactionDao.getFirstTransactionTime()?.toLocalDate() ?: return
-        var first = rows.first()
-        probes = 0
-        while (firstTxDate.isBefore(first.start) && probes++ < MAX_PROBE) {
+        transactionDao.getFirstTransactionTime()?.toLocalDate()?.let { backfillTo(it, holidays, now) }
+    }
+
+    /**
+     * 첫 행이 [date]를 덮을 때까지 첫 행의 규칙일로 **뒤로** 행을 만든다.
+     *
+     * 예산은 0 — 예산을 정하기 전의 회차를 새로 지어내는 것이라 이월할 근거가 없다.
+     * (앞으로 채울 때 직전 값을 복사하는 것과 다르다. 예전 budget_history도 이력 시작 전은 0이었다)
+     */
+    private suspend fun backfillTo(date: LocalDate, holidays: Holidays, now: Long) {
+        var first = cycleDao.getAll().toDomain().firstOrNull() ?: return
+        var probes = 0
+        while (date.isBefore(first.start) && probes++ < MAX_PROBE) {
             val start = BudgetCycle.previousPayDateBefore(first.start, first.payday, holidays)
             if (!start.isBefore(first.start)) break   // 더 못 거슬러 오르면 중단
             val previous = Cycle(
                 start = start,
                 endExclusive = first.start,
-                budget = first.budget,
+                budget = 0L,
                 payday = first.payday,
             )
             cycleDao.upsert(previous.toEntity(now))

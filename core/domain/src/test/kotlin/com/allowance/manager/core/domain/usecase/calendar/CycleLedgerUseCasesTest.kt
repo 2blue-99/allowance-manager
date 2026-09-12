@@ -2,6 +2,7 @@ package com.allowance.manager.core.domain.usecase.calendar
 
 import com.allowance.manager.core.domain.model.BudgetCycle
 import com.allowance.manager.core.domain.usecase.FakeCycleRepository
+import com.allowance.manager.core.domain.usecase.FakeRemoteConfigRepository
 import com.allowance.manager.core.domain.usecase.FakeTransactionRepository
 import com.allowance.manager.core.domain.usecase.cycle
 import com.allowance.manager.core.domain.usecase.d
@@ -20,7 +21,11 @@ class CycleLedgerUseCasesTest {
 
     // ─────────────────────────── 이웃 사이클 ───────────────────────────
 
-    private val adjacent = GetAdjacentCycleUseCase(cycles)
+    private val adjacent = GetAdjacentCycleUseCase(cycles, FakeRemoteConfigRepository())
+
+    // 첫 행(6/25~) 앞의 가상 사이클 — 규칙 25일 역산: 5/25(월), 4/24(4/25 토 보정)
+    private val v1 = BudgetCycle(d(5, 25), d(6, 25))
+    private val v2 = BudgetCycle(d(4, 24), d(5, 25))
 
     @Test
     fun `이웃 행으로 이동한다`() = runBlocking {
@@ -30,9 +35,26 @@ class CycleLedgerUseCasesTest {
     }
 
     @Test
-    fun `목록 끝에서는 멈춘다 - 호출부는 시작일이 같으면 정지로 본다`() = runBlocking {
-        assertEquals(a.period, adjacent(a.period, -1))
+    fun `미래로는 마지막 행에서 멈춘다 - 호출부는 시작일이 같으면 정지로 본다`() = runBlocking {
+        assertEquals(c.period, adjacent(c.period, +1))
         assertEquals(c.period, adjacent(c.period, +3))
+    }
+
+    @Test
+    fun `첫 행보다 앞은 규칙으로 역산한 가상 사이클로 이어진다 - 통계 창이 항상 6칸`() = runBlocking {
+        assertEquals(v1, adjacent(a.period, -1))
+        assertEquals(v2, adjacent(a.period, -2))
+        // 현재(c)에서 5칸 뒤 = 행 2개 + 가상 3개
+        val fifth = adjacent(c.period, -5)
+        assertEquals(d(3, 25), fifth.start)   // 3/25(수)
+        assertEquals(d(4, 24), fifth.endExclusive)
+    }
+
+    @Test
+    fun `가상 사이클에서 앞뒤로 이어진다`() = runBlocking {
+        assertEquals(a.period, adjacent(v1, +1))
+        assertEquals(v2, adjacent(v1, -1))
+        assertEquals(b.period, adjacent(v2, +3))
     }
 
     @Test
@@ -41,10 +63,35 @@ class CycleLedgerUseCasesTest {
     }
 
     @Test
-    fun `행에 없는 가상 과거 사이클에서 앞으로 가면 첫 행`() = runBlocking {
-        val virtual = BudgetCycle(d(5, 25), d(6, 25))
-        assertEquals(a.period, adjacent(virtual, +1))
-        assertEquals(a.period, adjacent(virtual, -1))
+    fun `매트릭스 - 규칙 9종 모두 행 하나에서 5칸 뒤로 가고 돌아오면 제자리, 체인이 맞물린다`() = runBlocking {
+        val today = d(9, 12)
+        for (payday in listOf(0, 1, 5, 10, 15, 20, 25, 28, 31)) {
+            val current = BudgetCycle.of(payday, today)
+            val uc = GetAdjacentCycleUseCase(
+                FakeCycleRepository(listOf(cycle(current.start, current.endExclusive, payday = payday))),
+                FakeRemoteConfigRepository(),
+            )
+            val window = ArrayDeque(listOf(current))
+            repeat(5) { window.addFirst(uc(window.first(), -1)) }
+            assertEquals("규칙=$payday 6칸", 6, window.distinctBy { it.start }.size)
+            window.zipWithNext().forEach { (a, b) -> assertEquals("규칙=$payday 맞물림", a.endExclusive, b.start) }
+            var back = window.first()
+            repeat(5) { back = uc(back, +1) }
+            assertEquals("규칙=$payday 왕복", current, back)
+            assertEquals("규칙=$payday 미래 멈춤", current, uc(current, +1))
+        }
+    }
+
+    @Test
+    fun `행이 하나뿐(새 사용자)이어도 5칸 뒤까지 간다`() = runBlocking {
+        val single = GetAdjacentCycleUseCase(FakeCycleRepository(listOf(c)), FakeRemoteConfigRepository())
+        var cur = c.period
+        repeat(5) { cur = single(cur, -1) }
+        assertEquals(d(3, 25), cur.start)
+        // 왕복하면 제자리
+        var back = cur
+        repeat(5) { back = single(back, +1) }
+        assertEquals(c.period, back)
     }
 
     // ─────────────────────────── 거래 있는 사이클 ───────────────────────────

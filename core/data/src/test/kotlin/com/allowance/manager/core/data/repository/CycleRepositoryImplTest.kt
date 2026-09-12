@@ -122,7 +122,24 @@ class CycleRepositoryImplTest {
 
         // 7/10을 덮을 때까지: 7/24~8/25, 6/25~7/24
         assertEquals(listOf(d(6, 25), d(7, 24), d(8, 25)), starts())
-        assertTrue(cycleDao.rows.value.all { it.budget == 500_000L })
+        // 백필 행 예산은 0 — 예산을 정하기 전 회차라 이월할 근거가 없다 (첫 행만 500,000 유지)
+        assertEquals(listOf(0L, 0L, 500_000L), cycleDao.rows.value.map { it.budget })
+    }
+
+    @Test
+    fun `setBudget - 행이 없는 과거 회차면 그 날까지 백필한 뒤 저장한다 (조용히 무시되지 않음)`() = runBlocking {
+        seed(d(8, 25), d(9, 25), payday = 25, budget = 500_000L)
+        val repo = repo()
+        // 7/24~8/25 회차 — 거래가 없어 행이 없는 상태 (디버그 '예산 넣기' 경로). 8/1은 7/24 지급 뒤라 이 회차
+        val julyStart = repo.cycleAt(d(8, 1)).start
+        assertEquals(d(7, 24), julyStart)
+        assertEquals(listOf(d(8, 25)), starts())
+
+        repo.setBudget(julyStart, 300_000L)
+
+        assertEquals(listOf(d(7, 24), d(8, 25)), starts())
+        assertEquals(300_000L, repo.budgetFor(d(7, 24)))
+        assertEquals(500_000L, repo.budgetFor(d(8, 25)))   // 기존 행은 그대로
     }
 
     @Test
@@ -507,76 +524,4 @@ class CycleRepositoryImplTest {
     private fun LocalDate.millis(): Long = atStartOfDay(ZoneId.systemDefault()).toInstant().toEpochMilli()
 }
 
-// ─────────────────────────── 페이크 ───────────────────────────
-
-/** 메모리 사이클 테이블 — start 오름차순 정렬을 DAO처럼 보장 */
-private class FakeCycleDao : CycleDao {
-    val rows = MutableStateFlow<List<CycleEntity>>(emptyList())
-
-    override suspend fun upsert(entity: CycleEntity) {
-        rows.value = (rows.value.filterNot { it.start == entity.start } + entity).sortedBy { it.start }
-    }
-
-    override suspend fun upsertAll(entities: List<CycleEntity>) = entities.forEach { upsert(it) }
-
-    override fun observeAll(): Flow<List<CycleEntity>> = rows
-
-    override suspend fun getAll(): List<CycleEntity> = rows.value.sortedBy { it.start }
-
-    override suspend fun deleteStartingFrom(start: String) {
-        rows.value = rows.value.filter { it.start < start }
-    }
-
-    override suspend fun updateEnd(start: String, end: String, updatedAt: Long) {
-        rows.value = rows.value.map { if (it.start == start) it.copy(endExclusive = end, updatedAt = updatedAt) else it }
-    }
-
-    override suspend fun updateBudget(start: String, budget: Long, updatedAt: Long) {
-        rows.value = rows.value.map { if (it.start == start) it.copy(budget = budget, updatedAt = updatedAt) else it }
-    }
-
-    override suspend fun pinEnd(start: String, end: String, updatedAt: Long) {
-        rows.value = rows.value.map {
-            if (it.start == start) it.copy(endExclusive = end, endPinned = true, updatedAt = updatedAt) else it
-        }
-    }
-}
-
-/** 관문은 가장 오래된 거래 시각만 본다 — 그 외는 호출되면 실패시켜 의도치 않은 의존을 드러낸다 */
-private class FakeTransactionDao : TransactionDao {
-    var firstTime: Long? = null
-
-    override suspend fun getFirstTransactionTime(): Long? = firstTime
-
-    override suspend fun insert(entity: TransactionEntity): Long = unused()
-    override suspend fun update(entity: TransactionEntity) = unused()
-    override suspend fun delete(entity: TransactionEntity) = unused()
-    override suspend fun getById(id: Long): TransactionEntity? = unused()
-    override suspend fun getLastTransactionTime(): Long? = unused()
-    override fun observeAll(): Flow<List<TransactionEntity>> = unused()
-    override fun observeBetween(start: Long, end: Long): Flow<List<TransactionEntity>> = unused()
-    override fun observeBudgetSpentBetween(start: Long, end: Long): Flow<Long> = unused()
-    override fun observeBudgetIncomeBetween(start: Long, end: Long): Flow<Long> = unused()
-    override fun observeAllTimes(): Flow<List<Long>> = unused()
-    override fun observeLedgerSpentBetween(start: Long, end: Long): Flow<Long> = unused()
-    override fun observeLedgerIncomeBetween(start: Long, end: Long): Flow<Long> = unused()
-    override suspend fun getUnmatched(): List<TransactionEntity> = unused()
-    override suspend fun promoteByIds(ids: List<Long>, accountId: Long) = unused()
-    override suspend fun getWithExtractedAccount(): List<TransactionEntity> = unused()
-    override suspend fun deleteByIds(ids: List<Long>) = unused()
-    override suspend fun countBySource(packageName: String): Int = unused()
-    override suspend fun deleteBySource(packageName: String) = unused()
-    override suspend fun promoteBySource(packageName: String, accountId: Long) = unused()
-
-    private fun unused(): Nothing = error("CycleRepository가 쓰지 않는 DAO 메서드가 호출됨")
-}
-
-/** 공휴일 데이터만 갈아끼우는 원격 설정 (프로퍼티명은 getHolidays()와의 JVM 시그니처 충돌 회피) */
-private class FakeRemoteConfigRepository : RemoteConfigRepository {
-    var holidayData: Holidays = Holidays.EMPTY
-    override suspend fun fetchAndActivate(): Boolean = true
-    override fun getForcedUpdateVersion(): String = ""
-    override fun getRecommendUpdateVersion(): String = ""
-    override fun getHolidays(): Holidays = holidayData
-    override fun getAnnouncement(): Announcement? = null
-}
+// 페이크(FakeCycleDao·FakeTransactionDao·FakeRemoteConfigRepository)는 Fakes.kt — 회귀 테스트와 공유
