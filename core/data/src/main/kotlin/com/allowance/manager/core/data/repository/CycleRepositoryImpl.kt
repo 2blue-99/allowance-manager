@@ -73,6 +73,14 @@ class CycleRepositoryImpl(
     override suspend fun budgetFor(cycleStart: LocalDate): Long =
         cycleDao.getAll().toDomain().firstOrNull { it.start == cycleStart }?.budget ?: 0L
 
+    override suspend fun setCycleEnd(cycleStart: LocalDate, end: LocalDate) {
+        mutex.withLock {
+            cycleDao.pinEnd(cycleStart.toString(), end.toString(), System.currentTimeMillis())
+            // 고정한 끝이 이미 지났으면 그 날부터 이어서 채운다
+            ensureLocked(today())
+        }
+    }
+
     override suspend fun init(payday: Int, today: LocalDate) {
         mutex.withLock {
             val cycle = BudgetCycle.of(payday.coerceIn(0, 31), today, holidays())
@@ -90,35 +98,71 @@ class CycleRepositoryImpl(
         }
     }
 
-    override suspend fun changePayday(boundary: LocalDate, payday: Int, today: LocalDate) {
+    override suspend fun moveCycleStart(boundary: LocalDate, today: LocalDate) {
         mutex.withLock {
+            ensureLocked(today)
             val rows = cycleDao.getAll().toDomain()
-            val rule = payday.coerceIn(0, 31)
-            // 대체되는 예산은 현재 사이클 값을 이어받는다 (행이 없으면 0)
-            val keepBudget = rows.lastOrNull { !it.start.isAfter(today) }?.budget
-                ?: rows.lastOrNull()?.budget ?: 0L
+            val current = rows.lastOrNull { !it.start.isAfter(today) } ?: rows.lastOrNull()
+            // 행이 없거나(온보딩 전) 경계가 현재 끝을 넘으면 유지할 끝이 없다 → 규칙으로 끝을 계산하는 경로로
+            if (current == null || !boundary.isBefore(current.endExclusive)) {
+                changePaydayLocked(boundary, current?.payday ?: fallbackPayday, today)
+                return
+            }
+            if (boundary == current.start) return
 
-            // [boundary] 이후 시작 행은 이번 변경으로 대체 — 삭제
+            // 경계 이후 시작 행(현재 행 포함 가능)은 대체 — 삭제
             cycleDao.deleteStartingFrom(boundary.toString())
-
-            // 직전 행의 끝을 새 경계로 (트림/연장) — 인접성 유지
+            // 직전 행의 끝을 새 경계로 (트림/연장)
             val previous = cycleDao.getAll().toDomain().lastOrNull { it.start.isBefore(boundary) }
             if (previous != null && previous.endExclusive != boundary) {
                 cycleDao.updateEnd(previous.start.toString(), boundary.toString(), System.currentTimeMillis())
             }
-
+            // 끝·예산·규칙은 현재 회차 것을 그대로. 끝은 시작으로 유도되지 않으니 고정 표시
             cycleDao.upsert(
-                CycleEntity(
-                    start = boundary.toString(),
-                    endExclusive = BudgetCycle.endAfterPayDate(boundary, rule, holidays()).toString(),
-                    budget = keepBudget,
-                    payday = rule,
-                    updatedAt = System.currentTimeMillis(),
-                ),
+                Cycle(
+                    start = boundary,
+                    endExclusive = current.endExclusive,
+                    budget = current.budget,
+                    payday = current.payday,
+                    endPinned = true,
+                ).toEntity(System.currentTimeMillis()),
             )
-            // 경계를 과거로 당겼으면 오늘까지 이어서 채운다
             ensureLocked(today)
         }
+    }
+
+    override suspend fun changePayday(boundary: LocalDate, payday: Int, today: LocalDate) {
+        mutex.withLock { changePaydayLocked(boundary, payday, today) }
+    }
+
+    /** [changePayday] 본체 — 호출자가 [mutex]를 잡고 있어야 한다 */
+    private suspend fun changePaydayLocked(boundary: LocalDate, payday: Int, today: LocalDate) {
+        val rows = cycleDao.getAll().toDomain()
+        val rule = payday.coerceIn(0, 31)
+        // 대체되는 예산은 현재 사이클 값을 이어받는다 (행이 없으면 0)
+        val keepBudget = rows.lastOrNull { !it.start.isAfter(today) }?.budget
+            ?: rows.lastOrNull()?.budget ?: 0L
+
+        // [boundary] 이후 시작 행은 이번 변경으로 대체 — 삭제
+        cycleDao.deleteStartingFrom(boundary.toString())
+
+        // 직전 행의 끝을 새 경계로 (트림/연장) — 인접성 유지
+        val previous = cycleDao.getAll().toDomain().lastOrNull { it.start.isBefore(boundary) }
+        if (previous != null && previous.endExclusive != boundary) {
+            cycleDao.updateEnd(previous.start.toString(), boundary.toString(), System.currentTimeMillis())
+        }
+
+        cycleDao.upsert(
+            CycleEntity(
+                start = boundary.toString(),
+                endExclusive = BudgetCycle.endAfterPayDate(boundary, rule, holidays()).toString(),
+                budget = keepBudget,
+                payday = rule,
+                updatedAt = System.currentTimeMillis(),
+            ),
+        )
+        // 경계를 과거로 당겼으면 오늘까지 이어서 채운다
+        ensureLocked(today)
     }
 
     // ─────────────────────────── 관문 ───────────────────────────
@@ -135,10 +179,11 @@ class CycleRepositoryImpl(
         val holidays = holidays()
         val now = System.currentTimeMillis()
 
-        // ① 마지막 행의 끝은 '예정' — 규칙·공휴일이 바뀌었을 수 있으니 재계산해 맞춘다
+        // ① 마지막 행의 끝은 '예정' — 규칙·공휴일이 바뀌었을 수 있으니 재계산해 맞춘다.
+        //    사용자가 "이번 회차만 이 날"로 고정한 끝은 건드리지 않는다.
         var last = rows.last()
         val derived = BudgetCycle.endAfterPayDate(last.start, last.payday, holidays)
-        if (derived != last.endExclusive) {
+        if (!last.endPinned && derived != last.endExclusive) {
             cycleDao.updateEnd(last.start.toString(), derived.toString(), now)
             last = last.copy(endExclusive = derived)
         }
@@ -217,6 +262,7 @@ private fun List<CycleEntity>.toDomain(): List<Cycle> = mapNotNull { e ->
             endExclusive = LocalDate.parse(e.endExclusive),
             budget = e.budget,
             payday = e.payday,
+            endPinned = e.endPinned,
         )
     }.getOrNull()
 }
@@ -226,5 +272,6 @@ private fun Cycle.toEntity(updatedAt: Long) = CycleEntity(
     endExclusive = endExclusive.toString(),
     budget = budget,
     payday = payday,
+    endPinned = endPinned,
     updatedAt = updatedAt,
 )

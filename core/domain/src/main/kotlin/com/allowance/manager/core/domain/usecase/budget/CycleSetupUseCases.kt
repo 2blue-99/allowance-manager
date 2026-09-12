@@ -16,6 +16,17 @@ class InitPaydayRuleUseCase @Inject constructor(
 }
 
 /**
+ * "이번 월급일은 사실 이 날이었다" — 현재 회차의 시작만 옮긴다. 끝(다음 월급일)·예산·규칙은 그대로.
+ * 규칙으로 끝을 다시 계산하지 않으므로 말일 규칙에 20일을 넣어도 11일짜리 회차가 생기지 않는다.
+ */
+class MoveCycleStartUseCase @Inject constructor(
+    private val cycleRepository: CycleRepository,
+) {
+    suspend operator fun invoke(boundary: LocalDate, today: LocalDate = LocalDate.now()) =
+        cycleRepository.moveCycleStart(boundary, today)
+}
+
+/**
  * 월급일 변경 적용 — 시트에서 **규칙일**과 **이번에 받은 날(경계)** 을 함께 받는다.
  *
  * 경계를 그대로 두면 규칙일만 갱신되어 시작일(이미 받은 날)은 유지되고 끝만 다시 계산되고,

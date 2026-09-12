@@ -21,6 +21,31 @@ data class PaydayChangePreview(
 }
 
 /**
+ * [MoveCycleStartUseCase]의 결과 예고 — 시작만 [boundary]로 옮기고 **끝은 현재 회차 것을 유지**.
+ *
+ * 저장 로직([CycleRepository.moveCycleStart])과 같은 규칙: 직전 회차 끝은 경계로, 이번 회차 끝은 그대로.
+ * 경계가 현재 끝을 넘는 비정상 입력은 저장 쪽과 똑같이 규칙으로 끝을 계산한다.
+ */
+class PreviewCycleStartUseCase @Inject constructor(
+    private val cycleRepository: CycleRepository,
+    private val remoteConfigRepository: RemoteConfigRepository,
+) {
+    suspend operator fun invoke(boundary: LocalDate, today: LocalDate = LocalDate.now()): PaydayChangePreview {
+        val current = cycleRepository.cycleAt(today)
+        val previous = cycleRepository.getAll().lastOrNull { it.start.isBefore(boundary) }
+        val end = if (boundary.isBefore(current.endExclusive)) {
+            current.endExclusive
+        } else {
+            BudgetCycle.endAfterPayDate(boundary, current.payday, remoteConfigRepository.getHolidays())
+        }
+        return PaydayChangePreview(
+            thisCycle = BudgetCycle(boundary, end),
+            previousCycle = previous?.let { BudgetCycle(it.start, boundary) },
+        )
+    }
+}
+
+/**
  * [ChangePaydayUseCase]를 실제로 저장하기 전에 결과를 계산만 해서 보여준다.
  *
  * 저장 로직([CycleRepository.changePayday])과 같은 규칙을 따른다 — 경계 이후 사이클은 대체되고,

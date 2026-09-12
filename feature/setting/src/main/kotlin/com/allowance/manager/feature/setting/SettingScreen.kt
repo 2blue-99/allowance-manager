@@ -118,7 +118,10 @@ fun SettingRoute(
         onStatusBarEnabledChange = viewModel::setStatusBarEnabled,
         onBudgetChange = viewModel::setBudget,
         onPaydayRuleChange = viewModel::setPaydayRule,
+        onCycleEndChange = viewModel::setCycleEnd,
+        onCycleStartChange = viewModel::moveCycleStart,
         onPreviewPaydayChange = viewModel::previewPaydayChange,
+        onPreviewCycleStart = viewModel::previewCycleStart,
         onUserTypeChange = viewModel::setUserType,
         onBudgetAlertEnabledChange = viewModel::setBudgetAlertEnabled,
         onBudgetAlertFrequencyChange = viewModel::setBudgetAlertFrequency,
@@ -191,7 +194,10 @@ fun SettingScreen(
     onStatusBarEnabledChange: (Boolean) -> Unit = {},
     onBudgetChange: (Long) -> Unit = {},
     onPaydayRuleChange: (java.time.LocalDate, Int) -> Unit = { _, _ -> },
+    onCycleEndChange: (java.time.LocalDate) -> Unit = {},
+    onCycleStartChange: (java.time.LocalDate) -> Unit = {},
     onPreviewPaydayChange: PaydayPreview = { _, _ -> null },
+    onPreviewCycleStart: CycleStartPreview = { null },
     onUserTypeChange: (UserType) -> Unit = {},
     onBudgetAlertEnabledChange: (Boolean) -> Unit = {},
     onBudgetAlertFrequencyChange: (AlertFrequency) -> Unit = {},
@@ -237,7 +243,7 @@ fun SettingScreen(
                             }
                         },
                         {
-                            AmSettingItem(title = uiState.userType.paydayLabel, subtitle = "매달 받는 날", onClick = { showPaydayDialog = true }) {
+                            AmSettingItem(title = uiState.userType.paydayLabel, subtitle = "매달 받는 날 설정", onClick = { showPaydayDialog = true }) {
                                 Text(paydayLabel(uiState.payday), fontSize = 13.sp, fontWeight = FontWeight.Bold, color = AmColors.Emerald)
                                 Spacer(Modifier.width(AmSpacing.xs))
                                 AmChevron()
@@ -245,7 +251,7 @@ fun SettingScreen(
                         },
                         {
                             // 규칙과 별개로 "이번에 실제로 받은 날"만 정정하는 진입점
-                            AmSettingItem(title = "이번 회차", subtitle = "이번에 받은 날이 다르면 정정", onClick = { showCycleDialog = true }) {
+                            AmSettingItem(title = "이번 회차", subtitle = "이번 달만 받는 날이 다르면", onClick = { showCycleDialog = true }) {
                                 Text(uiState.cycle?.toShortPeriodLabel() ?: "—", fontSize = 13.sp, fontWeight = FontWeight.Bold, color = AmColors.Emerald)
                                 Spacer(Modifier.width(AmSpacing.xs))
                                 AmChevron()
@@ -377,14 +383,17 @@ fun SettingScreen(
             )
         }
     }
-    // 이번 회차 = 실제 받은 날만 (규칙 유지, 시작 이동)
+    // 이번 회차 = 받았던 날(시작만 이동, 끝 유지) / 받을 날(끝 고정). 규칙은 두 경우 모두 유지
     if (showCycleDialog) {
         uiState.cycle?.let { cycle ->
-            CycleStartDialog(
+            CycleAdjustDialog(
                 currentCycle = cycle,
                 currentPayday = uiState.payday,
+                paydayLabel = uiState.userType.paydayLabel,
                 preview = onPreviewPaydayChange,
-                onSave = { date -> onPaydayRuleChange(date, uiState.payday); showCycleDialog = false },
+                previewStart = onPreviewCycleStart,
+                onSaveStart = { date -> onCycleStartChange(date); showCycleDialog = false },
+                onSaveEnd = { date -> onCycleEndChange(date); showCycleDialog = false },
                 onDismiss = { showCycleDialog = false },
             )
         }

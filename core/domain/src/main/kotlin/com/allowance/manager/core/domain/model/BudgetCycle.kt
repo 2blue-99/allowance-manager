@@ -129,6 +129,25 @@ data class BudgetCycle(
         }
 
         /**
+         * "며칠에 받을 예정"이라는 일(日) 숫자를 **가장 가까운 다가올** 실제 날짜로 푼다 — [recentDate]의 반대 방향.
+         *
+         * 오늘은 포함하지 않는다(오늘 받았으면 [recentDate]로 '받았던 날'). 그 달에 없는 날은 건너뛰고,
+         * 두 달 안에 없으면 null.
+         */
+        fun upcomingDate(day: Int, today: LocalDate = LocalDate.now()): LocalDate? {
+            if (day !in 1..31) return null
+            var ym = YearMonth.from(today)
+            repeat(2) {
+                if (day <= ym.lengthOfMonth()) {
+                    val candidate = ym.atDay(day)
+                    if (candidate.isAfter(today)) return candidate
+                }
+                ym = ym.plusMonths(1)
+            }
+            return null
+        }
+
+        /**
          * 이력 기반 사이클 — [today]가 속한 구간.
          *
          * [rules]는 오래된 → 최신 순. 비어 있으면 [fallbackPayday]로 규칙일 하나만 쓰던

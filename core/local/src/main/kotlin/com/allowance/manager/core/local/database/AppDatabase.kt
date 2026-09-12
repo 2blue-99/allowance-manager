@@ -20,7 +20,8 @@ import com.allowance.manager.core.local.entity.TransactionEntity
     ],
     // v13: 사이클 실체화 — payday_history·budget_history → cycles 테이블 통합,
     //      transactions.cycle_start(도장) 제거(소속은 createdAt 범위로 조회)
-    version = 13,
+    // v14: cycles.end_pinned — "이번 회차만 받을 날" 고정 표시
+    version = 14,
     exportSchema = true,
 )
 abstract class AppDatabase : RoomDatabase() {

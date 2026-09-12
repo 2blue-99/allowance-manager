@@ -142,6 +142,34 @@ class BudgetCycleTest {
         assertEquals(null, BudgetCycle.recentDate(32, today))
     }
 
+    // ─────────── upcomingDate — "며칠에 받을 예정"을 가장 가까운 다가올 날짜로 ───────────
+
+    @Test
+    fun `upcomingDate - 이번 달에 아직 안 온 날은 이번 달`() {
+        assertEquals(LocalDate.of(2026, 9, 20), BudgetCycle.upcomingDate(20, today))
+    }
+
+    @Test
+    fun `upcomingDate - 오늘은 포함하지 않고 다음 달`() {
+        assertEquals(LocalDate.of(2026, 10, 12), BudgetCycle.upcomingDate(12, today))
+    }
+
+    @Test
+    fun `upcomingDate - 이미 지난 날은 다음 달`() {
+        assertEquals(LocalDate.of(2026, 10, 5), BudgetCycle.upcomingDate(5, today))
+    }
+
+    @Test
+    fun `upcomingDate - 이번 달에 없는 날(9월 31일)은 건너뛰고 다음 달`() {
+        assertEquals(LocalDate.of(2026, 10, 31), BudgetCycle.upcomingDate(31, today))
+    }
+
+    @Test
+    fun `upcomingDate - 두 달 모두 없는 날이면 null`() {
+        // 1/31 기준 31일: 1월(오늘이라 제외)·2월(없음) → null
+        assertEquals(null, BudgetCycle.upcomingDate(31, LocalDate.of(2026, 1, 31)))
+    }
+
     // ─────────── endAfterPayDate — 저장·미리보기가 공유하는 끝 계산 ───────────
 
     @Test

@@ -36,4 +36,8 @@ interface CycleDao {
     /** 그 사이클 예산 변경 */
     @Query("UPDATE cycles SET budget = :budget, updated_at = :updatedAt WHERE start = :start")
     suspend fun updateBudget(start: String, budget: Long, updatedAt: Long)
+
+    /** "이번 회차만 이 날 받아요" — 끝을 사용자 값으로 고정. 관문 재계산 대상에서 빠진다 */
+    @Query("UPDATE cycles SET end_exclusive = :end, end_pinned = 1, updated_at = :updatedAt WHERE start = :start")
+    suspend fun pinEnd(start: String, end: String, updatedAt: Long)
 }
