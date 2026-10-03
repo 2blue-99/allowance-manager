@@ -58,6 +58,7 @@ fun DebugRoute(
         onSeedTestData = viewModel::seedTestData,
         onSeedCategories = viewModel::seedCategoriesForMonth,
         onAddExpense = viewModel::addExpenseToMonth,
+        onAddIncome = viewModel::addIncomeToMonth,
         onSetBudget = viewModel::setBudgetForMonth,
         budgetStatusText = budgetStatusText,
         onSpendTenPercent = viewModel::spendBudgetTenPercent,
@@ -82,6 +83,7 @@ fun DebugScreen(
     onSeedTestData: () -> Unit = {},
     onSeedCategories: (YearMonth) -> Unit = {},
     onAddExpense: (YearMonth, Long) -> Unit = { _, _ -> },
+    onAddIncome: (YearMonth, Long) -> Unit = { _, _ -> },
     onSetBudget: (YearMonth, Long) -> Unit = { _, _ -> },
     budgetStatusText: String = "",
     onSpendTenPercent: () -> Unit = {},
@@ -97,9 +99,11 @@ fun DebugScreen(
     // 테스트 데이터 대상 달 (기본 이번 달) — 카테고리 시드·달별 세팅 공용 + 월 피커 노출 여부
     var seedMonth by remember { mutableStateOf(YearMonth.now()) }
     var showMonthPicker by remember { mutableStateOf(false) }
-    // 빠른 지출 입력 — 월·금액만
+    // 빠른 지출/수입 입력 — 월·금액만
     var quickMonthInput by remember { mutableStateOf(YearMonth.now().monthValue.toString()) }
     var quickAmountInput by remember { mutableStateOf("10000") }
+    var incomeMonthInput by remember { mutableStateOf(YearMonth.now().monthValue.toString()) }
+    var incomeAmountInput by remember { mutableStateOf("100000") }
     // 빠른 예산 설정 — 월·금액만
     var budgetMonthInput by remember { mutableStateOf(YearMonth.now().monthValue.toString()) }
     var budgetAmountInput by remember { mutableStateOf("500000") }
@@ -232,39 +236,34 @@ fun DebugScreen(
         )
         Spacer(Modifier.height(AmSpacing.sm))
         // 한 줄에서 끝내는 입력 — 월·금액만 받고 나머지(날짜·출처)는 기본값으로 채운다
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(AmSpacing.sm),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            AmLineTextField(
-                value = quickMonthInput,
-                onValueChange = { v -> quickMonthInput = v.filter { it.isDigit() }.take(2) },
-                hint = "월",
-                keyboardType = KeyboardType.Number,
-                modifier = Modifier.weight(1f),
-            )
-            AmLineTextField(
-                value = quickAmountInput,
-                onValueChange = { v -> quickAmountInput = v.filter { it.isDigit() } },
-                hint = "금액",
-                keyboardType = KeyboardType.Number,
-                modifier = Modifier.weight(2f),
-            )
-            AmButton(
-                text = "추가",
-                onClick = {
-                    val month = quickMonthInput.toIntOrNull()?.takeIf { it in 1..12 }
-                    val amount = quickAmountInput.toLongOrNull()?.takeIf { it > 0 }
-                    if (month != null && amount != null) {
-                        // 연도는 올해 기준. 아직 오지 않은 달이면 작년 것으로 본다.
-                        val now = YearMonth.now()
-                        val target = YearMonth.of(now.year, month)
-                        onAddExpense(if (target.isAfter(now)) target.minusYears(1) else target, amount)
-                    }
-                },
-            )
-        }
+        QuickMonthAmountRow(
+            monthInput = quickMonthInput,
+            onMonthChange = { quickMonthInput = it },
+            amountInput = quickAmountInput,
+            onAmountChange = { quickAmountInput = it },
+            amountHint = "금액",
+            buttonText = "추가",
+            onSubmit = onAddExpense,
+        )
+
+        Spacer(Modifier.height(AmSpacing.xl))
+        Text("수입 넣기", style = AmType.size12_bold, color = AmColors.TextSecondary)
+        Spacer(Modifier.height(AmSpacing.sm))
+        Text(
+            "월과 금액만 넣으면 그 달에 수입 1건이 바로 쌓여요 (예산 반영 → 남은 금액 가산)",
+            style = AmType.size10_medium,
+            color = AmColors.TextTertiary,
+        )
+        Spacer(Modifier.height(AmSpacing.sm))
+        QuickMonthAmountRow(
+            monthInput = incomeMonthInput,
+            onMonthChange = { incomeMonthInput = it },
+            amountInput = incomeAmountInput,
+            onAmountChange = { incomeAmountInput = it },
+            amountHint = "금액",
+            buttonText = "추가",
+            onSubmit = onAddIncome,
+        )
 
         Spacer(Modifier.height(AmSpacing.xl))
         Text("예산 넣기", style = AmType.size12_bold, color = AmColors.TextSecondary)
@@ -275,38 +274,15 @@ fun DebugScreen(
             color = AmColors.TextTertiary,
         )
         Spacer(Modifier.height(AmSpacing.sm))
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(AmSpacing.sm),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            AmLineTextField(
-                value = budgetMonthInput,
-                onValueChange = { v -> budgetMonthInput = v.filter { it.isDigit() }.take(2) },
-                hint = "월",
-                keyboardType = KeyboardType.Number,
-                modifier = Modifier.weight(1f),
-            )
-            AmLineTextField(
-                value = budgetAmountInput,
-                onValueChange = { v -> budgetAmountInput = v.filter { it.isDigit() } },
-                hint = "예산",
-                keyboardType = KeyboardType.Number,
-                modifier = Modifier.weight(2f),
-            )
-            AmButton(
-                text = "설정",
-                onClick = {
-                    val month = budgetMonthInput.toIntOrNull()?.takeIf { it in 1..12 }
-                    val amount = budgetAmountInput.toLongOrNull()?.takeIf { it > 0 }
-                    if (month != null && amount != null) {
-                        val now = YearMonth.now()
-                        val target = YearMonth.of(now.year, month)
-                        onSetBudget(if (target.isAfter(now)) target.minusYears(1) else target, amount)
-                    }
-                },
-            )
-        }
+        QuickMonthAmountRow(
+            monthInput = budgetMonthInput,
+            onMonthChange = { budgetMonthInput = it },
+            amountInput = budgetAmountInput,
+            onAmountChange = { budgetAmountInput = it },
+            amountHint = "예산",
+            buttonText = "설정",
+            onSubmit = onSetBudget,
+        )
     }
 
     if (showMonthPicker) {
@@ -318,6 +294,54 @@ fun DebugScreen(
             allowEmptyMonths = true,   // 디버그는 빈 달에도 시드를 넣어야 하므로 전부 활성
             onSelect = { seedMonth = it; showMonthPicker = false },
             onDismiss = { showMonthPicker = false },
+        )
+    }
+}
+
+/**
+ * 디버그 화면 전용 "월 · 금액 · 버튼" 한 줄. 숫자만 받고, 월은 1~12·금액은 양수일 때만 [onSubmit].
+ * 연도는 올해 기준이되 아직 오지 않은 달이면 작년 것으로 본다.
+ */
+@Composable
+private fun QuickMonthAmountRow(
+    monthInput: String,
+    onMonthChange: (String) -> Unit,
+    amountInput: String,
+    onAmountChange: (String) -> Unit,
+    amountHint: String,
+    buttonText: String,
+    onSubmit: (YearMonth, Long) -> Unit,
+) {
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.spacedBy(AmSpacing.sm),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        AmLineTextField(
+            value = monthInput,
+            onValueChange = { v -> onMonthChange(v.filter { it.isDigit() }.take(2)) },
+            hint = "월",
+            keyboardType = KeyboardType.Number,
+            modifier = Modifier.weight(1f),
+        )
+        AmLineTextField(
+            value = amountInput,
+            onValueChange = { v -> onAmountChange(v.filter { it.isDigit() }) },
+            hint = amountHint,
+            keyboardType = KeyboardType.Number,
+            modifier = Modifier.weight(2f),
+        )
+        AmButton(
+            text = buttonText,
+            onClick = {
+                val month = monthInput.toIntOrNull()?.takeIf { it in 1..12 }
+                val amount = amountInput.toLongOrNull()?.takeIf { it > 0 }
+                if (month != null && amount != null) {
+                    val now = YearMonth.now()
+                    val target = YearMonth.of(now.year, month)
+                    onSubmit(if (target.isAfter(now)) target.minusYears(1) else target, amount)
+                }
+            },
         )
     }
 }

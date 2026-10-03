@@ -119,13 +119,25 @@ class DebugViewModel @Inject constructor(
         }
     }
 
+    /** 테스트용: 선택한 달에 [amount]원 지출 1건 추가. 누를 때마다 쌓인다. */
+    fun addExpenseToMonth(month: YearMonth, amount: Long) =
+        addToMonth(month, amount, TransactionType.EXPENSE, "테스트 지출", category = null)
+
+    /** 테스트용: 선택한 달에 [amount]원 수입 1건 추가(기본 scope=BUDGET → 남은 금액에 가산). */
+    fun addIncomeToMonth(month: YearMonth, amount: Long) =
+        addToMonth(month, amount, TransactionType.INCOME, "테스트 수입", category = TransactionCategory.INCOME)
+
     /**
-     * 테스트용: 선택한 달에 [amount]원 지출 1건 추가. 누를 때마다 쌓인다.
-     *
      * 날짜는 그 달 15일. 다만 이번 달이면 미래 거래가 되지 않도록 오늘 날짜로 넣는다.
      * 시:분:초는 지금 시각을 써서 같은 달에 여러 건을 넣어도 정렬이 구분된다.
      */
-    fun addExpenseToMonth(month: YearMonth, amount: Long) {
+    private fun addToMonth(
+        month: YearMonth,
+        amount: Long,
+        type: TransactionType,
+        sourceName: String,
+        category: TransactionCategory?,
+    ) {
         viewModelScope.launch {
             val zone = ZoneId.systemDefault()
             val today = LocalDate.now()
@@ -136,10 +148,11 @@ class DebugViewModel @Inject constructor(
                 .atZone(zone).toInstant().toEpochMilli()
             transactionRepository.record(
                 Transaction(
-                    type = TransactionType.EXPENSE,
+                    type = type,
                     amount = amount,
                     packageName = "",
-                    sourceName = "테스트 지출",
+                    sourceName = sourceName,
+                    category = category,
                     isManual = true,
                     createdAt = createdAt,
                 ),
