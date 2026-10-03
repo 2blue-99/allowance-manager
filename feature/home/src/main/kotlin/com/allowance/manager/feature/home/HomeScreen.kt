@@ -21,7 +21,6 @@ import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -35,6 +34,7 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.outlined.Delete
+import androidx.compose.material.icons.outlined.Settings
 import androidx.compose.material.icons.outlined.Visibility
 import androidx.compose.material.icons.outlined.VisibilityOff
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -75,7 +75,8 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.allowance.manager.core.domain.model.Announcement
 import com.allowance.manager.core.domain.model.toShortPeriodLabel
-import com.allowance.manager.core.designsystem.component.AmHelpIcon
+import com.allowance.manager.core.designsystem.component.AmHelpIconButton
+import com.allowance.manager.core.designsystem.component.AmIconButton
 import com.allowance.manager.core.domain.model.LedgerFilter
 import com.allowance.manager.core.domain.model.LedgerFilterChip
 import com.allowance.manager.core.domain.model.Transaction
@@ -126,6 +127,7 @@ fun HomeRoute(
     widgetPinSupported: Boolean = false,
     @DrawableRes widgetPreviewRes: Int = 0,
     onAddWidget: () -> Unit = {},
+    onOpenSetting: () -> Unit = {},
     viewModel: HomeViewModel = hiltViewModel(),
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
@@ -148,6 +150,7 @@ fun HomeRoute(
         showGuide = showGuide,
         onGuideFinished = viewModel::onGuideFinished,
         onReopenGuide = viewModel::onReopenGuide,
+        onOpenSetting = onOpenSetting,
         widgetPinSupported = widgetPinSupported,
         widgetPreviewRes = widgetPreviewRes,
         onAddWidget = onAddWidget,
@@ -173,6 +176,7 @@ fun HomeScreen(
     showGuide: Boolean = false,
     onGuideFinished: () -> Unit = {},
     onReopenGuide: () -> Unit = {},
+    onOpenSetting: () -> Unit = {},
     widgetPinSupported: Boolean = false,
     @DrawableRes widgetPreviewRes: Int = 0,
     onAddWidget: () -> Unit = {},
@@ -207,7 +211,7 @@ fun HomeScreen(
 
     Box(modifier = modifier.fillMaxSize()) {
         Column(modifier = Modifier.fillMaxSize().background(AmColors.ScreenBg)) {
-            Hero(uiState = uiState, guideTargets = guideTargets, onReopenGuide = onReopenGuide)
+            Hero(uiState = uiState, guideTargets = guideTargets, onReopenGuide = onReopenGuide, onOpenSetting = onOpenSetting)
             BottomContent(
                 uiState = uiState,
                 onFilterChip = onFilterChip,
@@ -362,21 +366,33 @@ private fun Hero(
     uiState: HomeUiState,
     guideTargets: SnapshotStateMap<String, Rect>,
     onReopenGuide: () -> Unit = {},
+    onOpenSetting: () -> Unit = {},
 ) {
+    val analytics = LocalAnalyticsHelper.current
     Column(
         modifier = Modifier
             .fillMaxWidth()
             .background(AmColors.ScreenBg)
             .padding(horizontal = AmSpacing.xl)
-            .padding(top = 12.dp, bottom = 4.dp),
+            .padding(top = AmSpacing.xs, bottom = AmSpacing.xs),
     ) {
+        // 상단 헤더: 우측 도움말(?)·설정(⚙)만. 예산 카드가 상태바에 바로 붙지 않도록 숨 쉴 공간 역할도 한다.
+        Row(
+            modifier = Modifier.fillMaxWidth().height(HOME_HEADER_HEIGHT),
+            horizontalArrangement = Arrangement.End,
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            AmHelpIconButton(onClick = onReopenGuide)
+            Spacer(Modifier.width(AmSpacing.sm))
+            AmIconButton(
+                icon = Icons.Outlined.Settings,
+                contentDescription = "더보기",
+                onClick = { analytics.logEvent(AmAnalytics.Event.HOME_SETTING_CLICK); onOpenSetting() },
+            )
+        }
+        Spacer(Modifier.height(AmSpacing.sm))
         Box(Modifier.fillMaxWidth().guideTarget("hero", guideTargets)) {
             BudgetCard(uiState = uiState)
-            // 가이드 재진입 ? — 카드 우상단 코너에 오버레이. 카드 내부 정렬(가운데 머리글·금액)은 건드리지 않는다.
-            AmHelpIcon(
-                onClick = onReopenGuide,
-                modifier = Modifier.align(Alignment.TopEnd).padding(14.dp),
-            )
         }
         Spacer(Modifier.height(12.dp))
         // 가이드 2번: 하루 지표는 예산 카드로 옮겨져 지출·수입 카드만 하이라이트한다.
@@ -385,6 +401,9 @@ private fun Hero(
         }
     }
 }
+
+// 홈 상단 헤더 높이
+private val HOME_HEADER_HEIGHT = 44.dp
 
 // 예산 카드 머리글(라벨·기간) 투명도 — 주인공인 금액과 대비되게 낮춘 값
 private const val HERO_CAPTION_ALPHA = 0.45f

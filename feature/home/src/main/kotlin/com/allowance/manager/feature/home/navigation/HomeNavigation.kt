@@ -17,6 +17,8 @@ fun NavGraphBuilder.homeScreen(
     widgetPinSupported: Boolean = false,
     @DrawableRes widgetPreviewRes: Int = 0,
     onAddWidget: () -> Unit = {},
+    // 상단 헤더 ⚙ → 더보기(설정) 탭 이동. 탭 전환 방식은 app(AppNavHost)이 결정하므로 콜백으로 받는다.
+    onOpenSetting: () -> Unit = {},
 ) {
     composable<HomeRoute> {
         HomeRoute(
@@ -24,6 +26,7 @@ fun NavGraphBuilder.homeScreen(
             widgetPinSupported = widgetPinSupported,
             widgetPreviewRes = widgetPreviewRes,
             onAddWidget = onAddWidget,
+            onOpenSetting = onOpenSetting,
         )
     }
 }

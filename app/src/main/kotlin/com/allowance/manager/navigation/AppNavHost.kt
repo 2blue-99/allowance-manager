@@ -228,6 +228,7 @@ fun AppNavHost(
                 widgetPinSupported = widgetPinSupported,
                 widgetPreviewRes = WidgetPinner.remainPreview,
                 onAddWidget = { WidgetPinner.requestPinRemainWidget(context) },
+                onOpenSetting = { navController.navigateToTab(SettingRoute) },
             )
             calendarScreen()
             statsScreen(
