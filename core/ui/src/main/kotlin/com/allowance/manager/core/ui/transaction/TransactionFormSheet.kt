@@ -31,7 +31,6 @@ import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.Text
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
@@ -119,13 +118,8 @@ fun TransactionFormSheet(
     var merchant by remember(stateKey) { mutableStateOf(editTx?.merchant.orEmpty()) }
     var category by remember(stateKey) { mutableStateOf<TransactionCategory?>(editTx?.category ?: TransactionCategory.ETC) }
     var memo by remember(stateKey) { mutableStateOf(editTx?.memo.orEmpty()) }
-    // 수입 기본은 '가계부만'(예산 미반영), 그 외는 예산 반영
-    var txScope by remember(stateKey) { mutableStateOf(editTx?.scope ?: defaultScopeFor(TransactionType.EXPENSE)) }
-    // 추가 모드에서 사용자가 직접 고르기 전까진 유형에 따라 기본 scope 자동 반영
-    var scopeTouched by remember(stateKey) { mutableStateOf(false) }
-    LaunchedEffect(type) {
-        if (editTx == null && !scopeTouched) txScope = defaultScopeFor(type)
-    }
+    // 직접 추가 기본은 유형과 무관하게 예산 반영(BUDGET) — 수입도 남은 금액에 가산(기획서 4.3)
+    var txScope by remember(stateKey) { mutableStateOf(editTx?.scope ?: TxScope.BUDGET) }
     var promote by remember(stateKey) { mutableStateOf(editTx?.isMain ?: false) }
     var showDeleteConfirm by remember(stateKey) { mutableStateOf(false) }
     var showIgnoreConfirm by remember(stateKey) { mutableStateOf(false) }
@@ -258,7 +252,7 @@ fun TransactionFormSheet(
                                         SheetScopeSelector(
                                             scope = txScope,
                                             budgetName = budgetName,
-                                            onScope = { txScope = it; if (editTx == null) scopeTouched = true },
+                                            onScope = { txScope = it },
                                         )
                                         // 아래 토글이 함께 있을 때만 구분선 (scope와 함께 접힘)
                                         if (showPromote) {
@@ -474,10 +468,6 @@ private fun IgnoreSourceButton(label: String, onClick: () -> Unit) {
 private fun SheetLabel(text: String) {
     Text(text, style = AmType.size12_bold, color = AmColors.TextSecondary)
 }
-
-/** 유형별 기본 예산 반영 상태 — 수입은 '가계부만'(예산 미반영), 그 외는 예산 반영. */
-private fun defaultScopeFor(type: TransactionType): TxScope =
-    if (type == TransactionType.INCOME) TxScope.LEDGER_ONLY else TxScope.BUDGET
 
 /** 예산 반영 상태 3분기 선택 (BUDGET / LEDGER_ONLY / EXCLUDED) */
 @Composable
