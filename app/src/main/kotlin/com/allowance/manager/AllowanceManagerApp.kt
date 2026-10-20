@@ -6,25 +6,36 @@ import com.allowance.manager.core.domain.usecase.alert.GetDailyReminderSettingUs
 import com.allowance.manager.core.domain.usecase.alert.GetPaydayAlertSettingUseCase
 import com.allowance.manager.core.domain.usecase.budget.GetUserTypeUseCase
 import com.allowance.manager.core.domain.usecase.budget.ObserveBudgetStatusUseCase
+import com.allowance.manager.core.domain.usecase.budget.ObserveDailyCoachUseCase
+import com.allowance.manager.core.domain.usecase.calendar.ObserveMonthlyLedgerUseCase
 import com.allowance.manager.service.BudgetAlertNotifier
 import com.allowance.manager.service.DailyReminderScheduler
 import com.allowance.manager.service.PaydayAlarmScheduler
 import com.allowance.manager.feature.widget.refreshBalanceWidget
+import com.allowance.manager.feature.widget.scheduleWidgetDayRefresh
 import dagger.hilt.android.HiltAndroidApp
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.distinctUntilChanged
-import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.flatMapLatest
+import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.launch
 import timber.log.Timber
+import java.time.LocalDate
+import java.time.ZoneId
 import javax.inject.Inject
 
 @HiltAndroidApp
 class AllowanceManagerApp : Application() {
 
     @Inject lateinit var observeBudgetStatusUseCase: ObserveBudgetStatusUseCase
+    @Inject lateinit var observeDailyCoachUseCase: ObserveDailyCoachUseCase
+    @Inject lateinit var observeMonthlyLedgerUseCase: ObserveMonthlyLedgerUseCase
     @Inject lateinit var getBudgetAlertSettingUseCase: GetBudgetAlertSettingUseCase
     @Inject lateinit var getUserTypeUseCase: GetUserTypeUseCase
     @Inject lateinit var budgetAlertNotifier: BudgetAlertNotifier
@@ -95,17 +106,39 @@ class AllowanceManagerApp : Application() {
     }
 
     /**
-     * 이번달 지출/예산이 바뀔 때마다 위젯을 갱신.
-     * 거래 저장·무시·삭제·예산/수급일 변경 등 모든 데이터 변화를 한곳에서 커버.
+     * 위젯 4종이 보여주는 값(예산 현황·오늘 코치·가계부)이 바뀔 때마다 위젯을 갱신.
+     * 거래 저장·무시·삭제·등록/해제·예산/수급일 변경 등 모든 데이터 변화를 한곳에서 커버.
+     *
+     * - 지출·예산만 보면 수입·'가계부만' 내역 변화를 놓친다 → 위젯이 쓰는 UseCase 결과 전체를 본다.
+     * - UseCase의 '오늘'은 구독 시점에 고정되므로 자정마다 다시 구독한다 (사이클 넘어감·오늘 지표 반영).
+     * - 앱 프로세스가 없을 때의 날짜 변경은 위젯 모듈의 자정 알람이 담당.
      */
+    @OptIn(ExperimentalCoroutinesApi::class)
     private fun observeAndRefreshWidget() {
+        runCatching { scheduleWidgetDayRefresh(this) }
         appScope.launch {
-            observeBudgetStatusUseCase()
-                .map { it.spent to it.budget }
+            todayTicks()
+                .flatMapLatest { today ->
+                    combine(
+                        observeBudgetStatusUseCase(today),
+                        observeDailyCoachUseCase(today),
+                        observeMonthlyLedgerUseCase(today),
+                    ) { status, coach, ledger -> Triple(status, coach, ledger) }
+                }
                 .distinctUntilChanged()
                 .collect {
                     runCatching { refreshBalanceWidget(this@AllowanceManagerApp) }
                 }
         }
     }
+
+    /** 오늘 날짜를 방출하고, 다음 자정(+5초)마다 새 날짜를 방출 */
+    private fun todayTicks(zone: ZoneId = ZoneId.systemDefault()): Flow<LocalDate> = flow {
+        while (true) {
+            val today = LocalDate.now(zone)
+            emit(today)
+            val nextMidnight = today.plusDays(1).atStartOfDay(zone).toInstant().toEpochMilli()
+            delay((nextMidnight - System.currentTimeMillis()).coerceAtLeast(0L) + 5_000L)
+        }
+    }.distinctUntilChanged()
 }

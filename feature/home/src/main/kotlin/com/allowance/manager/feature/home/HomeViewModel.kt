@@ -47,7 +47,6 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.launch
 import java.time.LocalDate
-import java.time.temporal.ChronoUnit
 import javax.inject.Inject
 
 data class HomeUiState(
@@ -155,14 +154,11 @@ class HomeViewModel @Inject constructor(
                 // 멀티 토글 필터: 전체(둘 다 꺼짐) / 메인 / 숨김 / 메인+숨김
                 val visible = transactions.filter { filter.matches(it) }
 
-                // 하루 권장액·평균·D-day: 사이클 경계와 오늘 기준으로 계산 (0일 나눗셈 방어)
+                // 하루 권장액·평균·D-day: BudgetStatus 공용 계산 (오늘 코치 위젯과 같은 값)
                 val today = LocalDate.now()
-                val daysUntil = ChronoUnit.DAYS.between(today, status.cycle.nextPayday).toInt()
-                val daysLeft = daysUntil.coerceAtLeast(1)
-                val elapsed = (ChronoUnit.DAYS.between(status.cycle.start, today).toInt() + 1).coerceAtLeast(1)
-                // 하루 권장·평균은 100원 단위로 내림 표시 (예: 13,163 → 13,100)
-                val dailyBudget = if (status.remaining > 0) status.remaining / daysLeft / 100 * 100 else 0L
-                val dailyAverage = status.spent / elapsed / 100 * 100
+                val daysUntil = status.daysUntilPayday(today)
+                val dailyBudget = status.dailyRecommended(today)
+                val dailyAverage = status.dailyAverage(today)
                 val spentRatio = if (status.budget > 0) (status.spent.toFloat() / status.budget).coerceIn(0f, 1f) else 0f
                 // 이번 달 수입 = 가계부 집계(BUDGET+LEDGER_ONLY) · INCOME (홈 수입 카드용)
                 val income = transactions

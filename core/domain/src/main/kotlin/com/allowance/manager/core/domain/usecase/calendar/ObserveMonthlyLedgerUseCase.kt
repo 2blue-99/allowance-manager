@@ -1,29 +1,30 @@
 package com.allowance.manager.core.domain.usecase.calendar
 
 import com.allowance.manager.core.domain.model.MonthlyLedger
+import com.allowance.manager.core.domain.repository.CycleRepository
 import com.allowance.manager.core.domain.repository.TransactionRepository
+import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.combine
-import java.time.YearMonth
-import java.time.ZoneId
+import kotlinx.coroutines.flow.flatMapLatest
+import java.time.LocalDate
 import javax.inject.Inject
 
 /**
- * 가계부 위젯용 이번 달(달력 월: 1일~말일) 지출·수입 합계를 관찰.
- * 홈/예산과 달리 수급일 사이클이 아닌 달력 월 기준이다.
+ * 가계부 위젯용 이번 달 지출·수입 합계를 관찰.
+ * "이번 달" = [today]가 속한 **수급일 사이클** (홈·월별과 같은 범위). 사이클 경계가 바뀌면 재방출.
  */
 class ObserveMonthlyLedgerUseCase @Inject constructor(
+    private val cycleRepository: CycleRepository,
     private val transactionRepository: TransactionRepository,
 ) {
-    operator fun invoke(
-        month: YearMonth = YearMonth.now(),
-        zone: ZoneId = ZoneId.systemDefault(),
-    ): Flow<MonthlyLedger> {
-        val start = month.atDay(1).atStartOfDay(zone).toInstant().toEpochMilli()
-        val end = month.plusMonths(1).atDay(1).atStartOfDay(zone).toInstant().toEpochMilli() - 1
-        return combine(
-            transactionRepository.observeLedgerSpentBetween(start, end),
-            transactionRepository.observeLedgerIncomeBetween(start, end),
-        ) { expense, income -> MonthlyLedger(expense = expense, income = income) }
-    }
+    @OptIn(ExperimentalCoroutinesApi::class)
+    operator fun invoke(today: LocalDate = LocalDate.now()): Flow<MonthlyLedger> =
+        cycleRepository.observeCycleAt(today).flatMapLatest { cycle ->
+            val period = cycle.period
+            combine(
+                transactionRepository.observeLedgerSpentBetween(period.startMillis(), period.endMillis()),
+                transactionRepository.observeLedgerIncomeBetween(period.startMillis(), period.endMillis()),
+            ) { expense, income -> MonthlyLedger(expense = expense, income = income) }
+        }
 }

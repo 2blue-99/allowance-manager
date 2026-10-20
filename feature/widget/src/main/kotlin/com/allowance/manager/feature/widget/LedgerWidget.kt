@@ -12,7 +12,7 @@ import androidx.glance.appwidget.provideContent
 import com.allowance.manager.core.designsystem.theme.AmColors
 import com.allowance.manager.core.domain.util.toCompactWon
 
-/** ④ 가계부 (2×1 → 4×1). 이번 달(달력 월) 지출·수입 2분할. */
+/** ④ 가계부 (2×1 → 4×1). 이번 달(수급일 사이클) 지출·수입 2분할. */
 class LedgerWidget : GlanceAppWidget() {
 
     override val sizeMode = SizeMode.Exact

@@ -55,6 +55,16 @@
                 android:resource="@xml/ledger_widget_info" />
         </receiver>
 
+        <!-- 날짜 변경(자정 알람·시각/시간대 변경) → 위젯 4종 갱신 (사이클·오늘 지표 갱신) -->
+        <receiver
+            android:name=".WidgetDayChangeReceiver"
+            android:exported="false">
+            <intent-filter>
+                <action android:name="android.intent.action.TIME_SET" />
+                <action android:name="android.intent.action.TIMEZONE_CHANGED" />
+            </intent-filter>
+        </receiver>
+
     </application>
 
 </manifest>

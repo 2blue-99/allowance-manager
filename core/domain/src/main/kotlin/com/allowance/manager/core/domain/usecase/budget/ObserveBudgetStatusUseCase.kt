@@ -7,6 +7,7 @@ import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.flatMapLatest
+import java.time.LocalDate
 import javax.inject.Inject
 
 /**
@@ -14,14 +15,16 @@ import javax.inject.Inject
  *
  * 예산·지출·수입이 **모두 같은 사이클**을 기준으로 나온다. 홈·위젯·상태바가 이 하나를 공유하므로
  * 여기서 나온 값을 화면에서 다시 계산하지 말 것 — 재계산하면 값이 어긋난다.
+ *
+ * [today]는 구독 시점에 고정된다. 오래 사는 구독(앱 전역 위젯 갱신 등)은 날짜가 바뀌면 다시 구독할 것.
  */
 class ObserveBudgetStatusUseCase @Inject constructor(
     private val cycleRepository: CycleRepository,
     private val transactionRepository: TransactionRepository,
 ) {
     @OptIn(ExperimentalCoroutinesApi::class)
-    operator fun invoke(): Flow<BudgetStatus> =
-        cycleRepository.observeCycleAt().flatMapLatest { cycle ->
+    operator fun invoke(today: LocalDate = LocalDate.now()): Flow<BudgetStatus> =
+        cycleRepository.observeCycleAt(today).flatMapLatest { cycle ->
             val period = cycle.period
             combine(
                 transactionRepository.observeBudgetSpentBetween(period.startMillis(), period.endMillis()),
