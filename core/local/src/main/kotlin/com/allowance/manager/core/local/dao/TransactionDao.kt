@@ -22,6 +22,24 @@ interface TransactionDao {
     @Query("SELECT * FROM transactions WHERE id = :id")
     suspend fun getById(id: Long): TransactionEntity?
 
+    // ── 컬럼 단위 수정 ──
+    // 행 전체를 읽어 copy 로 덮어쓰면, 시트 '저장'이 동시에 띄우는 승격(account_id 기록)을
+    // 옛 값으로 되돌릴 수 있다 → 각 동작은 자기 컬럼만 고친다.
+
+    /** 예산 반영 상태만 변경 (상세시트 3분기 · 스와이프 제외/복원) */
+    @Query("UPDATE transactions SET scope = :scope WHERE id = :id")
+    suspend fun updateScope(id: Long, scope: String)
+
+    /** 시트에서 편집하는 내용(유형·금액·사용처·메모·분류)만 변경 */
+    @Query(
+        """
+        UPDATE transactions
+        SET type = :type, amount = :amount, merchant = :merchant, memo = :memo, category = :category
+        WHERE id = :id
+        """
+    )
+    suspend fun updateContent(id: Long, type: String, amount: Long, merchant: String?, memo: String?, category: String?)
+
     /** 가장 오래된 내역 시각 (월별 화면의 이전-달 이동 하한). 내역이 없으면 null */
     @Query("SELECT MIN(created_at) FROM transactions")
     suspend fun getFirstTransactionTime(): Long?
@@ -97,6 +115,13 @@ interface TransactionDao {
         """
     )
     suspend fun promoteByIds(ids: List<Long>, accountId: Long)
+
+    /**
+     * 메인 → 비메인 해제(승격의 역연산): 그 계좌 내역을 미매칭으로 되돌리고 전부 EXCLUDED.
+     * '가계부만'(LEDGER_ONLY)도 제외 — 해제된 내역은 메인 필터에서 빠지고 전체에서만 보여야 한다.
+     */
+    @Query("UPDATE transactions SET account_id = NULL, scope = 'EXCLUDED' WHERE account_id = :accountId")
+    suspend fun demoteByAccount(accountId: Long)
 
     // ── 무시 계좌 소급 삭제·건수 ──
     /** 계좌번호 있는 내역 (번호 기준 무시 매칭 후보; 마스킹 대조는 도메인에서 판정) */

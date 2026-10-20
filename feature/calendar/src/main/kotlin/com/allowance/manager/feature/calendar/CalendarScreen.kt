@@ -108,6 +108,7 @@ fun CalendarRoute(
         onDelete = viewModel::onDelete,
         onSaveTransaction = viewModel::onSaveTransaction,
         onPromoteToMain = viewModel::onPromoteToMain,
+        onDemoteFromMain = viewModel::onDemoteFromMain,
     )
 }
 
@@ -130,6 +131,7 @@ fun CalendarScreen(
     onDelete: (Long) -> Unit = {},
     onSaveTransaction: (Long, TransactionType, Long, String, String, TransactionCategory?) -> Unit = { _, _, _, _, _, _ -> },
     onPromoteToMain: (Transaction) -> Unit = {},
+    onDemoteFromMain: (Transaction) -> Unit = {},
     modifier: Modifier = Modifier,
 ) {
     val analytics = LocalAnalyticsHelper.current
@@ -224,6 +226,7 @@ fun CalendarScreen(
             onSetScope = onSetScope,
             onDelete = onDelete,
             onPromoteToMain = onPromoteToMain,
+            onDemoteFromMain = onDemoteFromMain,
             onIgnoreSource = onIgnoreSource,
             countIgnorable = countIgnorable,
             onSaveTransaction = onSaveTransaction,

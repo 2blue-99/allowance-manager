@@ -4,6 +4,8 @@ import com.allowance.manager.core.domain.model.Announcement
 import com.allowance.manager.core.domain.model.Cycle
 import com.allowance.manager.core.domain.model.Holidays
 import com.allowance.manager.core.domain.model.Transaction
+import com.allowance.manager.core.domain.model.TransactionType
+import com.allowance.manager.core.domain.model.TransactionCategory
 import com.allowance.manager.core.domain.model.TxScope
 import com.allowance.manager.core.domain.repository.CycleRepository
 import com.allowance.manager.core.domain.repository.RemoteConfigRepository
@@ -55,8 +57,12 @@ open class FakeTransactionRepository : TransactionRepository {
     override fun observeLedgerIncomeBetween(start: Long, end: Long): Flow<Long> = unused()
     override suspend fun setHidden(id: Long, hidden: Boolean) = unused()
     override suspend fun setScope(id: Long, scope: TxScope) = unused()
-    override suspend fun promoteToMain(pattern: String, accountId: Long) = unused()
-    override suspend fun promoteToMainBySource(packageName: String, accountId: Long) = unused()
+    override suspend fun promoteToMain(pattern: String, accountId: Long): Unit = unused()
+    override suspend fun promoteToMainBySource(packageName: String, accountId: Long): Unit = unused()
+    override suspend fun demoteFromMain(accountId: Long): Unit = unused()
+    override suspend fun updateContent(
+        id: Long, type: TransactionType, amount: Long, merchant: String?, memo: String?, category: TransactionCategory?,
+    ) = unused()
     override suspend fun countMatchingForIgnore(pattern: String?, packageName: String): Int = unused()
     override suspend fun deleteMatchingForIgnore(pattern: String?, packageName: String) = unused()
 

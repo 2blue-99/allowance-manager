@@ -5,7 +5,7 @@ import com.allowance.manager.core.domain.model.Account
 import com.allowance.manager.core.domain.usecase.account.AddAccountUseCase
 import com.allowance.manager.core.domain.usecase.account.DeleteAccountUseCase
 import com.allowance.manager.core.domain.usecase.account.ObserveAccountsUseCase
-import com.allowance.manager.core.domain.usecase.account.UpdateAccountUseCase
+import com.allowance.manager.core.domain.usecase.account.SetAccountEnabledUseCase
 import com.allowance.manager.core.analytics.AmAnalytics
 import com.allowance.manager.core.analytics.AnalyticsHelper
 import com.allowance.manager.core.common.BaseViewModel
@@ -25,7 +25,7 @@ data class AccountUiState(
 class AccountViewModel @Inject constructor(
     observeAccountsUseCase: ObserveAccountsUseCase,
     private val addAccountUseCase: AddAccountUseCase,
-    private val updateAccountUseCase: UpdateAccountUseCase,
+    private val setAccountEnabledUseCase: SetAccountEnabledUseCase,
     private val deleteAccountUseCase: DeleteAccountUseCase,
     private val analytics: AnalyticsHelper,
 ) : BaseViewModel() {
@@ -58,7 +58,8 @@ class AccountViewModel @Inject constructor(
 
     fun onToggleEnabled(account: Account, enabled: Boolean) {
         analytics.logEvent(AmAnalytics.Event.ACCOUNT_ENABLED_TOGGLE, mapOf(AmAnalytics.Param.ENABLED to enabled))
-        viewModelScope.launch { updateAccountUseCase(account.copy(enabled = enabled)) }
+        // ON = 기존 내역 소급 승격 / OFF = 그 계좌 내역 비메인·제외 (계좌는 목록에 남음)
+        viewModelScope.launch { setAccountEnabledUseCase(account, enabled) }
     }
 
     fun onDelete(account: Account) {

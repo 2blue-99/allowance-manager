@@ -20,6 +20,12 @@ class AccountRepositoryImpl @Inject constructor(
     override suspend fun getEnabled(): List<Account> =
         accountDao.getEnabled().map { it.toDomain() }
 
+    override suspend fun getAll(): List<Account> =
+        accountDao.getAll().map { it.toDomain() }
+
+    override suspend fun getById(id: Long): Account? =
+        accountDao.getById(id)?.toDomain()
+
     override suspend fun add(account: Account): Long =
         accountDao.insert(account.toEntity())
 

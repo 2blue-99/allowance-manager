@@ -24,4 +24,11 @@ interface AccountDao {
 
     @Query("SELECT * FROM accounts WHERE enabled = 1")
     suspend fun getEnabled(): List<AccountEntity>
+
+    /** 꺼진 계좌 포함 전체 — 승격 시 같은 계좌 재사용(중복 등록 방지)용 */
+    @Query("SELECT * FROM accounts ORDER BY id")
+    suspend fun getAll(): List<AccountEntity>
+
+    @Query("SELECT * FROM accounts WHERE id = :id")
+    suspend fun getById(id: Long): AccountEntity?
 }

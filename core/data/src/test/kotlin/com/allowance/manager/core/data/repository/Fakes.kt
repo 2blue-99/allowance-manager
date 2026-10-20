@@ -83,6 +83,9 @@ class FakeTransactionDao : TransactionDao {
     override suspend fun countBySource(packageName: String): Int = unused()
     override suspend fun deleteBySource(packageName: String) = unused()
     override suspend fun promoteBySource(packageName: String, accountId: Long) = unused()
+    override suspend fun demoteByAccount(accountId: Long) = unused()
+    override suspend fun updateScope(id: Long, scope: String) = unused()
+    override suspend fun updateContent(id: Long, type: String, amount: Long, merchant: String?, memo: String?, category: String?) = unused()
 
     private fun unused(): Nothing = error("테스트가 준비하지 않은 TransactionDao 메서드가 호출됨")
 }

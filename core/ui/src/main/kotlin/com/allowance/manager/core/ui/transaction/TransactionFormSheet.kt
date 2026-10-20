@@ -95,6 +95,8 @@ fun TransactionFormSheet(
     onSetScope: (Long, TxScope) -> Unit = { _, _ -> },
     onDelete: (Long) -> Unit = {},
     onPromoteToMain: (Transaction) -> Unit = {},
+    // 메인 해제(토글 OFF → 저장): 그 계좌 내역 전부 비메인·제외 → 메인 필터·예산에서 빠짐
+    onDemoteFromMain: (Transaction) -> Unit = {},
     onSaved: () -> Unit = {},
     // 무시(출처/계좌 차단): 등록 + 과거 내역 소급 삭제. 비메인·자동감지 내역에만 노출.
     onIgnoreSource: (Transaction) -> Unit = {},
@@ -390,10 +392,13 @@ fun TransactionFormSheet(
                             val coreChanged = memoChanged || categoryChanged || typeChanged || amountChanged || merchantChanged
                             val scopeChanged = txScope != editTx.scope
                             val promoteNow = promote && !editTx.isMain
+                            val demoteNow = !promote && editTx.isMain
                             if (coreChanged) onSaveTransaction(editTx.id, type, amount, merchant, memo, effectiveCategory)
-                            if (scopeChanged) onSetScope(editTx.id, txScope)
+                            // 해제는 내역을 전부 제외로 돌리므로, 함께 고른 예산 반영 상태는 적용하지 않음
+                            if (scopeChanged && !demoteNow) onSetScope(editTx.id, txScope)
                             if (promoteNow) onPromoteToMain(editTx)
-                            if (coreChanged || scopeChanged || promoteNow) onSaved()
+                            if (demoteNow) onDemoteFromMain(editTx)
+                            if (coreChanged || scopeChanged || promoteNow || demoteNow) onSaved()
                             close()
                         },
                         modifier = Modifier.weight(1f),

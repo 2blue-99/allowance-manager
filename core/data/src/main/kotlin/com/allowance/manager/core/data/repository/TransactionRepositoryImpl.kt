@@ -58,15 +58,23 @@ class TransactionRepositoryImpl @Inject constructor(
     override fun observeLedgerIncomeBetween(start: Long, end: Long): Flow<Long> =
         transactionDao.observeLedgerIncomeBetween(start, end)
 
+    override suspend fun updateContent(
+        id: Long,
+        type: TransactionType,
+        amount: Long,
+        merchant: String?,
+        memo: String?,
+        category: TransactionCategory?,
+    ) = transactionDao.updateContent(id, type.name, amount, merchant, memo, category?.name)
+
     override suspend fun setHidden(id: Long, hidden: Boolean) {
         // 전환기: hidden 토글을 scope 로 매핑 (true=EXCLUDED / false=BUDGET). Phase 5에서 setScope 로 대체.
-        val scope = if (hidden) "EXCLUDED" else "BUDGET"
-        transactionDao.getById(id)?.let { transactionDao.update(it.copy(scope = scope)) }
+        val scope = if (hidden) TxScope.EXCLUDED else TxScope.BUDGET
+        transactionDao.updateScope(id, scope.name)
     }
 
-    override suspend fun setScope(id: Long, scope: TxScope) {
-        transactionDao.getById(id)?.let { transactionDao.update(it.copy(scope = scope.name)) }
-    }
+    override suspend fun setScope(id: Long, scope: TxScope) =
+        transactionDao.updateScope(id, scope.name)
 
     // 마스킹 계좌 대조는 SQL로 불가 → 미매칭 내역을 불러와 도메인 규칙으로 판정 후 일괄 승격
     override suspend fun promoteToMain(pattern: String, accountId: Long) {
@@ -79,6 +87,9 @@ class TransactionRepositoryImpl @Inject constructor(
     // 출처(앱) 기준 승격은 SQL로 처리 (계좌번호 없는 같은 packageName 내역)
     override suspend fun promoteToMainBySource(packageName: String, accountId: Long) =
         transactionDao.promoteBySource(packageName, accountId)
+
+    override suspend fun demoteFromMain(accountId: Long) =
+        transactionDao.demoteByAccount(accountId)
 
     // 번호 기준은 마스킹 대조가 필요해 도메인에서 필터, 출처 기준은 SQL로 처리
     override suspend fun countMatchingForIgnore(pattern: String?, packageName: String): Int =

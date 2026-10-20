@@ -30,6 +30,7 @@ import com.allowance.manager.core.domain.usecase.transaction.DeleteTransactionUs
 import com.allowance.manager.core.domain.usecase.transaction.HideTransactionUseCase
 import com.allowance.manager.core.domain.usecase.transaction.ObserveCurrentTransactionsUseCase
 import com.allowance.manager.core.domain.usecase.transaction.AddManualTransactionUseCase
+import com.allowance.manager.core.domain.usecase.transaction.DemoteFromMainUseCase
 import com.allowance.manager.core.domain.usecase.transaction.PromoteToMainUseCase
 import com.allowance.manager.core.domain.usecase.transaction.SetTxScopeUseCase
 import com.allowance.manager.core.domain.usecase.transaction.UpdateTransactionUseCase
@@ -83,6 +84,7 @@ class HomeViewModel @Inject constructor(
     private val countIgnorableTransactionsUseCase: CountIgnorableTransactionsUseCase,
     private val deleteTransactionUseCase: DeleteTransactionUseCase,
     private val promoteToMainUseCase: PromoteToMainUseCase,
+    private val demoteFromMainUseCase: DemoteFromMainUseCase,
     private val updateTransactionUseCase: UpdateTransactionUseCase,
     private val setTxScopeUseCase: SetTxScopeUseCase,
     private val addManualTransactionUseCase: AddManualTransactionUseCase,
@@ -262,5 +264,11 @@ class HomeViewModel @Inject constructor(
                 accountPattern = transaction.extractedAccount,
             )
         }
+    }
+
+    /** 메인 해제 — 그 계좌 내역 전부 비메인·제외 (등록과 같은 계좌 단위) */
+    fun onDemoteFromMain(transaction: Transaction) {
+        val accountId = transaction.accountId ?: return
+        viewModelScope.launch { demoteFromMainUseCase(accountId) }
     }
 }

@@ -6,6 +6,8 @@ import kotlinx.coroutines.flow.Flow
 interface AccountRepository {
     fun observeAll(): Flow<List<Account>>
     suspend fun getEnabled(): List<Account>
+    suspend fun getAll(): List<Account>
+    suspend fun getById(id: Long): Account?
     suspend fun add(account: Account): Long
     suspend fun update(account: Account)
     suspend fun delete(account: Account)

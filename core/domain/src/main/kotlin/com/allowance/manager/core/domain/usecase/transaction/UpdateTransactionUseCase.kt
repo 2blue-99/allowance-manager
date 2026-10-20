@@ -30,15 +30,15 @@ class UpdateTransactionUseCase @Inject constructor(
             type == TransactionType.EXPENSE && tx.amount < 0 -> -magnitude
             else -> magnitude   // 수입·이체·일반 지출 = 양수
         }
-        transactionRepository.update(
-            tx.copy(
-                type = type,
-                amount = signed,
-                // 출처(sourceName)는 읽기전용. 사용자가 편집하는 건 사용처(merchant)뿐.
-                merchant = merchant.trim().ifBlank { null },
-                memo = memo.trim().ifBlank { null },
-                category = category,
-            )
+        // 편집 컬럼만 갱신 — 같은 저장에서 함께 도는 승격·해제(account_id·scope)를 옛 값으로 덮지 않도록
+        transactionRepository.updateContent(
+            id = id,
+            type = type,
+            amount = signed,
+            // 출처(sourceName)는 읽기전용. 사용자가 편집하는 건 사용처(merchant)뿐.
+            merchant = merchant.trim().ifBlank { null },
+            memo = memo.trim().ifBlank { null },
+            category = category,
         )
     }
 }

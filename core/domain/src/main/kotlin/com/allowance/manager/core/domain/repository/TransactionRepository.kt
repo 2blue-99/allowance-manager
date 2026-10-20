@@ -1,12 +1,24 @@
 package com.allowance.manager.core.domain.repository
 
 import com.allowance.manager.core.domain.model.Transaction
+import com.allowance.manager.core.domain.model.TransactionCategory
+import com.allowance.manager.core.domain.model.TransactionType
 import com.allowance.manager.core.domain.model.TxScope
 import kotlinx.coroutines.flow.Flow
 
 interface TransactionRepository {
     suspend fun record(transaction: Transaction): Long
     suspend fun update(transaction: Transaction)
+
+    /** 시트에서 편집하는 내용(유형·금액·사용처·메모·분류)만 변경 — 계좌 매칭·예산 반영 상태는 건드리지 않음 */
+    suspend fun updateContent(
+        id: Long,
+        type: TransactionType,
+        amount: Long,
+        merchant: String?,
+        memo: String?,
+        category: TransactionCategory?,
+    )
     suspend fun delete(id: Long)
     suspend fun getById(id: Long): Transaction?
 
@@ -47,6 +59,9 @@ interface TransactionRepository {
 
     /** 같은 출처(앱)의 계좌번호 없는 비메인 내역을 메인(accountId)으로 승격 */
     suspend fun promoteToMainBySource(packageName: String, accountId: Long)
+
+    /** 메인 해제: 그 계좌(accountId) 내역을 비메인으로 되돌리고 전부 EXCLUDED (메인 필터·예산에서 빠짐) */
+    suspend fun demoteFromMain(accountId: Long)
 
     /**
      * 무시 계좌 기준 매칭 내역 건수 (다이얼로그 "기존 {n}건" 표시).
