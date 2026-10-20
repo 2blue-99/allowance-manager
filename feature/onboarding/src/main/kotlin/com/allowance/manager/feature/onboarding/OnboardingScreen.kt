@@ -132,10 +132,10 @@ fun OnboardingRoute(
         }
     }
 
-    // 온보딩 화면 이동은 공통 가로 슬라이드 전환 사용.
+    // 온보딩 화면 이동은 순차 페이드(사라짐 → 나타남) — 단계 화면이 겹쳐 보이지 않게.
     AnimatedContent(
         targetState = step,
-        transitionSpec = { AmMotion.slideForward() },
+        transitionSpec = { AmMotion.fadeOutThenIn() },
         label = "onboardingStep",
     ) { current ->
         when (current) {

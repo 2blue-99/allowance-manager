@@ -13,7 +13,7 @@ import androidx.compose.animation.togetherWith
 /**
  * 앱 공통 모션 스펙. 지속시간·전환 애니메이션을 한곳에서 관리한다.
  * - NavHost 화면 전환: [fadeEnter] / [fadeExit]
- * - AnimatedContent 전환: [slideForward] / [slideBackward] / [fadeThrough]
+ * - AnimatedContent 전환: [slideForward] / [slideBackward] / [fadeThrough] / [fadeOutThenIn]
  */
 object AmMotion {
     /** 기본 전환 지속시간(ms) */
@@ -59,4 +59,18 @@ object AmMotion {
     /** AnimatedContent: 페이드만 */
     fun fadeThrough(durationMs: Int = DurationMs): ContentTransform =
         fadeEnter(durationMs) togetherWith fadeExit(durationMs)
+
+    /** 순차 페이드의 사라짐 구간(ms) */
+    const val FadeOutMs = 150
+
+    /** 순차 페이드의 나타남 구간(ms) */
+    const val FadeInMs = 200
+
+    /**
+     * AnimatedContent: 순차 페이드 — 기존 화면이 완전히 사라진 뒤 새 화면이 나타난다(겹침 없음).
+     * [fadeThrough]는 두 화면이 동시에 교차하므로, 단계형 흐름(온보딩 등)에서 내용이 겹쳐 보이지 않게 할 때 쓴다.
+     */
+    fun fadeOutThenIn(outMs: Int = FadeOutMs, inMs: Int = FadeInMs): ContentTransform =
+        fadeIn(tween(durationMillis = inMs, delayMillis = outMs)) togetherWith
+            fadeOut(tween(durationMillis = outMs))
 }
