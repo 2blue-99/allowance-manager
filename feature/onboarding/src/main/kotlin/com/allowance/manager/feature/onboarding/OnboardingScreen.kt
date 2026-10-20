@@ -60,6 +60,7 @@ import com.allowance.manager.core.designsystem.component.AmThousandsTransformati
 import com.allowance.manager.core.designsystem.theme.AmColors
 import com.allowance.manager.core.designsystem.theme.AmShape
 import com.allowance.manager.core.designsystem.theme.AmSpacing
+import com.allowance.manager.core.designsystem.theme.AmType
 import com.allowance.manager.core.domain.model.UserType
 import androidx.compose.foundation.border
 import androidx.compose.ui.draw.clip
@@ -415,7 +416,11 @@ private fun AccountSection(
 ) {
     Section("$label 계좌 정보를 입력해주세요") {
         Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-            Text("은행 이름과 계좌 번호로 입출금 알림을 자동 감지해요.", fontSize = 14.sp, color = TextSecondary)
+            // 예산 정확도를 좌우하는 단계 — 첫 줄에 핵심 메시지를 강조
+            Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                Text("돈 관리의 핵심, 통장 쪼개기", style = AmType.size14_bold, color = AmColors.Emerald)
+                Text("은행 이름과 계좌 번호로 입출금 알림을 자동 감지해요.", fontSize = 14.sp, color = TextSecondary)
+            }
             AmLineTextField(
                 value = bankName,
                 onValueChange = onBankNameChange,
