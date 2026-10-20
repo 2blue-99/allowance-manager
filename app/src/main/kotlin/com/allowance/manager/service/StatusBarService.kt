@@ -20,12 +20,15 @@ import com.allowance.manager.R
 import com.allowance.manager.core.domain.usecase.budget.ObserveBudgetStatusUseCase
 import com.allowance.manager.core.domain.usecase.setting.GetStatusBarEnabledUseCase
 import com.allowance.manager.core.domain.util.amountToComma
+import com.allowance.manager.core.domain.util.todayTicks
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
@@ -61,6 +64,7 @@ class StatusBarService : Service() {
 
     override fun onBind(intent: Intent?) = null
 
+    @OptIn(ExperimentalCoroutinesApi::class)
     override fun onCreate() {
         super.onCreate()
         createChannel()
@@ -74,7 +78,8 @@ class StatusBarService : Service() {
 
         scope.launch {
             combine(
-                observeBudgetStatusUseCase(),
+                // 서비스가 몇 주씩 살아 있으므로 자정마다 재구독 — 수급일이 지나면 새 사이클로 넘어감
+                todayTicks().flatMapLatest { observeBudgetStatusUseCase(it) },
                 getStatusBarEnabledUseCase(),
             ) { status, enabled -> status to enabled }
                 .collect { (status, enabled) ->

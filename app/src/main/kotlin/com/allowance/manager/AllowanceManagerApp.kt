@@ -11,6 +11,7 @@ import com.allowance.manager.core.domain.usecase.calendar.ObserveMonthlyLedgerUs
 import com.allowance.manager.service.BudgetAlertNotifier
 import com.allowance.manager.service.DailyReminderScheduler
 import com.allowance.manager.service.PaydayAlarmScheduler
+import com.allowance.manager.core.domain.util.todayTicks
 import com.allowance.manager.feature.widget.refreshBalanceWidget
 import com.allowance.manager.feature.widget.scheduleWidgetDayRefresh
 import dagger.hilt.android.HiltAndroidApp
@@ -18,16 +19,11 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.SupervisorJob
-import kotlinx.coroutines.delay
-import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.flatMapLatest
-import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.launch
 import timber.log.Timber
-import java.time.LocalDate
-import java.time.ZoneId
 import javax.inject.Inject
 
 @HiltAndroidApp
@@ -92,10 +88,12 @@ class AllowanceManagerApp : Application() {
      * 이번달 예산 현황 변화를 받아 예산 소진 알림(임계값 관통)을 발송.
      * 위젯 갱신과 같은 흐름(ObserveBudgetStatusUseCase)을 공유해 홈·위젯과 값이 항상 일치한다.
      */
+    @OptIn(ExperimentalCoroutinesApi::class)
     private fun observeBudgetAlert() {
         appScope.launch {
             combine(
-                observeBudgetStatusUseCase(),
+                // 자정마다 재구독 — 상태바 서비스가 프로세스를 살려두면 지난 사이클에 머무는 것 방지
+                todayTicks().flatMapLatest { observeBudgetStatusUseCase(it) },
                 getBudgetAlertSettingUseCase(),
                 getUserTypeUseCase(),
             ) { status, setting, userType -> Triple(status, setting, userType) }
@@ -131,14 +129,4 @@ class AllowanceManagerApp : Application() {
                 }
         }
     }
-
-    /** 오늘 날짜를 방출하고, 다음 자정(+5초)마다 새 날짜를 방출 */
-    private fun todayTicks(zone: ZoneId = ZoneId.systemDefault()): Flow<LocalDate> = flow {
-        while (true) {
-            val today = LocalDate.now(zone)
-            emit(today)
-            val nextMidnight = today.plusDays(1).atStartOfDay(zone).toInstant().toEpochMilli()
-            delay((nextMidnight - System.currentTimeMillis()).coerceAtLeast(0L) + 5_000L)
-        }
-    }.distinctUntilChanged()
 }
