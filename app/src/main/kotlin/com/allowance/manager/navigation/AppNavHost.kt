@@ -213,6 +213,7 @@ fun AppNavHost(
                 onFinish = {
                     navController.navigate(OnboardingRoute) {
                         popUpTo(IntroRoute) { inclusive = true }
+                        launchSingleTop = true   // 완료 콜백 중복 호출 시 같은 화면이 두 번 쌓이지 않게
                     }
                 },
             )
@@ -220,6 +221,7 @@ fun AppNavHost(
                 onFinish = {
                     navController.navigate(HomeRoute) {
                         popUpTo(OnboardingRoute) { inclusive = true }
+                        launchSingleTop = true
                     }
                 },
             )

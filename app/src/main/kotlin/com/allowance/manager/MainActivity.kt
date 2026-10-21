@@ -13,6 +13,9 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
 import androidx.navigation.compose.rememberNavController
 import androidx.compose.runtime.CompositionLocalProvider
@@ -59,7 +62,14 @@ class MainActivity : ComponentActivity() {
             .addOnFailureListener { e -> Timber.tag("FCM").e(e, "토큰 조회 실패") }
         setContent {
             AllowanceManagerTheme {
-                val startDestination by viewModel.startDestination.collectAsState()
+                // 시작지점은 '처음 판정된 값'으로 고정한다. VM 의 startDestination 은 DataStore 를 따라
+                // INTRO→ONBOARDING→HOME 으로 계속 바뀌는데, 그대로 NavHost 에 넣으면 그래프가 재생성되어
+                // 인트로/온보딩의 onFinish 내비게이션과 겹쳐 스택이 꼬인다(홈 2개·온보딩 재등장). 이후 이동은 내비가 담당.
+                val latestStart by viewModel.startDestination.collectAsState()
+                var startDestination by remember { mutableStateOf<StartDestination?>(null) }
+                LaunchedEffect(latestStart) {
+                    if (startDestination == null && latestStart != null) startDestination = latestStart
+                }
 
                 val statusBarEnabled by viewModel.statusBarEnabled.collectAsState()
                 LaunchedEffect(statusBarEnabled) {
