@@ -57,6 +57,8 @@ class AllowanceNotificationListenerService : NotificationListenerService() {
     }
 
     override fun onNotificationPosted(sbn: StatusBarNotification) {
+        // 리스너는 이 앱의 알림(상태바·예산 알림·FCM)도 받는다 → 자기 알림을 거래로 기록하지 않도록 먼저 제외
+        if (sbn.packageName == packageName) return
         val extras = sbn.notification?.extras
         if (extras == null) {
             log("알림수신 pkg=${sbn.packageName} (extras 없음 → 무시)")
