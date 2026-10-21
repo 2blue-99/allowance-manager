@@ -44,7 +44,9 @@ class AllowanceManagerApp : Application() {
 
     override fun onCreate() {
         super.onCreate()
-        Timber.plant(Timber.DebugTree())
+        // 릴리즈에선 로그 트리를 심지 않는다 — 리스너가 찍는 알림 본문·금액·계좌가 로그캣에 남지 않도록.
+        // (트리가 없으면 Timber 호출은 no-op → 앱 동작엔 영향 없음)
+        if (BuildConfig.DEBUG) Timber.plant(Timber.DebugTree())
         observeAndRefreshWidget()
         observeBudgetAlert()
         observeDailyReminder()
