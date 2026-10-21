@@ -2,6 +2,7 @@ package com.allowance.manager.feature.account
 
 import androidx.lifecycle.viewModelScope
 import com.allowance.manager.core.domain.model.Account
+import com.allowance.manager.core.domain.model.MaskedAccount
 import com.allowance.manager.core.domain.usecase.account.AddAccountUseCase
 import com.allowance.manager.core.domain.usecase.account.DeleteAccountUseCase
 import com.allowance.manager.core.domain.usecase.account.ObserveAccountsUseCase
@@ -42,7 +43,8 @@ class AccountViewModel @Inject constructor(
     }
 
     fun onAdd(bankName: String, pattern: String) {
-        if (pattern.isBlank()) return
+        // 정규화(숫자·마스킹만) 후에도 비면 저장하지 않는다 — 빈 패턴 계좌는 어떤 알림에도 매칭되지 않음
+        if (MaskedAccount.normalize(pattern).isBlank()) return
         analytics.logEvent(AmAnalytics.Event.ACCOUNT_ADD)
         viewModelScope.launch {
             addAccountUseCase(

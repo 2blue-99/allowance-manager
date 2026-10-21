@@ -32,6 +32,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -186,8 +187,10 @@ private fun AddAccountForm(onAdd: (String, String) -> Unit) {
             )
             AmLineTextField(
                 value = pattern,
-                onValueChange = { pattern = it },
+                // 숫자와 구분자(-)만 입력 허용 (온보딩과 동일). 저장 시 도메인에서 숫자만 남긴다.
+                onValueChange = { v -> pattern = v.filter { it.isDigit() || it == '-' } },
                 hint = "예) 941111-11-111111 (\"-\" 제외)",
+                keyboardType = KeyboardType.Number,
                 modifier = Modifier.fillMaxWidth(),
             )
             AmButton(
@@ -197,7 +200,8 @@ private fun AddAccountForm(onAdd: (String, String) -> Unit) {
                     bankName = ""
                     pattern = ""
                 },
-                enabled = pattern.isNotBlank(),
+                // 숫자가 하나라도 있어야 추가 — 구분자만 입력하면 정규화 후 빈 계좌가 저장되는 것 방지
+                enabled = pattern.any { it.isDigit() },
                 modifier = Modifier.fillMaxWidth(),
             )
         }
