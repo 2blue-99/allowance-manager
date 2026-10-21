@@ -31,6 +31,25 @@ class AccountRegistrationTest {
     }
 
     @Test
+    fun `같은 번호 계좌가 이미 있으면 추가해도 새 행을 만들지 않는다`() = runBlocking {
+        // 온보딩 정보 단계 저장 후 프로세스가 죽어 다시 지나는 경우 · 계좌관리에서 같은 번호 재입력
+        val first = AddAccountUseCase(accounts, transactions)(
+            Account(packageName = "", bankName = "국민", accountPattern = "941602-12-345318", enabled = false)
+        )
+        val second = AddAccountUseCase(accounts, transactions)(
+            Account(packageName = "", bankName = "내 계좌", accountPattern = "94160212345318")
+        )
+
+        assertEquals(first, second)
+        assertEquals(1, accounts.all.value.size)
+        // 재추가로 켜지고, 기본 이름("내 계좌")으로 기존 이름을 덮지 않는다
+        assertTrue(accounts.byId(first)!!.enabled)
+        assertEquals("국민", accounts.byId(first)!!.bankName)
+        // 켜진 쪽(두 번째)만 소급 승격
+        assertEquals(listOf("number:94160212345318:$first"), transactions.calls)
+    }
+
+    @Test
     fun `스위치 OFF는 그 계좌 내역을 해제하고 계좌는 목록에 남긴다`() = runBlocking {
         val acc = accounts.seed(Account(packageName = "", bankName = "국민", accountPattern = "94160212345318"))
 

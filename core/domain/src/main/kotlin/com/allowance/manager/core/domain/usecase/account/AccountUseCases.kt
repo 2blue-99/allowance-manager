@@ -33,16 +33,46 @@ class ObserveAccountsUseCase @Inject constructor(
     operator fun invoke(): Flow<List<Account>> = accountRepository.observeAll()
 }
 
-/** 계좌 추가(온보딩·계좌관리) — 저장 후 같은 계좌의 기존 내역도 바로 메인으로 승격 */
+/**
+ * 계좌 추가(온보딩·계좌관리) — 저장 후 같은 계좌의 기존 내역도 바로 메인으로 승격.
+ *
+ * 같은 계좌(번호 계좌 = 같은 번호 / 출처 계좌 = 같은 앱)가 이미 있으면 새로 만들지 않고 그 행을 재사용한다
+ * (꺼져 있으면 켠다). 온보딩 중 프로세스가 죽어 정보 단계를 다시 지나거나, 계좌관리에서 같은 번호를
+ * 또 넣어도 중복 행이 생기지 않는다. 계좌 테이블엔 unique 제약이 없어 여기서 막는다.
+ */
 class AddAccountUseCase @Inject constructor(
     private val accountRepository: AccountRepository,
     private val transactionRepository: TransactionRepository,
 ) {
     suspend operator fun invoke(account: Account): Long {
         val normalized = account.normalized()
-        val id = accountRepository.add(normalized)
-        if (normalized.enabled) transactionRepository.promoteExisting(normalized.copy(id = id))
-        return id
+        val existing = accountRepository.getAll().firstOrNull { it.isSameAccount(normalized) }
+        val saved = if (existing != null) {
+            // 이름은 새로 입력한 값으로 갱신(기본값 제외), 켜짐 상태로
+            val merged = existing.copy(
+                bankName = normalized.bankName.takeIf { it.isNotBlank() && it != DEFAULT_BANK_NAME } ?: existing.bankName,
+                enabled = existing.enabled || normalized.enabled,
+            )
+            if (merged != existing) accountRepository.update(merged)
+            merged
+        } else {
+            normalized.copy(id = accountRepository.add(normalized))
+        }
+        if (saved.enabled) transactionRepository.promoteExisting(saved)
+        return saved.id
+    }
+
+    /** 같은 계좌 판정: 번호 계좌는 정규화 번호가 같을 때, 출처 계좌는 같은 앱일 때 */
+    private fun Account.isSameAccount(other: Account): Boolean =
+        if (isNumberBased || other.isNumberBased) {
+            isNumberBased && other.isNumberBased && accountPattern == other.accountPattern
+        } else {
+            packageName.isNotBlank() && packageName == other.packageName
+        }
+
+    private companion object {
+        /** 온보딩·계좌관리가 은행명을 비웠을 때 넣는 기본값 — 기존 이름을 이것으로 덮지 않는다 */
+        const val DEFAULT_BANK_NAME = "내 계좌"
     }
 }
 
