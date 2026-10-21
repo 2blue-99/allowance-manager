@@ -12,6 +12,7 @@ import com.android.billingclient.api.ProductDetails
 import com.android.billingclient.api.Purchase
 import com.android.billingclient.api.PurchasesUpdatedListener
 import com.android.billingclient.api.QueryProductDetailsParams
+import com.android.billingclient.api.QueryPurchasesParams
 import timber.log.Timber
 
 /**
@@ -23,18 +24,30 @@ import timber.log.Timber
  */
 class DonationManager(context: Context) {
 
-    enum class Result { SUCCESS, CANCELED, ERROR }
+    /** PENDING = 결제 수단 승인 대기(편의점 결제 등). 아직 돈이 안 들어왔으므로 감사 다이얼로그를 띄우지 않는다 */
+    enum class Result { SUCCESS, PENDING, CANCELED, ERROR }
 
     private var resultCallback: ((Result) -> Unit)? = null
 
     private val purchasesListener = PurchasesUpdatedListener { result, purchases ->
-        when {
-            result.responseCode == BillingClient.BillingResponseCode.OK && purchases != null -> {
-                purchases.forEach { consume(it) }
-                resultCallback?.invoke(Result.SUCCESS)
+        when (result.responseCode) {
+            BillingClient.BillingResponseCode.OK -> {
+                val list = purchases.orEmpty()
+                val purchased = list.filter { it.purchaseState == Purchase.PurchaseState.PURCHASED }
+                purchased.forEach { consume(it) }
+                resultCallback?.invoke(
+                    when {
+                        purchased.isNotEmpty() -> Result.SUCCESS
+                        list.any { it.purchaseState == Purchase.PurchaseState.PENDING } -> Result.PENDING
+                        else -> Result.ERROR
+                    },
+                )
             }
-            result.responseCode == BillingClient.BillingResponseCode.USER_CANCELED ->
-                resultCallback?.invoke(Result.CANCELED)
+            BillingClient.BillingResponseCode.USER_CANCELED -> resultCallback?.invoke(Result.CANCELED)
+            // 소비 안 된 구매가 남아 있는 경우(결제 직후 프로세스 종료 등) → 정리해 두면 다음 후원부터 정상
+            BillingClient.BillingResponseCode.ITEM_ALREADY_OWNED -> {
+                consumeOwned { resultCallback?.invoke(Result.ERROR) }
+            }
             else -> resultCallback?.invoke(Result.ERROR)
         }
     }
@@ -51,19 +64,36 @@ class DonationManager(context: Context) {
         resultCallback = onResult
         ensureConnected { ok ->
             if (!ok) { onResult(Result.ERROR); return@ensureConnected }
-            queryProduct { product ->
-                if (product == null) { onResult(Result.ERROR); return@queryProduct }
-                val params = BillingFlowParams.newBuilder()
-                    .setProductDetailsParamsList(
-                        listOf(
-                            BillingFlowParams.ProductDetailsParams.newBuilder()
-                                .setProductDetails(product)
-                                .build(),
-                        ),
-                    )
-                    .build()
-                client.launchBillingFlow(activity, params)
+            // 결제창을 띄우기 전에 소비 안 된 구매를 먼저 정리 — 소비성 상품은 소비 전까지 재구매가 막힌다
+            consumeOwned {
+                queryProduct { product ->
+                    if (product == null) { onResult(Result.ERROR); return@queryProduct }
+                    val params = BillingFlowParams.newBuilder()
+                        .setProductDetailsParamsList(
+                            listOf(
+                                BillingFlowParams.ProductDetailsParams.newBuilder()
+                                    .setProductDetails(product)
+                                    .build(),
+                            ),
+                        )
+                        .build()
+                    val launch = client.launchBillingFlow(activity, params)
+                    // 결제창 자체가 안 뜨면 PurchasesUpdatedListener 가 호출되지 않으므로 여기서 결과를 알린다
+                    if (launch.responseCode != BillingClient.BillingResponseCode.OK) onResult(Result.ERROR)
+                }
             }
+        }
+    }
+
+    /**
+     * 기기에 남아 있는 구매 중 소비 안 된 PURCHASED 를 소비한다 (복구).
+     * 결제 직후 앱이 죽었거나, PENDING 이 나중에 PURCHASED 로 바뀐 경우를 커버. 조회 실패해도 다음 단계로 진행.
+     */
+    private fun consumeOwned(onDone: () -> Unit) {
+        val params = QueryPurchasesParams.newBuilder().setProductType(BillingClient.ProductType.INAPP).build()
+        client.queryPurchasesAsync(params) { result, purchases ->
+            if (result.responseCode == BillingClient.BillingResponseCode.OK) purchases.forEach { consume(it) }
+            onDone()
         }
     }
 
