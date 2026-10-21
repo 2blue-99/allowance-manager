@@ -86,12 +86,14 @@ class MainActivity : ComponentActivity() {
                             onDismiss = { if (!forced) viewModel.onUpdateDialogDismissed() },
                             onConfirm = {
                                 if (!forced) viewModel.onUpdateDialogDismissed()
-                                startActivity(
-                                    Intent(
-                                        Intent.ACTION_VIEW,
-                                        Uri.parse("market://details?id=$packageName"),
-                                    )
-                                )
+                                // Play 스토어가 없는 기기(일부 중국 단말·에뮬레이터)에선 market:// 이 ActivityNotFound → 웹 스토어로 폴백
+                                runCatching {
+                                    startActivity(Intent(Intent.ACTION_VIEW, Uri.parse("market://details?id=$packageName")))
+                                }.onFailure {
+                                    runCatching {
+                                        startActivity(Intent(Intent.ACTION_VIEW, Uri.parse("https://play.google.com/store/apps/details?id=$packageName")))
+                                    }
+                                }
                             },
                             confirmText = "업데이트",
                             // 강제는 업데이트 버튼 하나(dismissText 비움), 추천은 확인/업데이트 두 버튼.
