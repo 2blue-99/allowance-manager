@@ -164,6 +164,56 @@ class NotificationParserTest {
         requireNotNull(result)
         assertEquals(3_000L, result.amount)
         assertEquals("서울특별시－현", result.merchant)
+        // 별표 선행 마스킹 계좌도 추출 (번호 기준 등록·무시가 동작하도록)
+        assertEquals("*250284", result.extractedAccount)
+    }
+
+    // ── 금액 탐색 제외 (잔액·누적·한도는 거래 금액이 아님) ──
+
+    @Test
+    fun `잔액이 금액보다 앞에 와도 거래 금액을 잡는다`() {
+        val result = NotificationParser.parse(
+            packageName = "com.samsung.android.messaging",
+            title = null,
+            text = "[Web발신] 신한 10/21 14:32 잔액 1,234,567원 출금 50,000원 110-***-123456 GS25",
+        )
+        requireNotNull(result)
+        assertEquals(TransactionType.EXPENSE, result.type)
+        assertEquals(50_000L, result.amount)
+        assertEquals(1_234_567L, result.balance)
+    }
+
+    @Test
+    fun `해외승인 누적 금액은 거래 금액이 아니다`() {
+        // 원 금액이 '누적'뿐이고 실제 승인은 USD → 원화 거래 금액 없음 → 드롭 (누적을 지출로 잡지 않는다)
+        val result = NotificationParser.parse(
+            packageName = "com.samsung.android.messaging",
+            title = null,
+            text = "[Web발신] 삼성카드 해외승인 홍*동 25.00 USD Netflix 누적 1,234,567원",
+        )
+        assertNull(result)
+    }
+
+    @Test
+    fun `금액 없이 잔액만 있으면 잔액을 지출로 잡지 않는다`() {
+        val result = NotificationParser.parse(
+            packageName = "com.samsung.android.messaging",
+            title = null,
+            text = "[Web발신] 농협 출금 11/03 17:43 301-****-2640-41 파우PC 잔액5,428원",
+        )
+        assertNull(result)
+    }
+
+    @Test
+    fun `마스킹 휴대폰 번호는 계좌번호로 잡지 않는다`() {
+        val result = NotificationParser.parse(
+            packageName = "com.kakaopay.app",
+            title = "카카오페이",
+            text = "010-****-1234님이 10,000원 입금",
+        )
+        requireNotNull(result)
+        assertEquals(10_000L, result.amount)
+        assertNull(result.extractedAccount)
     }
 
     @Test

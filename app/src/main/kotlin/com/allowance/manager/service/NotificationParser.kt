@@ -39,13 +39,17 @@ object NotificationParser {
 
     // "1,000원" / "1원" / "1,000 원" (한 자리 금액도 인식)
     private val AMOUNT_WON_REGEX = Regex("""(\d[\d,]*)\s*원""")
-    // 키워드 뒤 금액: "입금 1,000" / "결제1,000" / "입금 1"
+    // 키워드 뒤 금액: "입금 1,000" / "결제1,000" / "입금 1". 날짜·시각("출금 11/03", "결제 14:32")은 금액이 아님
     private val AMOUNT_NEAR_KEYWORD_REGEX =
-        Regex("""(?:입금|출금|결제|사용|이용|구매|승인|취소|환불)\s*(\d[\d,]*)""")
+        Regex("""(?:입금|출금|결제|사용|이용|구매|승인|취소|환불)\s*(\d[\d,]*)(?![\d,]*[/:.]\d)""")
     // "잔액225,023"
     private val BALANCE_REGEX = Regex("""잔액\s*([\d,]+)""")
-    // 마스킹 계좌번호: 숫자로 시작, * 를 포함하는 토큰 (예: 941602-**-***318, 9416***-61931**)
-    private val ACCOUNT_REGEX = Regex("""\d[\d*\-]*\*[\d*\-]*""")
+    // 거래 금액이 아닌 돈 표기 — 잔액·누적(해외승인)·한도. 금액 탐색 전에 걷어내 첫 "N원"이 잔액으로 잡히는 것 방지
+    private val NON_AMOUNT_MONEY_REGEX = Regex("""(?:잔액|누적|한도)\s*:?\s*\d[\d,]*\s*원?""")
+    // 마스킹 계좌번호: * 를 포함하는 토큰. 숫자 선행(941602-**-***318) · 별표 선행(우리은행식 *250284) 모두 인식
+    private val ACCOUNT_REGEX = Regex("""\*[\d*\-]{3,}|\d[\d*\-]*\*[\d*\-]*""")
+    // 마스킹 휴대폰 번호(010-****-1234) — 계좌가 아니므로 제외 (페이 앱 송금 알림의 상대방 번호)
+    private val MASKED_PHONE_REGEX = Regex("""^01\d-?[\d*]{3,4}-?[\d*]{4}$""")
 
     data class ParseResult(
         val type: TransactionType,
@@ -69,10 +73,14 @@ object NotificationParser {
         if (!isRefund && !isIncome && !isExpense) return null
 
         val balance = BALANCE_REGEX.find(content)?.groupValues?.get(1)?.toLongAmount()
-        val account = ACCOUNT_REGEX.find(content)?.value
+        val account = ACCOUNT_REGEX.findAll(content)
+            .map { it.value }
+            .firstOrNull { !MASKED_PHONE_REGEX.matches(it) }
 
         // Layer 2: "돈 형태" 금액만 인정 (잔액/계좌번호 동반이 강한 신호). 맨숫자 노이즈는 여기서 탈락.
-        val magnitude = extractMoneyAmount(content, hasStrongSignal = balance != null || account != null)
+        // 잔액·누적·한도는 거래 금액이 아니므로 탐색 대상에서 제외 — "잔액 1,234,567원 출금 50,000원"에서 50,000을 잡는다.
+        val amountSearchText = content.replace(NON_AMOUNT_MONEY_REGEX, " ")
+        val magnitude = extractMoneyAmount(amountSearchText, hasStrongSignal = balance != null || account != null)
             ?: return null
 
         val type: TransactionType
