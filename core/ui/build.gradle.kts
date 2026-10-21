@@ -41,6 +41,9 @@ dependencies {
     implementation(libs.androidx.compose.material3)
     implementation(libs.androidx.compose.material.icons.extended)
     implementation(libs.androidx.lifecycle.viewmodel.compose)
+    // 권한 요청기(rememberLauncherForActivityResult)·ON_RESUME 재조회를 피처에 노출
+    api(libs.androidx.activity.compose)
+    api(libs.androidx.lifecycle.runtime.compose)
     implementation(libs.kotlinx.coroutines.android)
 
     implementation(libs.hilt.android)

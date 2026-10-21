@@ -1,12 +1,7 @@
 package com.allowance.manager.feature.onboarding
 
-import android.Manifest
 import android.content.Intent
-import android.content.pm.PackageManager
-import android.os.Build
 import android.provider.Settings
-import androidx.activity.compose.rememberLauncherForActivityResult
-import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.expandVertically
@@ -33,6 +28,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -51,6 +47,7 @@ import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.compose.LifecycleEventEffect
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.allowance.manager.core.designsystem.anim.AmMotion
+import com.allowance.manager.core.ui.permission.rememberPostNotificationPermission
 import com.allowance.manager.core.designsystem.component.AmButton
 import com.allowance.manager.core.designsystem.component.amRippleClickable
 import com.allowance.manager.core.designsystem.component.AmCard
@@ -88,7 +85,8 @@ fun OnboardingRoute(
     val context = LocalContext.current
     val initiallyGranted = remember { isListenerGranted(context) }
     var permissionGranted by remember { mutableStateOf(initiallyGranted) }
-    var postGranted by remember { mutableStateOf(isPostNotificationGranted(context)) }
+    // 알림 표시 권한(13+) — 공용 요청기. 화면 복귀 시 자동 재조회.
+    val postPermission = rememberPostNotificationPermission()
     // 온보딩 내부 스텝: 유형 → 정보 입력 → 권한 → 서브 알림.
     // 권한(알림 접근)이 정보 입력 **뒤**인 이유: 권한이 켜지는 순간부터 거래가 자동 기록되므로,
     // 먼저 첫 사이클(월급일·예산)이 저장돼 있어야 모든 거래가 사이클 안에 떨어진다.
@@ -101,27 +99,24 @@ fun OnboardingRoute(
         )
     }
 
-    // 알림 보내기(POST) 응답이 끝나면 이어서 알림 접근(리스너) 설정 화면을 연다.
-    val postLauncher = rememberLauncherForActivityResult(
-        ActivityResultContracts.RequestPermission()
-    ) { granted ->
-        postGranted = granted
-        openListenerSettings()
-    }
-
-    // 버튼 하나로 두 권한 순차 요청: POST(앱 내 팝업) → 리스너(설정 화면)
+    // 버튼 하나로 두 권한 순차 요청: POST(앱 내 팝업, 응답 후) → 리스너(설정 화면). POST 거부해도 리스너는 이어서 요청.
     val requestBothPermissions = {
-        if (!postGranted && Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-            postLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
-        } else {
-            openListenerSettings()
-        }
+        postPermission.request { openListenerSettings() }
     }
 
-    // 설정에서 돌아올 때마다 권한 재조회. 거부 시 permissionGranted=false 유지 → 화면 안 넘어감.
+    // 설정에서 돌아올 때마다 리스너 권한 재조회. 거부 시 permissionGranted=false 유지 → 화면 안 넘어감.
     LifecycleEventEffect(Lifecycle.Event.ON_RESUME) {
         permissionGranted = isListenerGranted(context)
-        postGranted = isPostNotificationGranted(context)
+    }
+
+    // 리스너 권한이 이미 있어 권한 단계를 건너뛴 경우, 마지막(알림 설정) 단계에서 알림 표시 권한을 한 번 요청.
+    // 없으면 온보딩 완료 시 켜지는 상태바 알림이 조용히 안 보이기 때문. 거부해도 진행은 막지 않는다.
+    var alertStepPostAsked by rememberSaveable { mutableStateOf(false) }
+    LaunchedEffect(step) {
+        if (step == OnboardingStep.ALERT && !postPermission.isGranted && !alertStepPostAsked) {
+            alertStepPostAsked = true
+            postPermission.request { }
+        }
     }
 
     // 권한 화면에서 알림 접근이 허용되면 잠시 뒤 서브 알림 설정으로 전환 (✓ 상태를 잠깐 노출).
@@ -162,7 +157,7 @@ fun OnboardingRoute(
                 },
             )
             OnboardingStep.PERMISSION -> OnboardingPermissionScreen(
-                postGranted = postGranted,
+                postGranted = postPermission.isGranted,
                 listenerGranted = permissionGranted,
                 onAllow = requestBothPermissions,
             )
@@ -518,11 +513,3 @@ private fun PaydaySection(
 
 private fun isListenerGranted(context: android.content.Context): Boolean =
     NotificationManagerCompat.getEnabledListenerPackages(context).contains(context.packageName)
-
-// POST_NOTIFICATIONS는 Android 13(TIRAMISU)+에서만 런타임 권한. 그 이하는 항상 허용된 것으로 간주.
-private fun isPostNotificationGranted(context: android.content.Context): Boolean =
-    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-        context.checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS) == PackageManager.PERMISSION_GRANTED
-    } else {
-        true
-    }

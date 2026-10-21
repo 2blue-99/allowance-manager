@@ -53,6 +53,9 @@ import com.allowance.manager.core.designsystem.component.amRippleClickable
 import com.allowance.manager.core.analytics.AmAnalytics
 import com.allowance.manager.core.analytics.LocalAnalyticsHelper
 import com.allowance.manager.core.designsystem.component.AmDialog
+import com.allowance.manager.core.ui.permission.PostNotificationResult
+import com.allowance.manager.core.ui.permission.openAppNotificationSettings
+import com.allowance.manager.core.ui.permission.rememberPostNotificationPermission
 import com.allowance.manager.core.designsystem.component.AmScreenHeader
 import com.allowance.manager.core.designsystem.component.AmSelectableOptionCard
 import com.allowance.manager.core.designsystem.component.AmSettingGroup
@@ -107,6 +110,23 @@ fun SettingRoute(
     DisposableEffect(Unit) { onDispose { donationManager.release() } }
     var showThanks by remember { mutableStateOf(false) }
 
+    // 상태바 알림은 POST_NOTIFICATIONS(13+)가 없으면 조용히 안 보인다 → 켤 때 권한을 먼저 확보. 없으면 토글 유지 안 함.
+    val postPermission = rememberPostNotificationPermission()
+    var showNotificationSettingsGuide by remember { mutableStateOf(false) }
+    val onStatusBarEnabledChange: (Boolean) -> Unit = { enabled ->
+        if (!enabled) {
+            viewModel.setStatusBarEnabled(false)
+        } else {
+            postPermission.request { result ->
+                when (result) {
+                    PostNotificationResult.GRANTED -> viewModel.setStatusBarEnabled(true)
+                    PostNotificationResult.DENIED -> Unit
+                    PostNotificationResult.DENIED_PERMANENTLY -> showNotificationSettingsGuide = true
+                }
+            }
+        }
+    }
+
     SettingScreen(
         uiState = uiState,
         versionName = versionName,
@@ -115,7 +135,7 @@ fun SettingRoute(
         onNavigateToAccount = onNavigateToAccount,
         onNavigateToIgnored = onNavigateToIgnored,
         onNavigateToDebug = onNavigateToDebug,
-        onStatusBarEnabledChange = viewModel::setStatusBarEnabled,
+        onStatusBarEnabledChange = onStatusBarEnabledChange,
         onBudgetChange = viewModel::setBudget,
         onPaydayRuleChange = viewModel::setPaydayRule,
         onCycleEndChange = viewModel::setCycleEnd,
@@ -144,6 +164,21 @@ fun SettingRoute(
         onFeedback = { context.startFeedbackEmail() },
         onRate = { context.openPlayStore() },
     )
+
+    if (showNotificationSettingsGuide) {
+        AmDialog(
+            title = "알림 권한이 필요해요",
+            onDismiss = { showNotificationSettingsGuide = false },
+            onConfirm = { showNotificationSettingsGuide = false; openAppNotificationSettings(context) },
+            confirmText = "설정 열기",
+        ) {
+            Text(
+                "상태바 알림을 표시하려면 시스템 설정에서 이 앱의 알림을 허용해 주세요.",
+                style = AmType.size14_medium,
+                color = AmColors.TextSecondary,
+            )
+        }
+    }
 
     if (showThanks) {
         AmDialog(
