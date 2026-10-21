@@ -14,6 +14,8 @@ import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import kotlinx.coroutines.test.resetMain
 import kotlinx.coroutines.test.runTest
+import com.allowance.manager.core.domain.util.TodayTicker
+import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.test.setMain
 import org.junit.After
 import org.junit.Assert.assertEquals
@@ -55,6 +57,8 @@ class StatsViewModelTest {
             observeCycleUseCase = ObserveCycleUseCase(cycles),
             getAdjacentCycleUseCase = GetAdjacentCycleUseCase(cycles, remoteConfig),
             analytics = FakeAnalyticsHelper(),
+            // 테스트 디스패처(가상 시간)에선 자정 delay 루프가 끝나지 않으므로 오늘을 한 번만 방출
+            todayTicker = object : TodayTicker { override fun ticks() = flowOf(LocalDate.now()) },
         )
     }
 

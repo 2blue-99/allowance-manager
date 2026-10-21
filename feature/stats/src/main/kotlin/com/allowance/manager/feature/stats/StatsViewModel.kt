@@ -26,6 +26,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.flatMapLatest
+import com.allowance.manager.core.domain.util.TodayTicker
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
 import java.time.LocalDate
@@ -90,6 +91,7 @@ class StatsViewModel @Inject constructor(
     observeCycleUseCase: ObserveCycleUseCase,
     private val getAdjacentCycleUseCase: GetAdjacentCycleUseCase,
     private val analytics: AnalyticsHelper,
+    todayTicker: TodayTicker,
 ) : BaseViewModel() {
 
     private val windowEnd = MutableStateFlow<BudgetCycle?>(null)   // 창의 오른쪽 끝(최신)
@@ -123,7 +125,8 @@ class StatsViewModel @Inject constructor(
         // 오늘 사이클을 '관찰' — 더보기에서 월급일을 바꾸면 홈처럼 새 경계가 즉시 반영된다.
         // (1회 조회로 두면 탭 VM이 살아있는 동안 옛 경계를 계속 보여준다)
         viewModelScope.launch {
-            observeCycleUseCase().collect { today ->
+            // 자정마다 재구독 — 탭 VM 이 살아있는 채 수급일을 넘겨도 새 사이클로 따라간다
+            todayTicker.ticks().flatMapLatest { observeCycleUseCase(it) }.collect { today ->
                 // 경계가 실제로 바뀌었을 때만 창·선택을 오늘 사이클로 리셋
                 if (today == todayCycle) return@collect
                 todayCycle = today

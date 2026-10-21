@@ -45,8 +45,11 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.launch
 import java.time.LocalDate
+import com.allowance.manager.core.domain.util.TodayTicker
 import javax.inject.Inject
 
 data class HomeUiState(
@@ -70,6 +73,7 @@ data class HomeUiState(
     val isLoading: Boolean = true,
 )
 
+@OptIn(ExperimentalCoroutinesApi::class)
 @HiltViewModel
 class HomeViewModel @Inject constructor(
     observeBudgetStatusUseCase: ObserveBudgetStatusUseCase,
@@ -91,6 +95,7 @@ class HomeViewModel @Inject constructor(
     private val setHomeGuideShownUseCase: SetHomeGuideShownUseCase,
     private val getHomeNewAccountBadgeUseCase: GetHomeNewAccountBadgeUseCase,
     private val setHomeNewAccountBadgeUseCase: SetHomeNewAccountBadgeUseCase,
+    todayTicker: TodayTicker,
     private val getPendingAnnouncementUseCase: GetPendingAnnouncementUseCase,
     private val markAnnouncementSeenUseCase: MarkAnnouncementSeenUseCase,
     private val analytics: AnalyticsHelper,
@@ -143,8 +148,9 @@ class HomeViewModel @Inject constructor(
 
         viewModelScope.launch {
             combine(
-                observeBudgetStatusUseCase(),
-                observeCurrentTransactionsUseCase(),
+                // 자정마다 재구독 — 홈 탭 VM 은 오래 살아 수급일 자정을 넘기면 옛 사이클에 머문다 (위젯·상태바와 어긋남)
+                todayTicker.ticks().flatMapLatest { observeBudgetStatusUseCase(it) },
+                todayTicker.ticks().flatMapLatest { observeCurrentTransactionsUseCase(it) },
                 observeAccountsUseCase(),
                 combine(filterState, getHomeNewAccountBadgeUseCase()) { f, b -> f to b },
                 getUserTypeUseCase(),

@@ -31,6 +31,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.flatMapLatest
+import com.allowance.manager.core.domain.util.TodayTicker
 import kotlinx.coroutines.launch
 import java.time.YearMonth
 import javax.inject.Inject
@@ -81,6 +82,7 @@ class CalendarViewModel @Inject constructor(
     private val promoteToMainUseCase: PromoteToMainUseCase,
     private val demoteFromMainUseCase: DemoteFromMainUseCase,
     private val analytics: AnalyticsHelper,
+    todayTicker: TodayTicker,
 ) : BaseViewModel() {
 
     private val cycle = MutableStateFlow<BudgetCycle?>(null)
@@ -115,7 +117,8 @@ class CalendarViewModel @Inject constructor(
         // 오늘 사이클을 '관찰' — 더보기에서 월급일을 바꾸면 홈처럼 새 경계가 즉시 반영된다.
         // (1회 조회로 두면 탭 VM이 살아있는 동안 옛 경계를 계속 보여준다)
         viewModelScope.launch {
-            observeCycleUseCase().collect { today ->
+            // 자정마다 재구독 — 탭 VM 이 살아있는 채 수급일을 넘겨도 새 사이클로 따라간다
+            todayTicker.ticks().flatMapLatest { observeCycleUseCase(it) }.collect { today ->
                 // 경계가 실제로 바뀌었을 때만 오늘 사이클로 리셋 — 탐색 위치를 함부로 옮기지 않는다
                 if (today == todayCycle) return@collect
                 todayCycle = today

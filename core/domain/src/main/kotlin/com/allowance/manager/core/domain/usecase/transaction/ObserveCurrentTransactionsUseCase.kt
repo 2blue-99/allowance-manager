@@ -6,6 +6,7 @@ import com.allowance.manager.core.domain.repository.TransactionRepository
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flatMapLatest
+import java.time.LocalDate
 import javax.inject.Inject
 
 /**
@@ -17,8 +18,8 @@ class ObserveCurrentTransactionsUseCase @Inject constructor(
     private val transactionRepository: TransactionRepository,
 ) {
     @OptIn(ExperimentalCoroutinesApi::class)
-    operator fun invoke(): Flow<List<Transaction>> =
-        cycleRepository.observeCycleAt().flatMapLatest { cycle ->
+    operator fun invoke(today: LocalDate = LocalDate.now()): Flow<List<Transaction>> =
+        cycleRepository.observeCycleAt(today).flatMapLatest { cycle ->
             val period = cycle.period
             transactionRepository.observeBetween(period.startMillis(), period.endMillis())
         }

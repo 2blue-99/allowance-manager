@@ -16,6 +16,8 @@ import com.allowance.manager.core.domain.repository.RemoteConfigRepository
 import com.allowance.manager.core.domain.repository.TransactionRepository
 import dagger.Binds
 import dagger.Module
+import com.allowance.manager.core.data.util.SystemTodayTicker
+import com.allowance.manager.core.domain.util.TodayTicker
 import dagger.hilt.InstallIn
 import dagger.hilt.components.SingletonComponent
 import javax.inject.Singleton
@@ -65,4 +67,10 @@ abstract class DataModule {
     abstract fun bindIgnoredAccountRepository(
         impl: IgnoredAccountRepositoryImpl,
     ): IgnoredAccountRepository
+
+    @Binds
+    @Singleton
+    abstract fun bindTodayTicker(
+        impl: SystemTodayTicker,
+    ): TodayTicker
 }
