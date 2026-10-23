@@ -37,6 +37,9 @@ class AllowanceNotificationListenerService : NotificationListenerService() {
 
     private val serviceScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
 
+    // 같은 알림이 두 번 전달되는 것(삼성 자동 그룹) 방어
+    private val deduper = NotificationDeduper()
+
     private fun log(message: String) = Timber.tag(TAG).d(message)
 
     override fun onCreate() {
@@ -59,7 +62,11 @@ class AllowanceNotificationListenerService : NotificationListenerService() {
     override fun onNotificationPosted(sbn: StatusBarNotification) {
         // 리스너는 이 앱의 알림(상태바·예산 알림·FCM)도 받는다 → 자기 알림을 거래로 기록하지 않도록 먼저 제외
         if (sbn.packageName == packageName) return
-        val extras = sbn.notification?.extras
+        val notification = sbn.notification ?: return
+        // 그룹 요약(개별 알림 본문을 다시 품음)·진행 중 알림(음악·내비 등 상태 표시)은 거래가 아니다
+        if (notification.flags and Notification.FLAG_GROUP_SUMMARY != 0) return
+        if (sbn.isOngoing) return
+        val extras = notification.extras
         if (extras == null) {
             log("알림수신 pkg=${sbn.packageName} (extras 없음 → 무시)")
             return
@@ -77,6 +84,12 @@ class AllowanceNotificationListenerService : NotificationListenerService() {
             field(Notification.EXTRA_SUB_TEXT),
             field(Notification.EXTRA_INFO_TEXT),
         ).distinct().joinToString(" ")
+
+        // 같은 알림의 중복 전달(키·게시시각·내용 동일)은 한 번만 처리 — 거래가 두 줄 생기는 것 방지
+        if (!deduper.shouldProcess(sbn.key, sbn.postTime, "$title|$body")) {
+            log("알림수신 pkg=${sbn.packageName} (중복 전달 → 무시)")
+            return
+        }
 
         log("알림수신 pkg=${sbn.packageName}\n  title=$title\n  body=$body")
 
