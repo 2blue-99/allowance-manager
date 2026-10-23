@@ -8,12 +8,12 @@ import kotlinx.coroutines.flow.map
 import java.time.LocalDate
 import javax.inject.Inject
 
-/** 현재 사이클 예산. 설정 화면 표시·현재 예산용. */
+/** 현재 사이클 예산. 설정 화면 표시·현재 예산용. [today]는 구독 시점에 고정 — 오래 사는 구독은 날짜가 바뀌면 재구독. */
 class GetMonthlyBudgetUseCase @Inject constructor(
     private val cycleRepository: CycleRepository,
 ) {
-    operator fun invoke(): Flow<Long> =
-        cycleRepository.observeCycleAt().map { it.budget }
+    operator fun invoke(today: LocalDate = LocalDate.now()): Flow<Long> =
+        cycleRepository.observeCycleAt(today).map { it.budget }
 }
 
 /** 예산 변경 → 현재 사이클 행에 저장. 이후 새 사이클은 이 값을 이월한다. */

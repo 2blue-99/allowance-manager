@@ -9,6 +9,9 @@ import androidx.compose.ui.unit.sp
 import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.glance.GlanceId
+import kotlinx.coroutines.flow.flatMapLatest
+import kotlinx.coroutines.ExperimentalCoroutinesApi
+import com.allowance.manager.core.domain.util.todayTicks
 import androidx.glance.GlanceModifier
 import androidx.glance.GlanceTheme
 import androidx.glance.Image
@@ -56,13 +59,17 @@ class RemainWidget : GlanceAppWidget() {
     override val stateDefinition = PreferencesGlanceStateDefinition
     override val sizeMode = SizeMode.Exact
 
+    @OptIn(ExperimentalCoroutinesApi::class)
     override suspend fun provideGlance(context: Context, id: GlanceId) {
         val entryPoint = context.widgetEntryPoint()
+        // 위젯 세션은 홈 화면에 있는 동안 계속 살아 updateAll 로는 provideGlance 가 다시 돌지 않는다.
+        // '오늘'을 호출 시점에 고정하면 월급일이 지나도 옛 사이클을 보여주므로, 자정마다 스스로 재구독한다.
         val observeBudget = entryPoint.observeBudgetStatusUseCase()
         val observeType = entryPoint.getUserTypeUseCase()
+        val budgetFlow = todayTicks().flatMapLatest { observeBudget(it) }
 
         provideContent {
-            val status by observeBudget().collectAsState(initial = null)
+            val status by budgetFlow.collectAsState(initial = null)
             val userType by observeType().collectAsState(UserType.Default)
             val showSpent = currentState<Preferences>()[SHOW_SPENT] ?: false
             GlanceTheme {

@@ -35,6 +35,9 @@ import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.flow.flatMapLatest
+import com.allowance.manager.core.domain.util.TodayTicker
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import javax.inject.Inject
@@ -50,6 +53,7 @@ data class SettingUiState(
     val cycle: BudgetCycle? = null,   // 월급일·이번 회차 다이얼로그가 쓰는 현재 사이클. 첫 프레임에선 아직 null
 )
 
+@OptIn(ExperimentalCoroutinesApi::class)
 @HiltViewModel
 class SettingViewModel @Inject constructor(
     getMonthlyBudgetUseCase: GetMonthlyBudgetUseCase,
@@ -72,12 +76,14 @@ class SettingViewModel @Inject constructor(
     private val setDailyReminderSettingUseCase: SetDailyReminderSettingUseCase,
     private val setPaydayAlertSettingUseCase: SetPaydayAlertSettingUseCase,
     private val analytics: AnalyticsHelper,
+    todayTicker: TodayTicker,
 ) : BaseViewModel() {
 
     val uiState: StateFlow<SettingUiState> = combine(
         // 기존 4개 그룹을 먼저 묶고(combine 최대 인자 회피), 알림 설정 2개와 다시 결합
         combine(
-            getMonthlyBudgetUseCase(),
+            // 더보기는 탭처럼 백스택에 남아 VM 이 오래 산다 → 자정마다 재구독해 수급일 이후 옛 회차에 머물지 않게
+            todayTicker.ticks().flatMapLatest { getMonthlyBudgetUseCase(it) },
             getPaydayUseCase(),
             getStatusBarEnabledUseCase(),
             getUserTypeUseCase(),
@@ -87,7 +93,7 @@ class SettingViewModel @Inject constructor(
         getBudgetAlertSettingUseCase(),
         getDailyReminderSettingUseCase(),
         getPaydayAlertSettingUseCase(),
-        observeCycleUseCase(),
+        todayTicker.ticks().flatMapLatest { observeCycleUseCase(it) },
     ) { base, budgetAlert, dailyReminder, paydayAlert, cycle ->
         base.copy(
             budgetAlert = budgetAlert,
