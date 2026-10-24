@@ -20,6 +20,7 @@ import com.allowance.manager.core.domain.model.BudgetCycle
 import com.allowance.manager.core.domain.usecase.budget.ChangePaydayUseCase
 import com.allowance.manager.core.domain.usecase.budget.MoveCycleStartUseCase
 import com.allowance.manager.core.domain.usecase.budget.ObserveCycleUseCase
+import com.allowance.manager.core.domain.usecase.budget.ObserveBudgetStatusUseCase
 import com.allowance.manager.core.domain.usecase.budget.PaydayChangePreview
 import com.allowance.manager.core.domain.usecase.budget.PreviewCycleStartUseCase
 import com.allowance.manager.core.domain.usecase.budget.PreviewPaydayChangeUseCase
@@ -43,7 +44,8 @@ import kotlinx.coroutines.launch
 import javax.inject.Inject
 
 data class SettingUiState(
-    val budget: Long = 0L,
+    val budget: Long = 0L,              // 기본 예산 (정해둔 월 생활비, 수정 다이얼로그 값)
+    val extraBudget: Long = 0L,         // 추가 예산 (이번 달 생활비 반영 수입) — 0이면 숨김
     val payday: Int = 25,       // 0 = 말일
     val statusBarEnabled: Boolean = true,
     val userType: UserType = UserType.Default,
@@ -70,6 +72,7 @@ class SettingViewModel @Inject constructor(
     private val previewPaydayChangeUseCase: PreviewPaydayChangeUseCase,
     private val previewCycleStartUseCase: PreviewCycleStartUseCase,
     observeCycleUseCase: ObserveCycleUseCase,
+    observeBudgetStatusUseCase: ObserveBudgetStatusUseCase,
     private val setStatusBarEnabledUseCase: SetStatusBarEnabledUseCase,
     private val setUserTypeUseCase: SetUserTypeUseCase,
     private val setBudgetAlertSettingUseCase: SetBudgetAlertSettingUseCase,
@@ -87,8 +90,10 @@ class SettingViewModel @Inject constructor(
             getPaydayUseCase(),
             getStatusBarEnabledUseCase(),
             getUserTypeUseCase(),
-        ) { budget, payday, statusBar, userType ->
-            SettingUiState(budget = budget, payday = payday, statusBarEnabled = statusBar, userType = userType)
+            // 추가 예산(생활비 반영 수입)은 홈과 같은 예산 현황에서 — 재계산 금지
+            todayTicker.ticks().flatMapLatest { observeBudgetStatusUseCase(it) },
+        ) { budget, payday, statusBar, userType, status ->
+            SettingUiState(budget = budget, extraBudget = status.income, payday = payday, statusBarEnabled = statusBar, userType = userType)
         },
         getBudgetAlertSettingUseCase(),
         getDailyReminderSettingUseCase(),

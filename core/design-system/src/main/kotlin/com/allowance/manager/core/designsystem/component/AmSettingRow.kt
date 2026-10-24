@@ -103,13 +103,15 @@ fun AmSettingItem(
     modifier: Modifier = Modifier,
     subtitle: String? = null,
     onClick: (() -> Unit)? = null,
+    // 우측 값이 여러 줄일 때(예: 총액 + 기본/추가) 제목을 첫 줄에 맞추려면 Alignment.Top
+    verticalAlignment: Alignment.Vertical = Alignment.CenterVertically,
     trailing: @Composable (RowScope.() -> Unit)? = null,
 ) {
     val rowModifier = modifier
         .fillMaxWidth()
         .let { if (onClick != null) it.amRippleClickable(onClick = onClick) else it }
         .padding(horizontal = 16.dp, vertical = 15.dp)
-    Row(modifier = rowModifier, verticalAlignment = Alignment.CenterVertically) {
+    Row(modifier = rowModifier, verticalAlignment = verticalAlignment) {
         Column(
             modifier = Modifier.weight(1f),
             verticalArrangement = Arrangement.spacedBy(AmSpacing.xxs),

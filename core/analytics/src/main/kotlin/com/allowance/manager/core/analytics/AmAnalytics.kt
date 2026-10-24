@@ -111,6 +111,8 @@ object AmAnalytics {
 
     /** 다이얼로그 태그(=dialog 파라미터 값) */
     object Dialog {
+        /** 수입을 "생활비 반영"으로 저장 — 이번 달 예산 증액 확인 */
+        const val INCOME_TO_BUDGET = "income_to_budget"
         const val IGNORE = "ignore"
         const val IGNORE_REMOVE = "ignore_remove"
         const val BUDGET = "budget"

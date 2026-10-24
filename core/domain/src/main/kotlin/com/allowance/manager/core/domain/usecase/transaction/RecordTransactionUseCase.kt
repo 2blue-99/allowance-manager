@@ -3,6 +3,7 @@ package com.allowance.manager.core.domain.usecase.transaction
 import com.allowance.manager.core.domain.model.MaskedAccount
 import com.allowance.manager.core.domain.model.ParsedTransaction
 import com.allowance.manager.core.domain.model.Transaction
+import com.allowance.manager.core.domain.model.TransactionType
 import com.allowance.manager.core.domain.model.TxScope
 import com.allowance.manager.core.domain.repository.AccountRepository
 import com.allowance.manager.core.domain.repository.DataStoreRepository
@@ -54,9 +55,14 @@ class RecordTransactionUseCase @Inject constructor(
                 merchant = parsed.merchant,
                 extractedAccount = parsed.extractedAccount,
                 accountId = accountId,
-                // 미등록 계좌 = 제외(EXCLUDED). 등록계좌 매칭이면 지출·수입·이체 모두 예산 반영(BUDGET).
-                // 수입도 남은 금액에 가산된다(기획서 4.3). '가계부만'(LEDGER_ONLY)은 사용자가 시트에서 고를 때만.
-                scope = if (accountId == null) TxScope.EXCLUDED else TxScope.BUDGET,
+                // 미등록 계좌 = 제외(EXCLUDED). 등록계좌 매칭이면 지출·이체는 예산 반영(BUDGET).
+                // 수입은 기본 '가계부만'(LEDGER_ONLY) — 이체·월급 입금이 자동으로 한도를 늘리지 않게(기획서 4.3).
+                // 사용자가 시트에서 "생활비 반영"으로 켜면 그 달 추가 예산이 된다.
+                scope = when {
+                    accountId == null -> TxScope.EXCLUDED
+                    parsed.type == TransactionType.INCOME -> TxScope.LEDGER_ONLY
+                    else -> TxScope.BUDGET
+                },
                 createdAt = System.currentTimeMillis(),
             )
         )

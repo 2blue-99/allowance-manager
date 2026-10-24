@@ -27,7 +27,7 @@ class BalanceWidget : GlanceAppWidget() {
             val status by budgetFlow.collectAsState(initial = null)
             GlanceTheme {
                 SimpleBalanceContent(
-                    budget = status?.budget ?: 0L,
+                    budget = status?.totalBudget ?: 0L,   // 총 예산(기본+추가) — 홈과 동일 기준
                     spent = status?.spent ?: 0L,
                     // 남은 = budget - spent + income. 홈과 동일하게 유즈케이스 계산값을 그대로 사용.
                     remaining = status?.remaining ?: 0L,

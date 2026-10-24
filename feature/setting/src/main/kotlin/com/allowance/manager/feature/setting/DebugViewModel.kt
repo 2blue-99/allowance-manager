@@ -8,6 +8,7 @@ import com.allowance.manager.core.common.BaseViewModel
 import com.allowance.manager.core.domain.model.Transaction
 import com.allowance.manager.core.domain.model.TransactionCategory
 import com.allowance.manager.core.domain.model.TransactionType
+import com.allowance.manager.core.domain.model.TxScope
 import com.allowance.manager.core.domain.repository.DataStoreRepository
 import com.allowance.manager.core.domain.model.BudgetCycle
 import com.allowance.manager.core.domain.repository.RemoteConfigRepository
@@ -123,9 +124,9 @@ class DebugViewModel @Inject constructor(
     fun addExpenseToMonth(month: YearMonth, amount: Long) =
         addToMonth(month, amount, TransactionType.EXPENSE, "테스트 지출", category = null)
 
-    /** 테스트용: 선택한 달에 [amount]원 수입 1건 추가(기본 scope=BUDGET → 남은 금액에 가산). */
+    /** 테스트용: 선택한 달에 [amount]원 수입 1건 추가(기본 가계부만 — 시트에서 '생활비 반영'으로 켜야 추가 예산). */
     fun addIncomeToMonth(month: YearMonth, amount: Long) =
-        addToMonth(month, amount, TransactionType.INCOME, "테스트 수입", category = TransactionCategory.INCOME)
+        addToMonth(month, amount, TransactionType.INCOME, "테스트 수입", category = TransactionCategory.INCOME, scope = TxScope.LEDGER_ONLY)
 
     /**
      * 날짜는 그 달 15일. 다만 이번 달이면 미래 거래가 되지 않도록 오늘 날짜로 넣는다.
@@ -137,6 +138,7 @@ class DebugViewModel @Inject constructor(
         type: TransactionType,
         sourceName: String,
         category: TransactionCategory?,
+        scope: TxScope = TxScope.BUDGET,
     ) {
         viewModelScope.launch {
             val zone = ZoneId.systemDefault()
@@ -153,6 +155,7 @@ class DebugViewModel @Inject constructor(
                     packageName = "",
                     sourceName = sourceName,
                     category = category,
+                    scope = scope,
                     isManual = true,
                     createdAt = createdAt,
                 ),
@@ -296,6 +299,15 @@ class DebugViewModel @Inject constructor(
     }
 
     /** 되돌리기: 이 화면에서 넣은 "예산 10% 소진" 지출을 전부 삭제해 원래 잔액으로 복구. */
+    /** 개편 전 '예산 반영'으로 들어간 수입을 전부 '가계부만'으로 — 새 규칙(수입 기본 가계부만)으로 정리 */
+    fun demoteBudgetIncomes() {
+        viewModelScope.launch {
+            transactionRepository.observeAll().first()
+                .filter { it.type == TransactionType.INCOME && it.scope == TxScope.BUDGET }
+                .forEach { transactionRepository.setScope(it.id, TxScope.LEDGER_ONLY) }
+        }
+    }
+
     fun resetDebugSpending() {
         viewModelScope.launch {
             transactionRepository.observeAll().first()

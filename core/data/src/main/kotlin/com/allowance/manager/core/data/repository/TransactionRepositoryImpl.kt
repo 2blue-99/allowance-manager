@@ -68,8 +68,12 @@ class TransactionRepositoryImpl @Inject constructor(
     ) = transactionDao.updateContent(id, type.name, amount, merchant, memo, category?.name)
 
     override suspend fun setHidden(id: Long, hidden: Boolean) {
-        // 전환기: hidden 토글을 scope 로 매핑 (true=EXCLUDED / false=BUDGET). Phase 5에서 setScope 로 대체.
-        val scope = if (hidden) TxScope.EXCLUDED else TxScope.BUDGET
+        // 스와이프 제외/복원. 복원 기본값은 기록 규칙과 동일 — 지출·이체=BUDGET, 수입=LEDGER_ONLY(가계부만)
+        val scope = when {
+            hidden -> TxScope.EXCLUDED
+            transactionDao.getById(id)?.type == TransactionType.INCOME.name -> TxScope.LEDGER_ONLY
+            else -> TxScope.BUDGET
+        }
         transactionDao.updateScope(id, scope.name)
     }
 

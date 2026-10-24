@@ -65,6 +65,7 @@ import com.allowance.manager.core.domain.model.Transaction
 import com.allowance.manager.core.domain.model.TransactionCategory
 import com.allowance.manager.core.domain.model.TransactionType
 import com.allowance.manager.core.domain.model.TxScope
+import com.allowance.manager.core.domain.util.amountToComma
 import kotlinx.coroutines.launch
 import kotlin.math.abs
 
@@ -120,8 +121,18 @@ fun TransactionFormSheet(
     var merchant by remember(stateKey) { mutableStateOf(editTx?.merchant.orEmpty()) }
     var category by remember(stateKey) { mutableStateOf<TransactionCategory?>(editTx?.category ?: TransactionCategory.ETC) }
     var memo by remember(stateKey) { mutableStateOf(editTx?.memo.orEmpty()) }
-    // 직접 추가 기본은 유형과 무관하게 예산 반영(BUDGET) — 수입도 남은 금액에 가산(기획서 4.3)
+    // 직접 추가 기본: 지출·이체=예산 반영, 수입=가계부만 (수입은 켜야만 추가 예산이 된다 — 기획서 4.3).
+    // 사용자가 상태를 직접 고른 뒤에는 유형을 바꿔도 덮어쓰지 않는다.
     var txScope by remember(stateKey) { mutableStateOf(editTx?.scope ?: TxScope.BUDGET) }
+    var scopeTouched by remember(stateKey) { mutableStateOf(false) }
+    fun selectType(next: TransactionType) {
+        type = next
+        if (editTx == null && !scopeTouched) {
+            txScope = if (next == TransactionType.INCOME) TxScope.LEDGER_ONLY else TxScope.BUDGET
+        }
+    }
+    // 수입을 '생활비 반영'으로 저장 = 이번 달 예산을 그만큼 늘리는 것 → 확인 후 실행
+    var pendingBudgetIncome by remember(stateKey) { mutableStateOf<(() -> Unit)?>(null) }
     var promote by remember(stateKey) { mutableStateOf(editTx?.isMain ?: false) }
     var showDeleteConfirm by remember(stateKey) { mutableStateOf(false) }
     var showIgnoreConfirm by remember(stateKey) { mutableStateOf(false) }
@@ -229,9 +240,9 @@ fun TransactionFormSheet(
                 // 주요 선택 컨트롤이라 일반 칩보다 살짝 높게(44dp) — 배경은 꽉 차고 라벨은 중앙 유지
                 val typeChipModifier = Modifier.weight(1f).height(44.dp)
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    AmChip("지출", type == TransactionType.EXPENSE, selectedColor = AmColors.Red, textStyle = AmType.size16_bold, modifier = typeChipModifier) { type = TransactionType.EXPENSE }
-                    AmChip("수입", type == TransactionType.INCOME, selectedColor = AmColors.Emerald, textStyle = AmType.size16_bold, modifier = typeChipModifier) { type = TransactionType.INCOME }
-                    AmChip("이체", type == TransactionType.TRANSFER, selectedColor = AmColors.TextSecondary, textStyle = AmType.size16_bold, modifier = typeChipModifier) { type = TransactionType.TRANSFER }
+                    AmChip("지출", type == TransactionType.EXPENSE, selectedColor = AmColors.Red, textStyle = AmType.size16_bold, modifier = typeChipModifier) { selectType(TransactionType.EXPENSE) }
+                    AmChip("수입", type == TransactionType.INCOME, selectedColor = AmColors.Emerald, textStyle = AmType.size16_bold, modifier = typeChipModifier) { selectType(TransactionType.INCOME) }
+                    AmChip("이체", type == TransactionType.TRANSFER, selectedColor = AmColors.TextSecondary, textStyle = AmType.size16_bold, modifier = typeChipModifier) { selectType(TransactionType.TRANSFER) }
                 }
 
                 // 관리 카드(유형 아래) — 예산 반영(추가·수정 공통) + 메인등록·무시(수정 전용)
@@ -254,7 +265,8 @@ fun TransactionFormSheet(
                                         SheetScopeSelector(
                                             scope = txScope,
                                             budgetName = budgetName,
-                                            onScope = { txScope = it },
+                                            isIncome = type == TransactionType.INCOME,
+                                            onScope = { txScope = it; scopeTouched = true },
                                         )
                                         // 아래 토글이 함께 있을 때만 구분선 (scope와 함께 접힘)
                                         if (showPromote) {
@@ -365,7 +377,11 @@ fun TransactionFormSheet(
                 if (editTx == null) {
                     AmButton(
                         "추가",
-                        onClick = { onAdd(type, amount, merchant, effectiveCategory, memo, txScope); close() },
+                        onClick = {
+                            val doAdd = { onAdd(type, amount, merchant, effectiveCategory, memo, txScope); close() }
+                            // 수입 + 생활비 반영 = 이번 달 예산 증액 → 확인 후 추가
+                            if (type == TransactionType.INCOME && txScope == TxScope.BUDGET) pendingBudgetIncome = doAdd else doAdd()
+                        },
                         modifier = Modifier.weight(1f),
                         enabled = canSubmit,
                     )
@@ -393,19 +409,38 @@ fun TransactionFormSheet(
                             val scopeChanged = txScope != editTx.scope
                             val promoteNow = promote && !editTx.isMain
                             val demoteNow = !promote && editTx.isMain
-                            if (coreChanged) onSaveTransaction(editTx.id, type, amount, merchant, memo, effectiveCategory)
-                            // 해제는 내역을 전부 제외로 돌리므로, 함께 고른 예산 반영 상태는 적용하지 않음
-                            if (scopeChanged && !demoteNow) onSetScope(editTx.id, txScope)
-                            if (promoteNow) onPromoteToMain(editTx)
-                            if (demoteNow) onDemoteFromMain(editTx)
-                            if (coreChanged || scopeChanged || promoteNow || demoteNow) onSaved()
-                            close()
+                            val doSave = {
+                                if (coreChanged) onSaveTransaction(editTx.id, type, amount, merchant, memo, effectiveCategory)
+                                // 해제는 내역을 전부 제외로 돌리므로, 함께 고른 예산 반영 상태는 적용하지 않음
+                                if (scopeChanged && !demoteNow) onSetScope(editTx.id, txScope)
+                                if (promoteNow) onPromoteToMain(editTx)
+                                if (demoteNow) onDemoteFromMain(editTx)
+                                if (coreChanged || scopeChanged || promoteNow || demoteNow) onSaved()
+                                close()
+                            }
+                            // 수입이 새로 '생활비 반영'이 되는 저장 = 이번 달 예산 증액 → 확인 후 실행
+                            val becomesBudgetIncome = type == TransactionType.INCOME && txScope == TxScope.BUDGET &&
+                                !(editTx.type == TransactionType.INCOME && editTx.scope == TxScope.BUDGET) && !demoteNow
+                            if (becomesBudgetIncome) pendingBudgetIncome = doSave else doSave()
                         },
                         modifier = Modifier.weight(1f),
                         enabled = canSubmit,
                     )
                 }
             }
+        }
+    }
+
+    // 생활비 반영 확인 — 이번 달 예산에 이 수입만큼 더해진다 (이번 달에만)
+    pendingBudgetIncome?.let { run ->
+        AmDialog(
+            title = "이번 달 ${budgetName}에 ${amount.amountToComma()}원을 더할까요?",
+            onDismiss = { pendingBudgetIncome = null },
+            onConfirm = { pendingBudgetIncome = null; run() },
+            confirmText = "확인",
+            analyticsTag = AmAnalytics.Dialog.INCOME_TO_BUDGET,
+        ) {
+            Text("이번 달에만 적용돼요.", style = AmType.size14_medium, color = AmColors.TextSecondary)
         }
     }
 
@@ -476,7 +511,7 @@ private fun SheetLabel(text: String) {
 
 /** 예산 반영 상태 3분기 선택 (BUDGET / LEDGER_ONLY / EXCLUDED) */
 @Composable
-private fun SheetScopeSelector(scope: TxScope, budgetName: String, onScope: (TxScope) -> Unit) {
+private fun SheetScopeSelector(scope: TxScope, budgetName: String, isIncome: Boolean, onScope: (TxScope) -> Unit) {
     Column(modifier = Modifier.fillMaxWidth().padding(vertical = 6.dp)) {
         // 제목 없이 칩(호칭 반영)이 곧 라벨 역할 — 아래 안내문이 의미 보강
         Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
@@ -487,7 +522,8 @@ private fun SheetScopeSelector(scope: TxScope, budgetName: String, onScope: (TxS
         Spacer(Modifier.height(8.dp))
         // 선택한 상태별 안내 — 자산 호칭(용돈/생활비/예산)을 반영
         val hint = when (scope) {
-            TxScope.BUDGET -> "${budgetName}에 포함됩니다."
+            // 수입의 '반영'은 이번 달 예산을 늘리는 것(추가 예산), 지출은 예산에서 차감
+            TxScope.BUDGET -> if (isIncome) "이번 달 ${budgetName}에 더해집니다." else "${budgetName}에 포함됩니다."
             TxScope.LEDGER_ONLY -> "${budgetName}에는 포함되지 않고, 지출·수입에만 포함됩니다."
             TxScope.EXCLUDED -> "전체에서 제외됩니다."
         }

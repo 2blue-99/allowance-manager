@@ -4,21 +4,31 @@ import java.time.LocalDate
 import java.time.temporal.ChronoUnit
 
 /**
- * 이번달 예산 현황. remaining = budget - spent + income (음수 = 초과).
- * spent·income 은 모두 예산 반영(scope=BUDGET) 대상만.
+ * 이번달 예산 현황.
+ *
+ * - [budget] 기본 예산: 사용자가 정해둔 월 생활비 (설정값, 사이클 행)
+ * - [income] 추가 예산: 사용자가 "생활비 반영"으로 **직접 켠** 수입의 합(scope=BUDGET). 수입은 기본이 가계부만이라
+ *   이체·월급이 자동으로 한도를 늘리지 않는다 — 켠 달에만, 켠 만큼만 늘어난다.
+ * - [totalBudget] 총 예산 = 기본 + 추가. 남은 금액·사용률·초과 판정은 전부 총 예산 기준.
+ * - remaining = totalBudget − spent (음수 = 초과). spent 는 예산 반영(BUDGET) 지출만.
  */
 data class BudgetStatus(
-    val budget: Long,          // 월 예산 (0 = 미설정)
+    val budget: Long,          // 기본 예산 (0 = 미설정)
     val spent: Long,           // 이번달 BUDGET 지출 합계
-    val income: Long,          // 이번달 BUDGET 수입 합계 (남은 금액에 가산)
+    val income: Long,          // 추가 예산 = 이번달 BUDGET 수입 합계
     val cycle: BudgetCycle,
 ) {
-    val remaining: Long get() = budget - spent + income
-    val isOver: Boolean get() = budget > 0 && remaining < 0
+    /** 총 예산 = 기본 예산 + 추가 예산(반영 수입) */
+    val totalBudget: Long get() = budget + income
+    /** 추가 예산이 있는지 — 홈·설정에서 "기본/추가" 두 줄을 보여줄지 */
+    val hasExtraBudget: Boolean get() = income > 0
+
+    val remaining: Long get() = totalBudget - spent
+    val isOver: Boolean get() = totalBudget > 0 && remaining < 0
 
     /** 남은 비율 (1=가득, 0=소진, 음수=초과). 예산 미설정 시 0. */
     val ratio: Float get() =
-        if (budget <= 0) 0f else (remaining.toFloat() / budget).coerceIn(-1f, 1f)
+        if (totalBudget <= 0) 0f else (remaining.toFloat() / totalBudget).coerceIn(-1f, 1f)
 
     // ── 하루 지표 ── 홈 히어로 카드와 오늘 코치 위젯이 공유한다. 화면에서 따로 계산하지 말 것.
 

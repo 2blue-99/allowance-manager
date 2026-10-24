@@ -52,7 +52,9 @@ import com.allowance.manager.core.domain.util.TodayTicker
 import javax.inject.Inject
 
 data class HomeUiState(
-    val budget: Long = 0L,
+    val budget: Long = 0L,              // 총 예산 = 기본 + 추가 (카드 표시·사용률 기준)
+    val baseBudget: Long = 0L,          // 기본 예산 (정해둔 월 생활비)
+    val extraBudget: Long = 0L,         // 추가 예산 (생활비 반영 수입 합) — 0이면 두 줄 숨김
     val spent: Long = 0L,
     val income: Long = 0L,              // 이번 달(사이클) 수입 합계
     val remaining: Long = 0L,
@@ -160,14 +162,16 @@ class HomeViewModel @Inject constructor(
                 // 멀티 토글 필터: 전체(둘 다 꺼짐) / 메인 / 숨김 / 메인+숨김
                 val visible = transactions.filter { filter.matches(it) }
 
-                val spentRatio = if (status.budget > 0) (status.spent.toFloat() / status.budget).coerceIn(0f, 1f) else 0f
+                val spentRatio = if (status.totalBudget > 0) (status.spent.toFloat() / status.totalBudget).coerceIn(0f, 1f) else 0f
                 // 이번 달 수입 = 가계부 집계(BUDGET+LEDGER_ONLY) · INCOME (홈 수입 카드용)
                 val income = transactions
                     .filter { it.inLedger && it.type == TransactionType.INCOME }
                     .sumOf { it.amount }
 
                 HomeUiState(
-                    budget = status.budget,
+                    budget = status.totalBudget,
+                    baseBudget = status.budget,
+                    extraBudget = status.income,
                     spent = status.spent,
                     income = income,
                     remaining = status.remaining,
@@ -176,7 +180,7 @@ class HomeViewModel @Inject constructor(
                     isOver = status.isOver,
                     todaySpent = coach.todaySpent,
                     dailyBudget = coach.recommendedPerDay,
-                    overToday = status.budget > 0 && coach.isOverToday,
+                    overToday = status.totalBudget > 0 && coach.isOverToday,
                     daysUntilPayday = coach.daysUntilPayday,
                     cycle = status.cycle,
                     transactions = visible,

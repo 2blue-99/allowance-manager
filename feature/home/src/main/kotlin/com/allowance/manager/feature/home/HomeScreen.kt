@@ -480,7 +480,8 @@ private fun BudgetCard(uiState: HomeUiState) {
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically,
+                // 우측이 여러 줄(총액 + 예산/추가)이어도 퍼센트는 첫 줄(총액)에 맞춘다
+                verticalAlignment = Alignment.Top,
             ) {
                 Text(
                     // 퍼센트도 바와 함께 0부터 카운트업
@@ -488,11 +489,28 @@ private fun BudgetCard(uiState: HomeUiState) {
                     style = AmType.size12_medium,
                     color = fillColor,
                 )
-                Text(
-                    "${uiState.budget.amountToComma()}원",
-                    style = AmType.size12_medium,
-                    color = Color.White.copy(alpha = 0.6f),
-                )
+                // 총 예산. 추가 예산(생활비 반영 수입)이 있을 때만 "예산 / 추가" 두 줄을 작게 덧붙인다
+                Column(horizontalAlignment = Alignment.End) {
+                    Text(
+                        "${uiState.budget.amountToComma()}원",
+                        style = AmType.size12_medium,
+                        color = Color.White.copy(alpha = 0.6f),
+                    )
+                    if (uiState.extraBudget > 0) {
+                        Spacer(Modifier.height(4.dp))
+                        Text(
+                            "예산 ${uiState.baseBudget.amountToComma()}원",
+                            style = AmType.size11_medium,
+                            color = Color.White.copy(alpha = 0.45f),
+                        )
+                        Spacer(Modifier.height(2.dp))
+                        Text(
+                            "추가 ${uiState.extraBudget.amountToComma()}원",
+                            style = AmType.size11_medium,
+                            color = AmColors.Emerald,
+                        )
+                    }
+                }
             }
             // 금일 지출 | 하루 지출 권장(0시 기준 고정) | D-day — 전부 예산 사이클에서 나오는 값이라 카드 안으로 들인다.
             Spacer(Modifier.height(20.dp))

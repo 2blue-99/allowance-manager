@@ -271,8 +271,23 @@ fun SettingScreen(
                             }
                         },
                         {
-                            AmSettingItem(title = "월 ${uiState.userType.label}", onClick = { showBudgetDialog = true }) {
-                                Text("${uiState.budget.amountToComma()}원", fontSize = 13.sp, fontWeight = FontWeight.Bold, color = AmColors.Emerald)
+                            // 총 예산. 추가 예산(생활비 반영 수입)이 있을 때만 "예산 / 추가" 두 줄 — 홈 카드와 동일 구조.
+                            // 여러 줄일 땐 제목·화살표를 첫 줄(총액)에 맞춘다
+                            val hasExtra = uiState.extraBudget > 0
+                            AmSettingItem(
+                                title = "월 ${uiState.userType.label}",
+                                onClick = { showBudgetDialog = true },
+                                verticalAlignment = if (hasExtra) Alignment.Top else Alignment.CenterVertically,
+                            ) {
+                                Column(horizontalAlignment = Alignment.End) {
+                                    Text("${(uiState.budget + uiState.extraBudget).amountToComma()}원", fontSize = 13.sp, fontWeight = FontWeight.Bold, color = AmColors.Emerald)
+                                    if (hasExtra) {
+                                        Spacer(Modifier.height(4.dp))
+                                        Text("예산 ${uiState.budget.amountToComma()}원", style = AmType.size11_medium, color = AmColors.TextSecondary)
+                                        Spacer(Modifier.height(2.dp))
+                                        Text("추가 ${uiState.extraBudget.amountToComma()}원", style = AmType.size11_medium, color = AmColors.EmeraldDark)
+                                    }
+                                }
                                 Spacer(Modifier.width(AmSpacing.xs))
                                 AmChevron()
                             }

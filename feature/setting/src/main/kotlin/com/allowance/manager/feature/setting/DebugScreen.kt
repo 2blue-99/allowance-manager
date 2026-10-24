@@ -63,6 +63,7 @@ fun DebugRoute(
         budgetStatusText = budgetStatusText,
         onSpendTenPercent = viewModel::spendBudgetTenPercent,
         onResetSpending = viewModel::resetDebugSpending,
+        onDemoteBudgetIncomes = viewModel::demoteBudgetIncomes,
         onTriggerReminder = viewModel::triggerDailyReminderNow,
         paydayDebugText = paydayDebugText,
         onSetPaydayForTest = viewModel::setPaydayForTest,
@@ -88,6 +89,7 @@ fun DebugScreen(
     budgetStatusText: String = "",
     onSpendTenPercent: () -> Unit = {},
     onResetSpending: () -> Unit = {},
+    onDemoteBudgetIncomes: () -> Unit = {},
     onTriggerReminder: () -> Unit = {},
     paydayDebugText: String = "",
     onSetPaydayForTest: (Long) -> Unit = {},
@@ -147,6 +149,9 @@ fun DebugScreen(
         Spacer(Modifier.height(AmSpacing.sm))
         // 이 화면에서 넣은 디버그 지출을 전부 삭제 → 원래 잔액으로 복구
         AmButton(text = "원래대로 되돌리기", onClick = onResetSpending, modifier = Modifier.fillMaxWidth())
+        Spacer(Modifier.height(AmSpacing.sm))
+        // 수입 기본값이 '가계부만'으로 바뀐 뒤, 예전에 '생활비 반영'으로 들어간 수입을 한 번에 정리
+        AmButton(text = "생활비 반영 수입 → 가계부만 (일괄)", onClick = onDemoteBudgetIncomes, modifier = Modifier.fillMaxWidth())
 
         Spacer(Modifier.height(AmSpacing.xl))
         Text("가계부 관리 알림 (B안 테스트)", style = AmType.size12_bold, color = AmColors.TextSecondary)
@@ -250,7 +255,7 @@ fun DebugScreen(
         Text("수입 넣기", style = AmType.size12_bold, color = AmColors.TextSecondary)
         Spacer(Modifier.height(AmSpacing.sm))
         Text(
-            "월과 금액만 넣으면 그 달에 수입 1건이 바로 쌓여요 (예산 반영 → 남은 금액 가산)",
+            "월과 금액만 넣으면 그 달에 수입 1건이 바로 쌓여요 (기본 가계부만 — 시트에서 생활비 반영으로 켜면 추가 예산)",
             style = AmType.size10_medium,
             color = AmColors.TextTertiary,
         )

@@ -32,14 +32,14 @@ class BudgetAlertNotifier @Inject constructor(
 ) {
     /** BudgetStatus 한 건을 받아 임계값을 평가하고 필요 시 알림을 발송한다. (단일 콜렉터에서 순차 호출) */
     suspend fun onBudgetStatus(status: BudgetStatus, setting: BudgetAlertSetting, userType: UserType) {
-        if (!setting.enabled || status.budget <= 0) return
+        if (!setting.enabled || status.totalBudget <= 0) return
 
         val cycleStart = status.cycle.startMillis()
         val saved = dataStoreRepository.getBudgetAlertState()
         // 사이클이 바뀌면 이전 발송 기록은 무시(초기화)
         val fired = if (saved.cycleStart == cycleStart) saved.fired else emptySet()
 
-        val remainingPercent = status.remaining * 100f / status.budget
+        val remainingPercent = status.remaining * 100f / status.totalBudget   // 총 예산(기본+추가) 기준
         val result = BudgetAlertEvaluator.evaluate(
             remainingPercent = remainingPercent,
             thresholds = setting.frequency.remainingThresholds,

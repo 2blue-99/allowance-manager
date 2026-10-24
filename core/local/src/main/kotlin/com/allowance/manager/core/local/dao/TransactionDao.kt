@@ -105,12 +105,16 @@ interface TransactionDao {
     @Query("SELECT * FROM transactions WHERE account_id IS NULL")
     suspend fun getUnmatched(): List<TransactionEntity>
 
-    /** 비메인 → 메인 승격: accountId 소급 + EXCLUDED 는 BUDGET 로 승격(사용자 지정 상태는 유지) */
+    /** 비메인 → 메인 승격: accountId 소급 + EXCLUDED 는 지출·이체=BUDGET, 수입=LEDGER_ONLY 로(사용자 지정 상태는 유지) */
     @Query(
         """
         UPDATE transactions
         SET account_id = :accountId,
-            scope = CASE WHEN scope = 'EXCLUDED' THEN 'BUDGET' ELSE scope END
+            scope = CASE
+                WHEN scope != 'EXCLUDED' THEN scope
+                WHEN type = 'INCOME' THEN 'LEDGER_ONLY'
+                ELSE 'BUDGET'
+            END
         WHERE id IN (:ids)
         """
     )
@@ -160,7 +164,11 @@ interface TransactionDao {
         """
         UPDATE transactions
         SET account_id = :accountId,
-            scope = CASE WHEN scope = 'EXCLUDED' THEN 'BUDGET' ELSE scope END
+            scope = CASE
+                WHEN scope != 'EXCLUDED' THEN scope
+                WHEN type = 'INCOME' THEN 'LEDGER_ONLY'
+                ELSE 'BUDGET'
+            END
         WHERE account_id IS NULL
           AND package_name = :packageName
           AND (extracted_account IS NULL OR extracted_account = '')
