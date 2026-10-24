@@ -19,6 +19,10 @@ android {
     kotlinOptions {
         jvmTarget = "17"
     }
+    // Room 쿼리(승격·해제 CASE 문 등)를 JVM 에서 인메모리 DB 로 검증 — Robolectric
+    testOptions {
+        unitTests.isIncludeAndroidResources = true
+    }
 }
 
 ksp {
@@ -37,4 +41,8 @@ dependencies {
     implementation(libs.kotlinx.coroutines.android)
 
     implementation(libs.timber)
+
+    testImplementation("junit:junit:4.13.2")
+    testImplementation("org.robolectric:robolectric:4.14.1")
+    testImplementation("androidx.test:core:1.6.1")
 }

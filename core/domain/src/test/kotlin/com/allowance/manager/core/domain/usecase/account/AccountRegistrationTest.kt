@@ -1,12 +1,10 @@
 package com.allowance.manager.core.domain.usecase.account
 
 import com.allowance.manager.core.domain.model.Account
-import com.allowance.manager.core.domain.repository.AccountRepository
+import com.allowance.manager.core.domain.usecase.FakeAccountRepository
 import com.allowance.manager.core.domain.usecase.FakeTransactionRepository
 import com.allowance.manager.core.domain.usecase.transaction.DemoteFromMainUseCase
 import com.allowance.manager.core.domain.usecase.transaction.PromoteToMainUseCase
-import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.runBlocking
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -123,24 +121,4 @@ private class RecordingTransactionRepository : FakeTransactionRepository() {
     override suspend fun promoteToMain(pattern: String, accountId: Long) { calls += "number:$pattern:$accountId" }
     override suspend fun promoteToMainBySource(packageName: String, accountId: Long) { calls += "source:$packageName:$accountId" }
     override suspend fun demoteFromMain(accountId: Long) { calls += "demote:$accountId" }
-}
-
-private class FakeAccountRepository : AccountRepository {
-    val all = MutableStateFlow<List<Account>>(emptyList())
-    private var nextId = 1L
-
-    fun seed(account: Account): Account = account.copy(id = nextId++).also { all.value = all.value + it }
-    fun byId(id: Long): Account? = all.value.firstOrNull { it.id == id }
-
-    override fun observeAll(): Flow<List<Account>> = all
-    override suspend fun getEnabled(): List<Account> = all.value.filter { it.enabled }
-    override suspend fun getAll(): List<Account> = all.value
-    override suspend fun getById(id: Long): Account? = byId(id)
-    override suspend fun add(account: Account): Long = seed(account).id
-    override suspend fun update(account: Account) {
-        all.value = all.value.map { if (it.id == account.id) account else it }
-    }
-    override suspend fun delete(account: Account) {
-        all.value = all.value.filterNot { it.id == account.id }
-    }
 }

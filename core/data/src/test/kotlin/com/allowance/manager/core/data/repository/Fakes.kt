@@ -65,10 +65,20 @@ class FakeTransactionDao : TransactionDao {
     override suspend fun getFirstTransactionTime(): Long? = firstTime
     override fun observeAllTimes(): Flow<List<Long>> = times.map { it.sortedDescending() }
 
-    override suspend fun insert(entity: TransactionEntity): Long = unused()
-    override suspend fun update(entity: TransactionEntity) = unused()
-    override suspend fun delete(entity: TransactionEntity) = unused()
-    override suspend fun getById(id: Long): TransactionEntity? = unused()
+    // 행 단위 조회·수정은 인메모리로 흉내 (setHidden/setScope 등 저장소 규칙 테스트용)
+    val rows = mutableListOf<TransactionEntity>()
+    private var nextId = 1L
+    override suspend fun insert(entity: TransactionEntity): Long {
+        val saved = entity.copy(id = nextId++); rows += saved; return saved.id
+    }
+    override suspend fun update(entity: TransactionEntity) {
+        val i = rows.indexOfFirst { it.id == entity.id }; if (i >= 0) rows[i] = entity
+    }
+    override suspend fun delete(entity: TransactionEntity) { rows.removeAll { it.id == entity.id } }
+    override suspend fun getById(id: Long): TransactionEntity? = rows.firstOrNull { it.id == id }
+    override suspend fun updateScope(id: Long, scope: String) {
+        val i = rows.indexOfFirst { it.id == id }; if (i >= 0) rows[i] = rows[i].copy(scope = scope)
+    }
     override suspend fun getLastTransactionTime(): Long? = unused()
     override fun observeAll(): Flow<List<TransactionEntity>> = unused()
     override fun observeBetween(start: Long, end: Long): Flow<List<TransactionEntity>> = unused()
@@ -84,7 +94,6 @@ class FakeTransactionDao : TransactionDao {
     override suspend fun deleteBySource(packageName: String) = unused()
     override suspend fun promoteBySource(packageName: String, accountId: Long) = unused()
     override suspend fun demoteByAccount(accountId: Long) = unused()
-    override suspend fun updateScope(id: Long, scope: String) = unused()
     override suspend fun updateContent(id: Long, type: String, amount: Long, merchant: String?, memo: String?, category: String?) = unused()
 
     private fun unused(): Nothing = error("테스트가 준비하지 않은 TransactionDao 메서드가 호출됨")
