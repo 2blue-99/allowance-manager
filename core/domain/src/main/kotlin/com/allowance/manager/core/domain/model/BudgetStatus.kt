@@ -26,15 +26,16 @@ data class BudgetStatus(
     fun daysUntilPayday(today: LocalDate): Int =
         ChronoUnit.DAYS.between(today, cycle.nextPayday).toInt()
 
-    /** 하루 사용 권장액 = 남은 금액 ÷ 남은 일수(최소 1). 초과면 0. 100원 단위 내림 (13,163 → 13,100) */
-    fun dailyRecommended(today: LocalDate): Long {
+    /**
+     * 하루 지출 권장액 — **오늘 0시 기준으로 고정**된다. 하루 중 쓰는 만큼 권장액이 따라 줄어들면
+     * "오늘 이만큼만" 기준이 되지 못하므로, 오늘 거래를 되돌린 0시 잔액을 오늘 포함 남은 일수로 나눈다.
+     *
+     * 0시 잔액 = 지금 남은 금액 + 오늘 지출 − 오늘 수입. (오늘 들어온 수입은 내일부터 반영)
+     * 초과면 0, 100원 단위 내림 (13,163 → 13,100). 자정에만 바뀐다.
+     */
+    fun dailyRecommended(today: LocalDate, todaySpent: Long, todayIncome: Long): Long {
         val daysLeft = daysUntilPayday(today).coerceAtLeast(1)
-        return if (remaining > 0) remaining / daysLeft / 100 * 100 else 0L
-    }
-
-    /** 하루 평균 지출 = 지출 ÷ 경과 일수(오늘 포함, 최소 1). 100원 단위 내림 */
-    fun dailyAverage(today: LocalDate): Long {
-        val elapsed = (ChronoUnit.DAYS.between(cycle.start, today) + 1).coerceAtLeast(1)
-        return spent / elapsed / 100 * 100
+        val remainingAtMidnight = remaining + todaySpent - todayIncome
+        return if (remainingAtMidnight > 0) remainingAtMidnight / daysLeft / 100 * 100 else 0L
     }
 }

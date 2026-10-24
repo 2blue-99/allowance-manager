@@ -494,7 +494,7 @@ private fun BudgetCard(uiState: HomeUiState) {
                     color = Color.White.copy(alpha = 0.6f),
                 )
             }
-            // 하루 권장 | 하루 실지출 | D-day — 전부 예산 사이클에서 나오는 값이라 카드 안으로 들인다.
+            // 금일 지출 | 하루 지출 권장(0시 기준 고정) | D-day — 전부 예산 사이클에서 나오는 값이라 카드 안으로 들인다.
             Spacer(Modifier.height(20.dp))
             Box(
                 Modifier
@@ -504,14 +504,14 @@ private fun BudgetCard(uiState: HomeUiState) {
             )
             Spacer(Modifier.height(15.dp))
             Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-                HeroStat("하루 지출 권장", "${uiState.dailyBudget.amountToComma()}원", Modifier.weight(1f))
                 HeroStat(
-                    "하루 실지출",
-                    "${uiState.dailyAverage.amountToComma()}원",
+                    "금일 지출",
+                    "${uiState.todaySpent.amountToComma()}원",
                     Modifier.weight(1f),
-                    // 과속(평균>권장)이면 빨강으로 경고
-                    if (uiState.overPace) AmColors.Red else Color.White,
+                    // 오늘 권장을 넘기면 빨강으로 경고
+                    if (uiState.overToday) AmColors.Red else Color.White,
                 )
+                HeroStat("하루 지출 권장", "${uiState.dailyBudget.amountToComma()}원", Modifier.weight(1f))
                 HeroStat(
                     "${uiState.userType.paydayShort}까지",
                     if (uiState.daysUntilPayday <= 0) "오늘" else "D-${uiState.daysUntilPayday}",

@@ -9,10 +9,11 @@ import java.time.ZoneId
 import javax.inject.Inject
 
 /**
- * 오늘 코치 위젯용 지표(오늘 지출·오늘 권장·하루 평균)를 관찰.
+ * 하루 지표(금일 지출 · 하루 지출 권장 · 월급일까지)를 관찰. 홈 예산 카드와 오늘 코치 위젯이 공유한다.
  *
- * 권장·평균은 [ObserveBudgetStatusUseCase] 결과의 공용 계산(BudgetStatus.dailyRecommended/dailyAverage)을
- * 그대로 쓴다 — 홈 히어로 카드와 같은 값(수입 가산·100원 내림 포함). 오늘 지출만 날짜 범위로 따로 센다.
+ * 권장액은 [BudgetStatus.dailyRecommended] 로 **오늘 0시 기준 고정** — 오늘 지출·수입을 되돌린 잔액으로
+ * 계산하므로 하루 중 거래가 들어와도 바뀌지 않고, 날짜가 바뀔 때만 바뀐다.
+ * [today]는 구독 시점에 고정 — 오래 사는 구독은 todayTicks 로 자정마다 재구독할 것.
  */
 class ObserveDailyCoachUseCase @Inject constructor(
     private val observeBudgetStatusUseCase: ObserveBudgetStatusUseCase,
@@ -27,11 +28,12 @@ class ObserveDailyCoachUseCase @Inject constructor(
         return combine(
             observeBudgetStatusUseCase(today),
             transactionRepository.observeBudgetSpentBetween(todayStart, todayEnd),
-        ) { status, todaySpent ->
+            transactionRepository.observeBudgetIncomeBetween(todayStart, todayEnd),
+        ) { status, todaySpent, todayIncome ->
             DailyCoach(
                 todaySpent = todaySpent,
-                recommendedPerDay = status.dailyRecommended(today),
-                avgPerDay = status.dailyAverage(today),
+                recommendedPerDay = status.dailyRecommended(today, todaySpent, todayIncome),
+                daysUntilPayday = status.daysUntilPayday(today),
             )
         }
     }

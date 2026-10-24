@@ -6,9 +6,9 @@ import com.allowance.manager.core.domain.model.BudgetCycle
 import com.allowance.manager.core.domain.model.Transaction
 import com.allowance.manager.core.domain.usecase.config.GetPendingAnnouncementUseCase
 import com.allowance.manager.core.domain.usecase.config.MarkAnnouncementSeenUseCase
-import com.allowance.manager.core.domain.usecase.account.ObserveAccountsUseCase
 import com.allowance.manager.core.domain.usecase.budget.GetUserTypeUseCase
 import com.allowance.manager.core.domain.usecase.budget.ObserveBudgetStatusUseCase
+import com.allowance.manager.core.domain.usecase.budget.ObserveDailyCoachUseCase
 import com.allowance.manager.core.domain.model.LedgerFilter
 import com.allowance.manager.core.domain.model.LedgerFilterChip
 import com.allowance.manager.core.domain.model.matches
@@ -48,7 +48,6 @@ import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.launch
-import java.time.LocalDate
 import com.allowance.manager.core.domain.util.TodayTicker
 import javax.inject.Inject
 
@@ -60,9 +59,9 @@ data class HomeUiState(
     val ratio: Float = 0f,              // 남은 비율
     val spentRatio: Float = 0f,         // 소진율 (지출/예산) — 메인 바 채움
     val isOver: Boolean = false,
-    val dailyBudget: Long = 0L,         // 하루 사용 권장액 (남은예산 ÷ 남은일수)
-    val dailyAverage: Long = 0L,        // 하루 평균 지출 (지출 ÷ 경과일수)
-    val overPace: Boolean = false,      // 하루 평균 > 권장 → 과속
+    val todaySpent: Long = 0L,          // 금일 지출 (예산 반영 BUDGET, 환불 차감)
+    val dailyBudget: Long = 0L,         // 하루 지출 권장 — 오늘 0시 기준 고정 (DailyCoach)
+    val overToday: Boolean = false,     // 금일 지출 > 권장 → 빨강
     val daysUntilPayday: Int = 0,       // 다음 월급일까지 D-day
     // 이번 사이클 — 예산 카드 머리글의 기간 표기에 쓴다. 로딩 중이면 null
     val cycle: BudgetCycle? = null,
@@ -78,7 +77,6 @@ data class HomeUiState(
 class HomeViewModel @Inject constructor(
     observeBudgetStatusUseCase: ObserveBudgetStatusUseCase,
     observeCurrentTransactionsUseCase: ObserveCurrentTransactionsUseCase,
-    observeAccountsUseCase: ObserveAccountsUseCase,
     getHomeFilterUseCase: GetHomeFilterUseCase,
     getUserTypeUseCase: GetUserTypeUseCase,
     private val setHomeFilterUseCase: SetHomeFilterUseCase,
@@ -87,6 +85,7 @@ class HomeViewModel @Inject constructor(
     private val countIgnorableTransactionsUseCase: CountIgnorableTransactionsUseCase,
     private val deleteTransactionUseCase: DeleteTransactionUseCase,
     private val promoteToMainUseCase: PromoteToMainUseCase,
+    private val observeDailyCoachUseCase: ObserveDailyCoachUseCase,
     private val demoteFromMainUseCase: DemoteFromMainUseCase,
     private val updateTransactionUseCase: UpdateTransactionUseCase,
     private val setTxScopeUseCase: SetTxScopeUseCase,
@@ -151,20 +150,16 @@ class HomeViewModel @Inject constructor(
                 // 자정마다 재구독 — 홈 탭 VM 은 오래 살아 수급일 자정을 넘기면 옛 사이클에 머문다 (위젯·상태바와 어긋남)
                 todayTicker.ticks().flatMapLatest { observeBudgetStatusUseCase(it) },
                 todayTicker.ticks().flatMapLatest { observeCurrentTransactionsUseCase(it) },
-                observeAccountsUseCase(),
+                // 하루 지표는 오늘 코치 위젯과 같은 UseCase — 홈에서 다시 계산하지 않는다
+                todayTicker.ticks().flatMapLatest { observeDailyCoachUseCase(it) },
                 combine(filterState, getHomeNewAccountBadgeUseCase()) { f, b -> f to b },
                 getUserTypeUseCase(),
-            ) { status, transactions, _, filterBadge, userType ->
+            ) { status, transactions, coach, filterBadge, userType ->
                 val filter = filterBadge.first
                 val newAccountBadge = filterBadge.second
                 // 멀티 토글 필터: 전체(둘 다 꺼짐) / 메인 / 숨김 / 메인+숨김
                 val visible = transactions.filter { filter.matches(it) }
 
-                // 하루 권장액·평균·D-day: BudgetStatus 공용 계산 (오늘 코치 위젯과 같은 값)
-                val today = LocalDate.now()
-                val daysUntil = status.daysUntilPayday(today)
-                val dailyBudget = status.dailyRecommended(today)
-                val dailyAverage = status.dailyAverage(today)
                 val spentRatio = if (status.budget > 0) (status.spent.toFloat() / status.budget).coerceIn(0f, 1f) else 0f
                 // 이번 달 수입 = 가계부 집계(BUDGET+LEDGER_ONLY) · INCOME (홈 수입 카드용)
                 val income = transactions
@@ -179,10 +174,10 @@ class HomeViewModel @Inject constructor(
                     ratio = status.ratio,
                     spentRatio = spentRatio,
                     isOver = status.isOver,
-                    dailyBudget = dailyBudget,
-                    dailyAverage = dailyAverage,
-                    overPace = status.budget > 0 && dailyAverage > dailyBudget,
-                    daysUntilPayday = daysUntil,
+                    todaySpent = coach.todaySpent,
+                    dailyBudget = coach.recommendedPerDay,
+                    overToday = status.budget > 0 && coach.isOverToday,
+                    daysUntilPayday = coach.daysUntilPayday,
                     cycle = status.cycle,
                     transactions = visible,
                     filter = filter,
